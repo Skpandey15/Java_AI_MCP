@@ -79,7 +79,7 @@ public class SessionService {
                         .equals(session.getAssignment().getInterviewDefinition().getId()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Question not found"));
         Instant now = Instant.now();
-        var existing = answers.findBySessionIdAndQuestionId(sessionId, questionId);
+        var existing = answers.findBySession_IdAndQuestion_Id(sessionId, questionId);
         if (existing.isEmpty()) {
             if (expectedVersion != 0) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Answer version is stale");
@@ -120,7 +120,7 @@ public class SessionService {
     private SessionView view(InterviewSession session) {
         var questionList = questions.findByInterviewDefinitionIdOrderByOrderAsc(
                 session.getAssignment().getInterviewDefinition().getId());
-        var answerList = answers.findBySessionId(session.getId());
+        var answerList = answers.findBySession_Id(session.getId());
         return new SessionView(session, questionList, answerList);
     }
 
