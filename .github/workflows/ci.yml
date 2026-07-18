@@ -1,9 +1,10 @@
-name: phase-1-ci
+name: platform-ci
 
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -21,7 +22,7 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: apps/web-ui/package-lock.json
-      - run: npm install
+      - run: npm ci
       - run: npm test
       - run: npm run build
 
