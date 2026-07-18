@@ -1,0 +1,53 @@
+openapi: 3.1.0
+info:
+  title: Online Interview Workflow API
+  version: 1.0.0
+paths:
+  /api/v1/interviews:
+    post:
+      summary: Create a draft interview
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Draft created }
+        '403': { description: Interviewer role required }
+    get:
+      summary: List interviews owned by the authenticated interviewer
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Owned interviews }
+  /api/v1/interviews/{interviewId}/publish:
+    post:
+      summary: Publish an owned draft
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: interviewId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Published }
+        '404': { description: Interview not found or not owned }
+        '409': { description: Invalid state transition }
+  /api/v1/interviews/{interviewId}/assignments:
+    post:
+      summary: Assign a published interview to a candidate
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: interviewId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '201': { description: Assignment scheduled }
+  /api/v1/candidate/interviews:
+    get:
+      summary: List the authenticated candidate's scheduled interviews
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Candidate assignments ordered by start time }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

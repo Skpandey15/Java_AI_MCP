@@ -43,7 +43,7 @@ management:
 info:
   app:
     name: ${spring.application.name}
-    phase: foundation
+    phase: phase-2b-interview-workflow
 
 app:
   cors:
