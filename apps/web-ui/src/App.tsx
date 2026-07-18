@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthProvider'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { CandidateDashboard } from './pages/CandidateDashboard'
@@ -7,6 +7,16 @@ import { InterviewSessionPage } from './pages/InterviewSessionPage'
 
 function LandingPage() {
   const auth = useAuth()
+
+  if (!auth.initialized) {
+    return <main className="shell"><p>Connecting to secure login…</p></main>
+  }
+  if (auth.authenticated) {
+    if (auth.roles.includes('interviewer')) return <Navigate to="/interviewer" replace />
+    if (auth.roles.includes('candidate')) return <Navigate to="/candidate" replace />
+    return <Navigate to="/unauthorized" replace />
+  }
+
   return (
     <main className="shell">
       <section className="hero" aria-labelledby="page-title">
