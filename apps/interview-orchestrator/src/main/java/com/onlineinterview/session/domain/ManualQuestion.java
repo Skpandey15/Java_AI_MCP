@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
@@ -20,6 +22,10 @@ public class ManualQuestion {
     @Column(name = "question_order", nullable = false) private int order;
     @Column(nullable = false, length = 4000) private String prompt;
     @Column(name = "max_score", nullable = false) private int maxScore;
+    @Enumerated(EnumType.STRING) @Column(nullable = false) private QuestionSource source;
+    @Column(name = "generation_request_id") private UUID generationRequestId;
+    @Column(name = "model_policy") private String modelPolicy;
+    @Column(name = "prompt_version") private String promptVersion;
 
     protected ManualQuestion() {}
 
@@ -30,6 +36,18 @@ public class ManualQuestion {
         question.order = order;
         question.prompt = prompt;
         question.maxScore = maxScore;
+        question.source = QuestionSource.MANUAL;
+        return question;
+    }
+
+    public static ManualQuestion generated(InterviewDefinition definition, int order,
+            String prompt, int maxScore, UUID generationRequestId,
+            String modelPolicy, String promptVersion) {
+        var question = create(definition, order, prompt, maxScore);
+        question.source = QuestionSource.AI_DIRECT;
+        question.generationRequestId = generationRequestId;
+        question.modelPolicy = modelPolicy;
+        question.promptVersion = promptVersion;
         return question;
     }
 
@@ -38,4 +56,8 @@ public class ManualQuestion {
     public int getOrder() { return order; }
     public String getPrompt() { return prompt; }
     public int getMaxScore() { return maxScore; }
+    public QuestionSource getSource() { return source; }
+    public UUID getGenerationRequestId() { return generationRequestId; }
+    public String getModelPolicy() { return modelPolicy; }
+    public String getPromptVersion() { return promptVersion; }
 }

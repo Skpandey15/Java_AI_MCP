@@ -34,9 +34,9 @@ Acceptance criteria:
 
 ## Phase 3 — AI generation and evaluation
 
-- LiteLLM gateway and Kubernetes secret integration
-- Direct OpenAI-backed question generation through the Python service
-- Structured response schemas and prompt/model versioning
+- LiteLLM gateway with OpenAI key isolation (implemented for Docker in Phase 3A; Kubernetes secret follows)
+- Direct OpenAI-backed question generation through the Python service (implemented in Phase 3A)
+- Structured response schemas and prompt/model versioning (implemented in Phase 3A)
 - Kafka, transactional outbox and asynchronous answer evaluation
 
 ## Phase 4 — RAG and MCP

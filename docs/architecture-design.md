@@ -196,6 +196,8 @@ Recommended modules:
 
 All AI outputs must follow JSON schemas. Validate them before returning them to Spring Boot.
 
+Phase 3A implements direct question generation through the internal path `Spring Boot → Python AI service → LiteLLM → OpenAI`. The provider key is injected only into LiteLLM. Spring Boot authenticates to Python with a separate service token, and Python authenticates to LiteLLM with its internal gateway key. The stable application model alias is `interview-question-model`; model selection remains a gateway concern.
+
 ## 6. Core user journeys
 
 ### Interviewer journey

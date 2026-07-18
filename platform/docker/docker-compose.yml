@@ -34,6 +34,17 @@ services:
       postgres:
         condition: service_healthy
 
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY must be set}
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-local-litellm-key}
+    ports:
+      - "4000:4000"
+    volumes:
+      - ../litellm/config.yaml:/app/config.yaml:ro
+
   web-ui:
     build:
       context: ../../apps/web-ui
@@ -55,6 +66,8 @@ services:
       DATABASE_PASSWORD: interview
       KEYCLOAK_ISSUER_URI: http://localhost:8090/realms/online-interview
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/online-interview/protocol/openid-connect/certs
+      AI_SERVICE_BASE_URL: http://ai-service:8000
+      AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-local-ai-service-token}
     ports:
       - "8080:8080"
     healthcheck:
@@ -68,12 +81,22 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_started
+      ai-service:
+        condition: service_healthy
 
   ai-service:
     build:
       context: ../../apps/ai-service
+    environment:
+      LITELLM_BASE_URL: http://litellm:4000
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-local-litellm-key}
+      AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-local-ai-service-token}
+      INTERVIEW_QUESTION_MODEL: interview-question-model
     ports:
       - "8000:8000"
+    depends_on:
+      litellm:
+        condition: service_started
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
       interval: 10s
