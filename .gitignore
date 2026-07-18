@@ -1,0 +1,27 @@
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.iml
+*.log
+.env
+.env.*
+!.env.example
+
+# Java
+apps/interview-orchestrator/target/
+
+# Node
+apps/web-ui/node_modules/
+apps/web-ui/dist/
+apps/web-ui/coverage/
+apps/web-ui/vite.config.js
+apps/web-ui/vite.config.d.ts
+
+# Python
+apps/ai-service/.venv/
+apps/ai-service/.pytest_cache/
+apps/ai-service/.ruff_cache/
+apps/ai-service/.coverage
+apps/ai-service/**/__pycache__/
+apps/ai-service/*.egg-info/

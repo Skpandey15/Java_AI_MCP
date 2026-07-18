@@ -1,0 +1,21 @@
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #10233f;
+  background: #eef4fb;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; }
+button { font: inherit; }
+.shell { min-height: 100vh; display: grid; place-items: center; padding: 2rem; background: radial-gradient(circle at top right, #cfe4ff, transparent 36%), #eef4fb; }
+.hero { width: min(720px, 100%); padding: 4rem; border: 1px solid #d7e2ef; border-radius: 24px; background: rgba(255,255,255,.92); box-shadow: 0 24px 70px rgba(35,74,122,.14); }
+.eyebrow { margin: 0 0 .75rem; color: #1266d4; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+h1 { margin: 0; font-size: clamp(2.6rem, 7vw, 5rem); line-height: .98; }
+.summary { max-width: 58ch; margin: 1.5rem 0; font-size: 1.15rem; line-height: 1.7; color: #52647a; }
+.actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.actions button { padding: .9rem 1.2rem; border: 1px solid #1266d4; border-radius: 10px; color: white; background: #1266d4; cursor: pointer; }
+.actions .secondary { color: #1266d4; background: white; }
+.status { margin: 2rem 0 0; color: #66809c; font-size: .9rem; }
+@media (max-width: 600px) { .hero { padding: 2rem; } .actions button { width: 100%; } }

@@ -36,4 +36,19 @@ See the complete [High-Level Design and Low-Level Design](docs/architecture-desi
 
 ### Status
 
-Architecture and detailed design completed. Project scaffolding is the next phase.
+Phase 1 foundation is implemented:
+
+- React/TypeScript web application
+- Java 21 Spring Boot orchestrator
+- Python 3.12 FastAPI AI service
+- Health endpoints and initial tests
+- Dockerfiles, Docker Compose and GitHub Actions CI
+- Shared API-contract directories
+
+See the [implementation plan](docs/implementation-plan.md).
+
+### Local startup
+
+```bash
+docker compose -f platform/docker/docker-compose.yml up --build
+```
