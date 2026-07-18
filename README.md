@@ -51,6 +51,8 @@ Phase 2A identity foundation is also implemented:
 - Administrative interviewer-role assignment
 - Spring Security OAuth2 resource server
 - PostgreSQL, Flyway and JPA user profiles
+- PostgreSQL-backed Keycloak state in a separate `keycloak` database
+- In-memory browser tokens only; no business data or tokens in `localStorage`
 - Role-protected React dashboard routes
 
 See the [implementation plan](docs/implementation-plan.md).

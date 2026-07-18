@@ -15,9 +15,9 @@ Endpoints:
 - Python API docs: http://localhost:8000/docs
 - Keycloak: http://localhost:8090
 - Keycloak administration: http://localhost:8090/admin (local credentials: `admin` / `admin`)
-- PostgreSQL: localhost:5432 (`online_interview` database)
+- PostgreSQL: localhost:5432 (`online_interview` business database and separate `keycloak` identity database)
 
-Candidate self-registration is available from the UI. The default Keycloak realm role is `candidate`. Assign the `interviewer` realm role only through Keycloak administration.
+Keycloak realms, users, credentials, roles and sessions persist in PostgreSQL across container restarts. Candidate self-registration is available from the UI. The default Keycloak realm role is `candidate`. Assign the `interviewer` realm role only through Keycloak administration. The React application keeps access and refresh tokens only in the Keycloak JavaScript adapter memory; it does not persist tokens or business data in browser `localStorage`.
 
 Stop the environment with:
 

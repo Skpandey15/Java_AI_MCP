@@ -9,6 +9,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U interview -d online_interview"]
       interval: 5s
@@ -21,10 +22,17 @@ services:
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak
     ports:
       - "8090:8080"
     volumes:
       - ./keycloak/online-interview-realm.json:/opt/keycloak/data/import/online-interview-realm.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   web-ui:
     build:

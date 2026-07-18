@@ -48,7 +48,7 @@ Questions can be delivered in two modes:
 | AI gateway | LiteLLM Gateway | Central OpenAI routing, authentication, budgets, rate limits, fallbacks and AI telemetry |
 | MCP layer | Java/Python MCP SDKs with an MCP registry | Internal platform tools and approved external MCP integrations |
 | Business orchestrator | Java 21+, Spring Boot 3.x | Users, schedules, sessions, workflow, authorization |
-| Authentication | Keycloak using OAuth 2.1/OIDC | Login, registration, MFA-ready identity |
+| Authentication | Keycloak using OAuth 2.1/OIDC and a dedicated PostgreSQL database | Login, registration, MFA-ready identity, durable realms/users/roles/sessions |
 | AI service | Python 3.12+, FastAPI, LangGraph/LangChain | Direct generation, RAG, evaluation |
 | Primary database | PostgreSQL | Transactional platform data |
 | Vector store | pgvector initially | Document chunks and embeddings |
@@ -121,7 +121,7 @@ Recommended feature modules:
 - `admin` — optional future tenant/user management
 - `shared` — API client, components, validation, auth utilities
 
-Use an OIDC Authorization Code flow with PKCE. Prefer a backend-for-frontend/HttpOnly-cookie pattern for production; do not store long-lived tokens in local storage.
+Use an OIDC Authorization Code flow with PKCE. The current SPA keeps access and refresh tokens only in the Keycloak JavaScript adapter memory and never writes tokens or business data to browser `localStorage`. Prefer a backend-for-frontend/Secure HttpOnly cookie pattern for production.
 
 ### Spring Boot orchestrator
 
@@ -701,6 +701,7 @@ Interviewer routes:
 ## 17. Reliability and consistency
 
 - PostgreSQL remains authoritative for interview/session state.
+- Keycloak uses a separate `keycloak` PostgreSQL database; it never shares application business tables or Flyway migrations.
 - Use the transactional outbox pattern when publishing Kafka events.
 - Consumers must be idempotent using event ID and aggregate version.
 - Autosave endpoints use optimistic versioning and return the accepted server version.
@@ -848,7 +849,7 @@ A monorepo is appropriate for the initial team because API contracts and end-to-
 
 1. **Spring Boot owns workflows; Python owns AI capabilities.**
 2. **Start with a modular monolith plus a separately deployable AI service.**
-3. **Use Keycloak instead of implementing password authentication.**
+3. **Use Keycloak instead of implementing password authentication, and persist its state in a separate PostgreSQL database.**
 4. **Use PostgreSQL with pgvector initially to reduce operational complexity.**
 5. **Generate question sets before start where possible to protect interview availability.**
 6. **Use asynchronous evaluation so submission remains reliable during LLM latency.**
