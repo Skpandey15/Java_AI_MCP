@@ -20,9 +20,8 @@ class AiQuestionClientTest {
     void sendsCamelCaseJsonBodyAndServiceToken() {
         var builder = RestClient.builder();
         var server = MockRestServiceServer.bindTo(builder).build();
-        var client = new AiQuestionClient(builder,
-                JsonMapper.builder().findAndAddModules().build(),
-                "http://localhost:8000", "service-token");
+        var client = new AiQuestionClient(builder.baseUrl("http://localhost:8000").build(),
+                JsonMapper.builder().findAndAddModules().build(), "service-token");
         UUID requestId = UUID.randomUUID();
         UUID interviewId = UUID.randomUUID();
 
