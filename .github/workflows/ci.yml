@@ -55,3 +55,11 @@ jobs:
       - run: uv sync --frozen --extra dev
       - run: uv run --extra dev ruff check .
       - run: uv run --extra dev pytest --cov=app
+
+  docker-images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t online-interview-web-ui:ci apps/web-ui
+      - run: docker build -t online-interview-orchestrator:ci apps/interview-orchestrator
+      - run: docker build -t online-interview-ai-service:ci apps/ai-service

@@ -3,7 +3,9 @@ WORKDIR /workspace
 COPY gradlew settings.gradle build.gradle ./
 COPY gradle gradle
 COPY src src
-RUN chmod +x gradlew && ./gradlew clean bootJar --no-daemon
+RUN sed -i 's/\r$//' gradlew \
+    && chmod +x gradlew \
+    && ./gradlew clean bootJar --no-daemon
 
 FROM eclipse-temurin:21-jre-alpine
 RUN addgroup -S app && adduser -S app -G app
