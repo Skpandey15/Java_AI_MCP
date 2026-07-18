@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.http.HttpClient;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -17,6 +18,7 @@ public class AiQuestionClient {
     private final ObjectMapper objectMapper;
     private final String serviceToken;
 
+    @Autowired
     public AiQuestionClient(RestClient.Builder builder, ObjectMapper objectMapper,
             @Value("${app.ai-service.base-url}") String baseUrl,
             @Value("${app.ai-service.service-token}") String serviceToken) {
