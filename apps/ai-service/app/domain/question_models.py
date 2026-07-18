@@ -5,7 +5,12 @@ from pydantic.alias_generators import to_camel
 
 
 class ApiModel(BaseModel):
-    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        validate_by_alias=True,
+        validate_by_name=True,
+        serialize_by_alias=True,
+    )
 
 
 class GenerateQuestionsRequest(ApiModel):
