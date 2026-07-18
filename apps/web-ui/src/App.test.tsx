@@ -15,9 +15,9 @@ vi.mock('./auth/keycloak', () => ({
 import { App } from './App'
 
 describe('App', () => {
-  it('shows the platform entry points', () => {
+  it('shows the platform entry points after authentication initializes', async () => {
     render(<App />)
-    expect(screen.getByRole('heading', { name: 'Online Interview' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Online Interview' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Login' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Candidate registration' })).toBeInTheDocument()
   })
