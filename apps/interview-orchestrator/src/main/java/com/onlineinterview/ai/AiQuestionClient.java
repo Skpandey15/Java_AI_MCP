@@ -2,10 +2,12 @@ package com.onlineinterview.ai;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.net.http.HttpClient;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -18,7 +20,19 @@ public class AiQuestionClient {
     public AiQuestionClient(RestClient.Builder builder, ObjectMapper objectMapper,
             @Value("${app.ai-service.base-url}") String baseUrl,
             @Value("${app.ai-service.service-token}") String serviceToken) {
-        this.client = builder.baseUrl(baseUrl).build();
+        var httpClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .build();
+        this.client = builder
+                .baseUrl(baseUrl)
+                .requestFactory(new JdkClientHttpRequestFactory(httpClient))
+                .build();
+        this.objectMapper = objectMapper;
+        this.serviceToken = serviceToken;
+    }
+
+    AiQuestionClient(RestClient client, ObjectMapper objectMapper, String serviceToken) {
+        this.client = client;
         this.objectMapper = objectMapper;
         this.serviceToken = serviceToken;
     }
