@@ -1,5 +1,7 @@
 package com.onlineinterview.ai;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
@@ -10,23 +12,33 @@ import org.springframework.web.client.RestClient;
 @Component
 public class AiQuestionClient {
     private final RestClient client;
+    private final ObjectMapper objectMapper;
     private final String serviceToken;
 
-    public AiQuestionClient(RestClient.Builder builder,
+    public AiQuestionClient(RestClient.Builder builder, ObjectMapper objectMapper,
             @Value("${app.ai-service.base-url}") String baseUrl,
             @Value("${app.ai-service.service-token}") String serviceToken) {
         this.client = builder.baseUrl(baseUrl).build();
+        this.objectMapper = objectMapper;
         this.serviceToken = serviceToken;
     }
 
     public GenerationResponse generate(GenerationRequest request) {
         return client.post()
-                .uri("/internal/v1/questions:generate")
+                .uri("/internal/v1/questions%3Agenerate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("X-Service-Token", serviceToken)
-                .body(request)
+                .body(jsonBody(request))
                 .retrieve()
                 .body(GenerationResponse.class);
+    }
+
+    private byte[] jsonBody(GenerationRequest request) {
+        try {
+            return objectMapper.writeValueAsBytes(request);
+        } catch (JsonProcessingException exception) {
+            throw new IllegalArgumentException("Unable to serialize AI generation request", exception);
+        }
     }
 
     public record GenerationRequest(UUID requestId, UUID interviewId, List<String> skills,
