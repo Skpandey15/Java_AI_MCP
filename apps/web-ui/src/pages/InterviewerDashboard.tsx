@@ -40,6 +40,16 @@ export function InterviewerDashboard() {
     await load()
   }
 
+  async function generateQuestions(id: string) {
+    setMessage('Generating questions through the AI Gateway…')
+    try {
+      await interviewApi.generateQuestions(id)
+      setMessage('AI questions generated and saved in PostgreSQL.')
+    } catch {
+      setMessage('AI question generation failed. Check LiteLLM and the OpenAI key.')
+    }
+  }
+
   async function addQuestion(event: FormEvent, id: string) {
     event.preventDefault()
     await interviewApi.addQuestion(id, { order: questionOrder, prompt: questionPrompt, maxScore: 10 })
@@ -84,11 +94,13 @@ export function InterviewerDashboard() {
             <p>{interview.skills.join(', ')} · {interview.difficulty} · {interview.durationMinutes} min</p>
             <p><strong>Status:</strong> {interview.status}</p>
             {interview.status === 'DRAFT' && <>
-              <form className="assignment-form" onSubmit={(event) => void addQuestion(event, interview.id)}>
+              {interview.questionMode === 'DIRECT_LLM' &&
+                <button onClick={() => void generateQuestions(interview.id)}>Generate AI questions</button>}
+              {interview.questionMode === 'MANUAL' && <form className="assignment-form" onSubmit={(event) => void addQuestion(event, interview.id)}>
                 <label>Question order<input type="number" min="1" max="100" value={questionOrder} onChange={(e) => setQuestionOrder(Number(e.target.value))} /></label>
                 <label>Manual question<textarea required value={questionPrompt} onChange={(e) => setQuestionPrompt(e.target.value)} /></label>
                 <button type="submit">Add question</button>
-              </form>
+              </form>}
               <button onClick={() => void publish(interview.id)}>Publish</button>
             </>}
             {interview.status === 'PUBLISHED' && (

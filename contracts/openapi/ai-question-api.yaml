@@ -1,0 +1,17 @@
+openapi: 3.1.0
+info:
+  title: Online Interview AI Question API
+  version: 1.0.0
+paths:
+  /api/v1/interviews/{interviewId}/questions:generate:
+    post:
+      summary: Idempotently generate and persist direct-LLM questions
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Generated questions persisted in PostgreSQL }
+        '409': { description: Interview is not a DIRECT_LLM draft }

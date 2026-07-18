@@ -55,6 +55,8 @@ Phase 2A identity foundation is also implemented:
 - In-memory browser tokens only; no business data or tokens in `localStorage`
 - Role-protected React dashboard routes
 - Interview definition, publishing, assignment and candidate-dashboard APIs
+- Server-controlled interview sessions and PostgreSQL answer autosave
+- LiteLLM-governed direct AI question generation with structured output
 
 See the [implementation plan](docs/implementation-plan.md).
 

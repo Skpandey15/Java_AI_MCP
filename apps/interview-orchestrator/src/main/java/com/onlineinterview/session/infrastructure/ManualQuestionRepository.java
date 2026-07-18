@@ -8,4 +8,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface ManualQuestionRepository extends JpaRepository<ManualQuestion, UUID> {
     List<ManualQuestion> findByInterviewDefinitionIdOrderByOrderAsc(UUID interviewDefinitionId);
     long countByInterviewDefinitionId(UUID interviewDefinitionId);
+    List<ManualQuestion> findByGenerationRequestIdOrderByOrderAsc(UUID generationRequestId);
 }

@@ -1,5 +1,9 @@
 # Local container environment
 
+Set `OPENAI_API_KEY` in your operating-system environment or copy
+`platform/docker/.env.example` to `platform/docker/.env` and replace its placeholders.
+Never commit the real values.
+
 From the repository root:
 
 ```bash
@@ -13,6 +17,7 @@ Endpoints:
 - Spring Boot actuator: http://localhost:8080/actuator/health
 - Python health: http://localhost:8000/api/v1/health
 - Python API docs: http://localhost:8000/docs
+- LiteLLM Gateway: http://localhost:4000
 - Keycloak: http://localhost:8090
 - Keycloak administration: http://localhost:8090/admin (local credentials: `admin` / `admin`)
 - PostgreSQL: localhost:5432 (`online_interview` business database and separate `keycloak` identity database)
@@ -32,3 +37,10 @@ cd apps/web-ui && npm install && npm test && npm run build
 cd apps/interview-orchestrator && ./gradlew clean test bootJar
 cd apps/ai-service && uv sync --extra dev && uv run --extra dev pytest
 ```
+
+## Phase 3A AI request path
+
+`Spring Boot -> Python AI service -> LiteLLM -> OpenAI`
+
+Only LiteLLM receives `OPENAI_API_KEY`. React and Spring Boot never receive the provider key.
+Use distinct random values for `LITELLM_MASTER_KEY` and `AI_SERVICE_TOKEN` outside local development.

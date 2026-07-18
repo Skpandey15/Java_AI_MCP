@@ -43,8 +43,11 @@ management:
 info:
   app:
     name: ${spring.application.name}
-    phase: phase-2c-session-runtime
+    phase: phase-3a-direct-ai-generation
 
 app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
+  ai-service:
+    base-url: ${AI_SERVICE_BASE_URL:http://localhost:8000}
+    service-token: ${AI_SERVICE_TOKEN:local-ai-service-token}
