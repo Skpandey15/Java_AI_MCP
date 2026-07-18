@@ -2,6 +2,14 @@ import { keycloak } from '../auth/keycloak'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
 
+export type Profile = {
+  id: string
+  email: string
+  displayName: string
+  role: string
+  status: string
+}
+
 export type Interview = {
   id: string
   title: string
@@ -55,6 +63,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const interviewApi = {
+  completeCandidateProfile: () => {
+    const claims = keycloak.tokenParsed
+    const displayName = claims?.name ?? claims?.preferred_username ?? claims?.email ?? 'Candidate'
+    return request<Profile>('/api/v1/profiles/registration-complete', {
+      method: 'POST', body: JSON.stringify({ displayName }),
+    })
+  },
   listOwned: () => request<Interview[]>('/api/v1/interviews'),
   create: (body: object) => request<Interview>('/api/v1/interviews', {
     method: 'POST', body: JSON.stringify(body),

@@ -11,9 +11,15 @@ export function CandidateDashboard() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    interviewApi.candidateAssignments()
-      .then(setAssignments)
-      .catch(() => setError('Unable to load interviews. Please try again.'))
+    async function load() {
+      try {
+        await interviewApi.completeCandidateProfile()
+        setAssignments(await interviewApi.candidateAssignments())
+      } catch {
+        setError('Unable to complete your candidate profile or load interviews. Please try again.')
+      }
+    }
+    void load()
   }, [])
 
   async function start(assignmentId: string) {
