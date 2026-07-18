@@ -37,7 +37,7 @@ def test_returns_schema_valid_questions(monkeypatch) -> None:
             interview_id=request.interview_id,
             model_policy="interview-question-model",
             prompt_version="direct-question-v1",
-            questions=[GeneratedQuestion(order=1, prompt="Explain Java virtual threads.", max_score=10)],
+            questions=[\n                GeneratedQuestion(\n                    order=1, prompt="Explain Java virtual threads.", max_score=10\n                )\n            ],
         )
 
     monkeypatch.setattr(question_routes.generator, "generate", fake_generate)

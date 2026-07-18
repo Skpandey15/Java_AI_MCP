@@ -15,7 +15,7 @@ def generate_questions(
     x_service_token: str = Header(default=""),
 ) -> GenerateQuestionsResponse:
     if x_service_token != settings.ai_service_token:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid service token")
+        raise HTTPException(\n            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid service token"\n        )
     try:
         return generator.generate(request)
     except (ModelGatewayError, ValueError) as exc:
