@@ -7,6 +7,7 @@ export type Profile = {
   email: string
   displayName: string
   role: string
+  status: string
 }
 
 export type Interview = {
