@@ -9,6 +9,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface InterviewAnswerRepository extends JpaRepository<InterviewAnswer, UUID> {
     @EntityGraph(attributePaths = "question")
-    List<InterviewAnswer> findBySessionId(UUID sessionId);
-    Optional<InterviewAnswer> findBySessionIdAndQuestionId(UUID sessionId, UUID questionId);
+    List<InterviewAnswer> findBySession_Id(UUID sessionId);
+    Optional<InterviewAnswer> findBySession_IdAndQuestion_Id(UUID sessionId, UUID questionId);
 }
