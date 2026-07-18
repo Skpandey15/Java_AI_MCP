@@ -5,6 +5,12 @@ import { CandidateDashboard } from './pages/CandidateDashboard'
 import { InterviewerDashboard } from './pages/InterviewerDashboard'
 import { InterviewSessionPage } from './pages/InterviewSessionPage'
 
+export function dashboardPath(roles: string[]) {
+  if (roles.includes('interviewer')) return '/interviewer'
+  if (roles.includes('candidate')) return '/candidate'
+  return '/unauthorized'
+}
+
 function LandingPage() {
   const auth = useAuth()
 
@@ -12,9 +18,7 @@ function LandingPage() {
     return <main className="shell"><p>Connecting to secure login…</p></main>
   }
   if (auth.authenticated) {
-    if (auth.roles.includes('interviewer')) return <Navigate to="/interviewer" replace />
-    if (auth.roles.includes('candidate')) return <Navigate to="/candidate" replace />
-    return <Navigate to="/unauthorized" replace />
+    return <Navigate to={dashboardPath(auth.roles)} replace />
   }
 
   return (
