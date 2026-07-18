@@ -5,8 +5,8 @@ from fastapi.testclient import TestClient
 from app.api import question_routes
 from app.config import settings
 from app.domain.question_models import (
-    GenerateQuestionsResponse,
     GeneratedQuestion,
+    GenerateQuestionsResponse,
 )
 from app.main import app
 
@@ -37,7 +37,13 @@ def test_returns_schema_valid_questions(monkeypatch) -> None:
             interview_id=request.interview_id,
             model_policy="interview-question-model",
             prompt_version="direct-question-v1",
-            questions=[\n                GeneratedQuestion(\n                    order=1, prompt="Explain Java virtual threads.", max_score=10\n                )\n            ],
+            questions=[
+                GeneratedQuestion(
+                    order=1,
+                    prompt="Explain Java virtual threads.",
+                    max_score=10,
+                )
+            ],
         )
 
     monkeypatch.setattr(question_routes.generator, "generate", fake_generate)

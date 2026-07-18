@@ -1,8 +1,8 @@
 from app.config import settings
 from app.domain.question_models import (
+    GeneratedQuestion,
     GenerateQuestionsRequest,
     GenerateQuestionsResponse,
-    GeneratedQuestion,
 )
 from app.llm.litellm_client import LiteLLMClient
 
