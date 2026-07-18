@@ -63,3 +63,17 @@ jobs:
       - run: docker build -t online-interview-web-ui:ci apps/web-ui
       - run: docker build -t online-interview-orchestrator:ci apps/interview-orchestrator
       - run: docker build -t online-interview-ai-service:ci apps/ai-service
+      - name: Start AI service container and verify health
+        run: |
+          docker run --detach --name ai-service-smoke --publish 18000:8000 online-interview-ai-service:ci
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:18000/api/v1/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs ai-service-smoke
+          exit 1
+      - name: Stop AI service smoke container
+        if: always()
+        run: docker rm --force ai-service-smoke || true
