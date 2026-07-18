@@ -12,9 +12,15 @@ vi.mock('./auth/keycloak', () => ({
   },
 }))
 
-import { App } from './App'
+import { App, dashboardPath } from './App'
 
 describe('App', () => {
+  it('selects the dashboard from authenticated realm roles', () => {
+    expect(dashboardPath(['candidate'])).toBe('/candidate')
+    expect(dashboardPath(['interviewer'])).toBe('/interviewer')
+    expect(dashboardPath([])).toBe('/unauthorized')
+  })
+
   it('shows the platform entry points after authentication initializes', async () => {
     render(<App />)
     expect(await screen.findByRole('heading', { name: 'Online Interview' })).toBeInTheDocument()
