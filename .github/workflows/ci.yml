@@ -36,8 +36,10 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-          cache: maven
-      - run: mvn --batch-mode verify
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.12"
+      - run: gradle clean test bootJar --no-daemon
 
   ai-service:
     runs-on: ubuntu-latest
@@ -49,7 +51,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
-      - run: python -m pip install ".[dev]"
-      - run: ruff check .
-      - run: pytest --cov=app
+      - run: python -m pip install uv==0.8.22
+      - run: uv sync --frozen --extra dev
+      - run: uv run --extra dev ruff check .
+      - run: uv run --extra dev pytest --cov=app

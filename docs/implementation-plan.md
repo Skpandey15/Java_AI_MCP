@@ -6,9 +6,9 @@ Status: implemented as initial scaffolding.
 
 Deliverables:
 
-- React and TypeScript web application with a tested landing page
-- Java 21 Spring Boot orchestrator with application and actuator health endpoints
-- Python 3.12 FastAPI AI service with a typed and tested health endpoint
+- React and TypeScript web application built with Vite and npm
+- Java 21 Spring Boot orchestrator built with Gradle Kotlin DSL
+- Python 3.12 FastAPI AI service managed and locked with uv
 - Versioned contract directories
 - Multi-stage Dockerfiles and Docker Compose environment
 - Continuous integration for all application builds and tests

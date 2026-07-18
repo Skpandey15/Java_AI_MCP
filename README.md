@@ -47,6 +47,12 @@ Phase 1 foundation is implemented:
 
 See the [implementation plan](docs/implementation-plan.md).
 
+### Build tools
+
+- Web UI: Vite + npm
+- Interview orchestrator: Gradle 8.12 with Kotlin DSL
+- AI service: uv with a committed dependency lockfile
+
 ### Local startup
 
 ```bash
