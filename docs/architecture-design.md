@@ -44,7 +44,9 @@ Questions can be delivered in two modes:
 | Layer | Technology | Responsibility |
 |---|---|---|
 | Web UI | React, TypeScript, Vite, React Router, TanStack Query | Login, dashboards, interview experience |
-| API entry | Spring Cloud Gateway or ingress gateway | Routing, throttling, cross-cutting controls |
+| Application API entry | Spring Cloud Gateway or Traefik ingress | User/API routing, throttling, cross-cutting controls |
+| AI gateway | LiteLLM Gateway | Central OpenAI routing, authentication, budgets, rate limits, fallbacks and AI telemetry |
+| MCP layer | Java/Python MCP SDKs with an MCP registry | Internal platform tools and approved external MCP integrations |
 | Business orchestrator | Java 21+, Spring Boot 3.x | Users, schedules, sessions, workflow, authorization |
 | Authentication | Keycloak using OAuth 2.1/OIDC | Login, registration, MFA-ready identity |
 | AI service | Python 3.12+, FastAPI, LangGraph/LangChain | Direct generation, RAG, evaluation |
@@ -53,7 +55,7 @@ Questions can be delivered in two modes:
 | Cache/state | Redis | Session cache, locks, rate limits, short-lived state |
 | Messaging | Kafka | Asynchronous generation, evaluation, notifications, audit events |
 | Object storage | S3/MinIO | Resumes, source documents, reports, recordings later |
-| LLM providers | OpenAI/Azure OpenAI or local vLLM/Ollama | Model inference via provider abstraction |
+| LLM provider | OpenAI initially, accessed only through LiteLLM | Hosted model inference; provider can change without application changes |
 | Observability | OpenTelemetry, Prometheus, Grafana, Loki/ELK | Metrics, traces, logs |
 | Deployment | Docker Compose locally; Kubernetes in production | Runtime platform |
 
@@ -62,27 +64,34 @@ Questions can be delivered in two modes:
 ```mermaid
 flowchart TB
     UI["React Web Application"]
-    GW["API Gateway / Ingress"]
+    APPGW["Traefik / Application API Gateway"]
     IDP["Keycloak OIDC"]
     ORCH["Spring Boot Interview Orchestrator"]
     AI["Python AI Service"]
+    MCPG["MCP Host / Tool Gateway"]
+    MCPI["Internal MCP Servers"]
+    MCPE["Approved External MCP Servers"]
+    LITE["LiteLLM AI Gateway"]
+    OPENAI["OpenAI API"]
     DATA["PostgreSQL + pgvector"]
     ASYNC["Kafka + Redis"]
     STORE["S3 / MinIO"]
-    LLM["LLM Provider / vLLM"]
 
-    UI --> GW
+    UI --> APPGW
     UI --> IDP
-    GW --> ORCH
-    GW --> AI
+    APPGW --> ORCH
     ORCH --> IDP
     ORCH --> DATA
     ORCH --> ASYNC
     ORCH --> AI
+    AI --> MCPG
+    MCPG --> MCPI
+    MCPG --> MCPE
+    AI --> LITE
+    LITE --> OPENAI
     AI --> DATA
     AI --> ASYNC
     AI --> STORE
-    AI --> LLM
 ```
 
 ### Architectural boundary
@@ -91,7 +100,11 @@ Spring Boot is the **system of record and workflow orchestrator**. It owns autho
 
 Python is a specialized **AI capability service**. It does not decide whether a candidate is allowed to start an interview. Spring Boot validates the request and sends a narrow, versioned AI task to Python.
 
-The browser should call Spring Boot for business workflows. Streaming AI responses may be proxied through Spring Boot or exposed through a gateway-protected AI streaming endpoint using a short-lived session token.
+LiteLLM is the **AI Gateway**, not the application gateway. All model requests from the Python AI service—and any approved Java AI client—must go through LiteLLM. Applications must never contain a direct OpenAI endpoint or API key. LiteLLM applies virtual keys, model aliases, budgets, rate limits, retries, fallback policies and centralized AI telemetry.
+
+The MCP layer is the **tool interoperability boundary**, not a replacement for REST, Kafka, or the AI Gateway. The AI service acts as an MCP host/client. It can call narrowly scoped internal MCP servers and approved external MCP servers. Internal platform operations still pass through Spring Boot authorization and application services.
+
+The browser should call Spring Boot for business workflows. The browser must never call LiteLLM, OpenAI, or MCP servers directly. Streaming AI responses may be proxied through Spring Boot using a short-lived interview-session authorization.
 
 ## 5. Major components
 
@@ -127,6 +140,44 @@ Recommended bounded modules:
 - Audit logging
 
 Start as a **modular monolith**. The modules can later be extracted into services when scaling or team ownership justifies it.
+
+### LiteLLM AI Gateway
+
+LiteLLM runs as a separately deployable internal service. Its responsibilities are:
+
+- expose one OpenAI-compatible endpoint to approved backend workloads
+- map stable aliases such as `interview-question-model` and `answer-evaluation-model` to OpenAI models
+- authenticate workloads with separate LiteLLM virtual keys
+- enforce per-service, tenant and use-case budgets
+- apply request and token rate limits
+- retry transient failures and apply explicitly configured fallbacks
+- record latency, token use, model, status and estimated cost
+- redact or avoid logging prompt/response bodies containing candidate data
+- deny model names and parameters that are not allow-listed
+
+OpenAI is the initial upstream provider. The OpenAI API key exists only in a Kubernetes Secret mounted or injected into the LiteLLM pod. Spring Boot, Python, React, configuration files and GitHub must never contain that key.
+
+### MCP architecture
+
+MCP is used in both directions:
+
+1. **Platform MCP servers:** controlled capabilities exposed by this platform.
+2. **External MCP servers:** approved external tools/data used by AI workflows.
+
+The initial internal MCP servers should be:
+
+| MCP server | Example tools | Owner |
+|---|---|---|
+| Interview MCP | `get_interview_context`, `get_skill_blueprint` | Spring Boot |
+| Question Bank MCP | `search_approved_questions`, `check_question_reuse` | Spring Boot |
+| Knowledge MCP | `search_knowledge`, `get_citation` | Python/RAG |
+| Result MCP | `submit_ai_evaluation` | Spring Boot |
+
+Tools must be task-oriented and narrow. Do not expose generic SQL, unrestricted HTTP, filesystem, shell, or arbitrary code-execution tools. Each call carries service identity, tenant ID, actor ID, interview/session ID, trace ID and a short-lived authorization context. Spring Boot revalidates every state-changing tool call.
+
+Approved external MCP servers may later provide GitHub documentation, calendars, enterprise knowledge or notifications. They are disabled by default and registered through an allow-listed MCP registry. Credentials are isolated per server. Tool descriptions are treated as untrusted input, and tool results are scanned, size-limited and policy-checked before being added to an LLM context.
+
+For the first release, use **streamable HTTP** for remotely deployed MCP servers. Local `stdio` transport is reserved for developer tooling, not production Kubernetes communication.
 
 ### Python AI service
 
@@ -219,6 +270,73 @@ The Python service returns validated question objects with expected answer crite
 7. A grounding check rejects or retries unsupported questions.
 
 RAG data must be isolated by organization/tenant. User-uploaded document text must never be inserted into a system prompt without prompt-injection defenses and strict context delimiters.
+
+## 8A. AI Gateway request flow
+
+1. Spring Boot authorizes the interview operation and sends an AI task to Python.
+2. Python selects a stable model policy alias, not a provider-specific model name.
+3. Python calls LiteLLM using an internal service URL and its scoped virtual key.
+4. LiteLLM validates budget, allowed model, rate limits and routing policy.
+5. LiteLLM calls OpenAI using the centrally stored provider key.
+6. LiteLLM returns the response and emits usage/latency telemetry.
+7. Python validates the structured output and returns or publishes a versioned result.
+8. Spring Boot persists the approved domain result and audit metadata.
+
+```mermaid
+sequenceDiagram
+    participant S as Spring Boot
+    participant A as Python AI
+    participant G as LiteLLM
+    participant O as OpenAI
+    participant T as Telemetry
+
+    S->>A: Authorized AI task
+    A->>G: Model alias plus structured prompt
+    G->>G: Auth, quota, policy and routing
+    G->>O: OpenAI request
+    O-->>G: Model response
+    G->>T: Tokens, cost, latency and status
+    G-->>A: Gateway response
+    A->>A: Schema and safety validation
+    A-->>S: Versioned AI result
+```
+
+## 8B. MCP tool-call flow
+
+1. The AI workflow determines that a tool is necessary.
+2. The MCP host checks whether the server and tool are allow-listed for that workflow.
+3. It creates a scoped authorization context with tenant, actor, interview and expiry.
+4. The MCP server validates identity, authorization, input schema and resource ownership.
+5. Read-only calls execute directly; state-changing calls require explicit workflow policy and an idempotency key.
+6. Tool output is validated, size-limited, classified and audited.
+7. Only the minimum required output is returned to the model context.
+
+```mermaid
+sequenceDiagram
+    participant A as AI Agent Host
+    participant R as MCP Registry
+    participant M as MCP Server
+    participant S as Spring Boot
+    participant D as Domain Data
+
+    A->>R: Resolve approved tool
+    R-->>A: Endpoint and policy
+    A->>M: Tool call plus scoped context
+    M->>S: Authorized application command/query
+    S->>D: Enforce tenant and domain rules
+    D-->>S: Result
+    S-->>M: Minimal response
+    M-->>A: Validated tool result
+```
+
+### MCP authorization rules
+
+- Candidate-facing sessions receive only candidate-safe read/write tools for their assigned session.
+- Interviewer tools require the `INTERVIEWER` role and ownership/tenant checks.
+- AI workflows cannot elevate privileges beyond the initiating actor or approved service policy.
+- Destructive or externally visible actions require an explicit application command; the model cannot silently authorize them.
+- Every tool call records tool name, arguments hash, actor/service, target resource, outcome and latency.
+- Secrets, hidden rubrics and expected answers are filtered from candidate-scoped tool results.
 
 ## 9. Logical data model
 
@@ -504,6 +622,13 @@ ai-service/
 │   │   ├── embeddings.py
 │   │   ├── retrieval.py
 │   │   └── grounding.py
+│   ├── gateway/
+│   │   └── litellm_client.py
+│   ├── mcp/
+│   │   ├── host.py
+│   │   ├── registry.py
+│   │   ├── policy.py
+│   │   └── clients/
 │   ├── messaging/
 │   └── observability/
 └── tests/
@@ -615,16 +740,20 @@ flowchart TB
     EDGE["WAF / Load Balancer"]
     K8S["Kubernetes Cluster"]
     APPS["React + Gateway + Spring Boot"]
-    AIS["Python AI Workers"]
+    AIS["Python AI Workers + MCP Host"]
+    MCP["Internal MCP Servers"]
+    LITE["LiteLLM Gateway"]
     MANAGED["PostgreSQL, Redis, Kafka, Object Storage"]
-    MODEL["Managed LLM or GPU Inference"]
+    MODEL["OpenAI API"]
 
     EDGE --> K8S
     K8S --> APPS
     K8S --> AIS
     APPS --> MANAGED
     AIS --> MANAGED
-    AIS --> MODEL
+    AIS --> MCP
+    AIS --> LITE
+    LITE --> MODEL
 ```
 
 Run web/API workloads and AI workers with separate scaling policies. Scale Spring Boot using CPU/request latency; scale AI workers using Kafka lag, concurrent inference requests, and provider limits.
@@ -642,7 +771,12 @@ Java_AI_MCP/
 │   ├── web-ui/
 │   ├── interview-orchestrator/
 │   └── ai-service/
+├── services/
+│   ├── mcp-interview-server/
+│   ├── mcp-knowledge-server/
+│   └── mcp-registry/
 ├── platform/
+│   ├── litellm/
 │   ├── docker/
 │   ├── kubernetes/
 │   ├── terraform/
@@ -686,12 +820,18 @@ A monorepo is appropriate for the initial team because API contracts and end-to-
 ### Phase 3 — AI generation
 
 - Python FastAPI service
+- LiteLLM Gateway with OpenAI model aliases, virtual keys, budgets and telemetry
+- OpenAI secret injected only into LiteLLM
 - Direct LLM question generation
 - Structured output and prompt/model versioning
 - Kafka-based asynchronous evaluation
 
-### Phase 4 — RAG
+### Phase 4 — RAG and MCP
 
+- Internal MCP registry and policy enforcement
+- Interview, question-bank and knowledge MCP servers
+- MCP host/client integration in the Python AI workflows
+- Approved external MCP connection framework
 - Document upload and ingestion
 - pgvector retrieval and reranking
 - Grounded question generation with citations
@@ -714,7 +854,11 @@ A monorepo is appropriate for the initial team because API contracts and end-to-
 6. **Use asynchronous evaluation so submission remains reliable during LLM latency.**
 7. **Version prompts, models, rubrics, question sets, and AI contracts for auditability.**
 8. **Adopt Kafka only for durable asynchronous workflows; use synchronous REST for immediate commands.**
+9. **Route every model call through LiteLLM; OpenAI credentials exist only at the gateway.**
+10. **Use MCP as a governed tool boundary, not as a replacement for domain APIs or events.**
+11. **Support MCP in both directions through an allow-listed registry and least-privilege tool policies.**
+12. **Never expose LiteLLM or MCP endpoints directly to the React application or the public internet.**
 
 ## 24. Definition of MVP success
 
-The MVP is complete when an interviewer can create and schedule an interview, a registered candidate can see and complete it within the allowed window, questions can be generated directly by an LLM or from a selected RAG collection, answers survive failures and retries, evaluation produces an auditable result, and each user sees only data permitted by their role and tenant.
+The MVP is complete when an interviewer can create and schedule an interview, a registered candidate can see and complete it within the allowed window, questions can be generated directly by an LLM or from a selected RAG collection, answers survive failures and retries, evaluation produces an auditable result, and each user sees only data permitted by their role and tenant. All model traffic must be governed by LiteLLM, while all MCP tool calls must be allow-listed, scoped, validated and auditable.
