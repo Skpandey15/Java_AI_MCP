@@ -15,6 +15,8 @@ export function InterviewerDashboard() {
   const [startsAt, setStartsAt] = useState('')
   const [endsAt, setEndsAt] = useState('')
   const [message, setMessage] = useState('')
+  const [questionPrompt, setQuestionPrompt] = useState('')
+  const [questionOrder, setQuestionOrder] = useState(1)
 
   const load = () => interviewApi.listOwned().then(setInterviews)
     .catch(() => setMessage('Unable to load interviews.'))
@@ -36,6 +38,14 @@ export function InterviewerDashboard() {
     await interviewApi.publish(id)
     setMessage('Interview published.')
     await load()
+  }
+
+  async function addQuestion(event: FormEvent, id: string) {
+    event.preventDefault()
+    await interviewApi.addQuestion(id, { order: questionOrder, prompt: questionPrompt, maxScore: 10 })
+    setQuestionPrompt('')
+    setQuestionOrder((current) => current + 1)
+    setMessage('Manual question added.')
   }
 
   async function assign(event: FormEvent, id: string) {
@@ -73,7 +83,14 @@ export function InterviewerDashboard() {
             <h2>{interview.title}</h2>
             <p>{interview.skills.join(', ')} · {interview.difficulty} · {interview.durationMinutes} min</p>
             <p><strong>Status:</strong> {interview.status}</p>
-            {interview.status === 'DRAFT' && <button onClick={() => void publish(interview.id)}>Publish</button>}
+            {interview.status === 'DRAFT' && <>
+              <form className="assignment-form" onSubmit={(event) => void addQuestion(event, interview.id)}>
+                <label>Question order<input type="number" min="1" max="100" value={questionOrder} onChange={(e) => setQuestionOrder(Number(e.target.value))} /></label>
+                <label>Manual question<textarea required value={questionPrompt} onChange={(e) => setQuestionPrompt(e.target.value)} /></label>
+                <button type="submit">Add question</button>
+              </form>
+              <button onClick={() => void publish(interview.id)}>Publish</button>
+            </>}
             {interview.status === 'PUBLISHED' && (
               <form className="assignment-form" onSubmit={(event) => void assign(event, interview.id)}>
                 <label>Candidate profile ID<input required value={candidateId} onChange={(e) => setCandidateId(e.target.value)} /></label>

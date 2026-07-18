@@ -34,3 +34,8 @@ textarea { min-height: 90px; resize: vertical; }
 .secondary-button { color: #1266d4; background: white; }
 .status-message { padding: .8rem 1rem; border-radius: 8px; color: #175f35; background: #e8f7ed; }
 .error { color: #a32121; }
+
+.timer { padding: .8rem 1rem; border-radius: 10px; color: white; background: #10233f; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.question-card { margin: 1rem 0; padding: 1.25rem; border: 1px solid #d7e2ef; border-radius: 14px; background: #f9fbfe; }
+.question-card textarea { min-height: 180px; }
+button:disabled, textarea:disabled { cursor: not-allowed; opacity: .55; }

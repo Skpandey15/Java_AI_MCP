@@ -15,6 +15,19 @@ export type Interview = {
   createdAt: string
 }
 
+export type Question = { id: string; order: number; prompt: string; maxScore: number }
+export type SavedAnswer = { id: string; questionId: string; content: string; updatedAt: string; version: number }
+export type InterviewSession = {
+  id: string
+  assignmentId: string
+  state: string
+  startedAt: string
+  expiresAt: string
+  serverTime: string
+  questions: Question[]
+  answers: SavedAnswer[]
+}
+
 export type Assignment = {
   id: string
   interviewId: string
@@ -54,4 +67,24 @@ export const interviewApi = {
     { method: 'POST', body: JSON.stringify(body) },
   ),
   candidateAssignments: () => request<Assignment[]>('/api/v1/candidate/interviews'),
+  addQuestion: (interviewId: string, body: object) => request<Question>(
+    `/api/v1/interviews/${interviewId}/questions`,
+    { method: 'POST', body: JSON.stringify(body) },
+  ),
+  listQuestions: (interviewId: string) => request<Question[]>(
+    `/api/v1/interviews/${interviewId}/questions`,
+  ),
+  startSession: (assignmentId: string) => request<InterviewSession>(
+    `/api/v1/candidate/assignments/${assignmentId}/sessions`, { method: 'POST' },
+  ),
+  loadSession: (sessionId: string) => request<InterviewSession>(
+    `/api/v1/candidate/sessions/${sessionId}`,
+  ),
+  saveAnswer: (sessionId: string, questionId: string, content: string, expectedVersion: number) =>
+    request<SavedAnswer>(`/api/v1/candidate/sessions/${sessionId}/answers/${questionId}`, {
+      method: 'PUT', body: JSON.stringify({ content, expectedVersion }),
+    }),
+  submitSession: (sessionId: string) => request<InterviewSession>(
+    `/api/v1/candidate/sessions/${sessionId}/submit`, { method: 'POST' },
+  ),
 }

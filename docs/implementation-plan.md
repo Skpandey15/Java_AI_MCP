@@ -29,8 +29,8 @@ Acceptance criteria:
 - PostgreSQL/Flyway user-profile persistence (implemented in Phase 2A)
 - Interview definitions, publishing, assignments and scheduling (implemented in Phase 2B)
 - Candidate upcoming-interview API backed by PostgreSQL (implemented in Phase 2B)
-- Session state machine, server timer and answer autosave
-- Manual question sets for deterministic end-to-end testing
+- Session state machine, server timer and optimistic answer autosave (implemented in Phase 2C)
+- Manual question sets for deterministic end-to-end testing (implemented in Phase 2C)
 
 ## Phase 3 — AI generation and evaluation
 

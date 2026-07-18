@@ -1,0 +1,16 @@
+openapi: 3.1.0
+info:
+  title: Online Interview Session API
+  version: 1.0.0
+paths:
+  /api/v1/interviews/{interviewId}/questions:
+    post: { summary: Add a manual question to an owned draft interview }
+    get: { summary: List manual questions for an owned interview }
+  /api/v1/candidate/assignments/{assignmentId}/sessions:
+    post: { summary: Idempotently start or resume an assignment attempt }
+  /api/v1/candidate/sessions/{sessionId}:
+    get: { summary: Load server-authoritative session, questions and saved answers }
+  /api/v1/candidate/sessions/{sessionId}/answers/{questionId}:
+    put: { summary: Autosave an answer using its expected optimistic version }
+  /api/v1/candidate/sessions/{sessionId}/submit:
+    post: { summary: Submit an active session before server expiry }

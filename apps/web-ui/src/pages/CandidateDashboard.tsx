@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { interviewApi, type Assignment } from '../api/interviewApi'
 import { useAuth } from '../auth/AuthProvider'
 
 export function CandidateDashboard() {
   const auth = useAuth()
+  const navigate = useNavigate()
+  const [starting, setStarting] = useState('')
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [error, setError] = useState('')
 
@@ -12,6 +15,17 @@ export function CandidateDashboard() {
       .then(setAssignments)
       .catch(() => setError('Unable to load interviews. Please try again.'))
   }, [])
+
+  async function start(assignmentId: string) {
+    setStarting(assignmentId)
+    try {
+      const session = await interviewApi.startSession(assignmentId)
+      navigate(`/candidate/sessions/${session.id}`)
+    } catch {
+      setError('This interview cannot be started outside its scheduled window.')
+      setStarting('')
+    }
+  }
 
   return (
     <main className="dashboard">
@@ -29,6 +43,7 @@ export function CandidateDashboard() {
             <p><strong>Starts:</strong> {new Date(assignment.startsAt).toLocaleString()}</p>
             <p><strong>Ends:</strong> {new Date(assignment.endsAt).toLocaleString()}</p>
             <p><strong>Maximum attempts:</strong> {assignment.maxAttempts}</p>
+            <button disabled={starting === assignment.id} onClick={() => void start(assignment.id)}>{starting === assignment.id ? 'Starting…' : 'Start or resume'}</button>
           </article>
         ))}
       </div>
