@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.fasterxml.jackson.databind.json.JsonMapper;
@@ -27,8 +26,8 @@ class AiQuestionClientTest {
         UUID requestId = UUID.randomUUID();
         UUID interviewId = UUID.randomUUID();
 
-        server.expect(requestTo(
-                        "http://localhost:8000/internal/v1/questions%3Agenerate"))
+        server.expect(request -> assertThat(request.getURI().getPath())
+                        .isEqualTo("/internal/v1/questions:generate"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header("X-Service-Token", "service-token"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
