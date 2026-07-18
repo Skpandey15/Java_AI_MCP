@@ -13,6 +13,8 @@ An AI-assisted online interview platform for the Java and AI ecosystems.
 - RAG-grounded questions from approved knowledge sources
 - Spring Boot workflow orchestration
 - Python-based LLM and RAG services
+- LiteLLM AI Gateway for centralized OpenAI access, budgets and observability
+- Bidirectional MCP integration for internal platform tools and approved external tools
 - React web application
 - Auditable answer evaluation and results
 
@@ -28,6 +30,8 @@ See the complete [High-Level Design and Low-Level Design](docs/architecture-desi
 - Keycloak
 - PostgreSQL and pgvector
 - Redis and Kafka
+- LiteLLM Gateway and OpenAI
+- Model Context Protocol (MCP)
 - Docker and Kubernetes
 
 ### Status
