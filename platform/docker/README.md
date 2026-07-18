@@ -24,6 +24,6 @@ docker compose -f platform/docker/docker-compose.yml down
 
 ```bash
 cd apps/web-ui && npm install && npm test && npm run build
-cd apps/interview-orchestrator && gradle clean test bootJar
+cd apps/interview-orchestrator && ./gradlew clean test bootJar
 cd apps/ai-service && uv sync --extra dev && uv run --extra dev pytest
 ```

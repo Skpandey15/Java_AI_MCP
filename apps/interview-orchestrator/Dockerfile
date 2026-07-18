@@ -1,8 +1,9 @@
-FROM gradle:8.12-jdk21 AS build
+FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /workspace
-COPY settings.gradle build.gradle ./
+COPY gradlew settings.gradle build.gradle ./
+COPY gradle gradle
 COPY src src
-RUN gradle clean bootJar --no-daemon
+RUN chmod +x gradlew && ./gradlew clean bootJar --no-daemon
 
 FROM eclipse-temurin:21-jre-alpine
 RUN addgroup -S app && adduser -S app -G app

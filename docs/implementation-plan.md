@@ -7,7 +7,7 @@ Status: implemented as initial scaffolding.
 Deliverables:
 
 - React and TypeScript web application built with Vite and npm
-- Java 21 Spring Boot orchestrator built with Gradle Groovy DSL
+- Java 21 Spring Boot orchestrator built with the Gradle Wrapper and Groovy DSL
 - Python 3.12 FastAPI AI service managed and locked with uv
 - Versioned contract directories
 - Multi-stage Dockerfiles and Docker Compose environment

@@ -37,9 +37,8 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.12"
-      - run: gradle clean test bootJar --no-daemon
+      - run: chmod +x gradlew
+      - run: ./gradlew clean test bootJar --no-daemon
 
   ai-service:
     runs-on: ubuntu-latest

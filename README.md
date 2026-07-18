@@ -50,7 +50,7 @@ See the [implementation plan](docs/implementation-plan.md).
 ### Build tools
 
 - Web UI: Vite + npm
-- Interview orchestrator: Gradle 8.12 with Groovy DSL
+- Interview orchestrator: Gradle 8.12 Wrapper with Groovy DSL
 - AI service: uv with a committed dependency lockfile
 
 ### Local startup
