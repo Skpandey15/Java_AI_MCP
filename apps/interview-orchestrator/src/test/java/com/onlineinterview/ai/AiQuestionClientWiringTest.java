@@ -17,8 +17,8 @@ class AiQuestionClientWiringTest {
                     "test", Map.of(
                             "app.ai-service.base-url", "http://127.0.0.1:8000",
                             "app.ai-service.service-token", "service-token")));
-            context.registerBean(RestClient.Builder.class, RestClient::builder);
-            context.registerBean(ObjectMapper.class, ObjectMapper::new);
+            context.registerBean(RestClient.Builder.class, () -> RestClient.builder());
+            context.registerBean(ObjectMapper.class, () -> new ObjectMapper());
             context.register(AiQuestionClient.class);
 
             context.refresh();
