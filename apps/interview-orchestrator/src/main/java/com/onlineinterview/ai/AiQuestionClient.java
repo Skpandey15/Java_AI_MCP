@@ -2,7 +2,6 @@ package com.onlineinterview.ai;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,7 +25,7 @@ public class AiQuestionClient {
 
     public GenerationResponse generate(GenerationRequest request) {
         return client.post()
-                .uri(URI.create("/internal/v1/questions:generate"))
+                .uri("/internal/v1/questions:generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("X-Service-Token", serviceToken)
                 .body(jsonBody(request))
