@@ -1,4 +1,11 @@
-export function App() {
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { AuthProvider, useAuth } from './auth/AuthProvider'
+import { ProtectedRoute } from './auth/ProtectedRoute'
+import { CandidateDashboard } from './pages/CandidateDashboard'
+import { InterviewerDashboard } from './pages/InterviewerDashboard'
+
+function LandingPage() {
+  const auth = useAuth()
   return (
     <main className="shell">
       <section className="hero" aria-labelledby="page-title">
@@ -9,11 +16,26 @@ export function App() {
           and for candidates to complete their assigned sessions.
         </p>
         <div className="actions">
-          <button type="button">Candidate login</button>
-          <button className="secondary" type="button">Interviewer login</button>
+          <button type="button" onClick={auth.login}>Login</button>
+          <button className="secondary" type="button" onClick={auth.register}>Candidate registration</button>
         </div>
         <p className="status">Phase 1 foundation is running.</p>
       </section>
     </main>
+  )
+}
+
+export function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/candidate" element={<ProtectedRoute role="candidate"><CandidateDashboard /></ProtectedRoute>} />
+          <Route path="/interviewer" element={<ProtectedRoute role="interviewer"><InterviewerDashboard /></ProtectedRoute>} />
+          <Route path="/unauthorized" element={<main className="dashboard"><h1>Access denied</h1><p>Your account does not have permission for this dashboard.</p></main>} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }

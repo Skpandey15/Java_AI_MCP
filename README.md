@@ -45,6 +45,14 @@ Phase 1 foundation is implemented:
 - Dockerfiles, Docker Compose and GitHub Actions CI
 - Shared API-contract directories
 
+Phase 2A identity foundation is also implemented:
+
+- Keycloak OIDC with PKCE and candidate self-registration
+- Administrative interviewer-role assignment
+- Spring Security OAuth2 resource server
+- PostgreSQL, Flyway and JPA user profiles
+- Role-protected React dashboard routes
+
 See the [implementation plan](docs/implementation-plan.md).
 
 ### Build tools

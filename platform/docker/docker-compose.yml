@@ -1,4 +1,31 @@
 services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: online_interview
+      POSTGRES_USER: interview
+      POSTGRES_PASSWORD: interview
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U interview -d online_interview"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1.0
+    command: ["start-dev", "--import-realm", "--health-enabled=true"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    ports:
+      - "8090:8080"
+    volumes:
+      - ./keycloak/online-interview-realm.json:/opt/keycloak/data/import/online-interview-realm.json:ro
+
   web-ui:
     build:
       context: ../../apps/web-ui
@@ -15,6 +42,11 @@ services:
       context: ../../apps/interview-orchestrator
     environment:
       SERVER_PORT: 8080
+      DATABASE_URL: jdbc:postgresql://postgres:5432/online_interview
+      DATABASE_USERNAME: interview
+      DATABASE_PASSWORD: interview
+      KEYCLOAK_ISSUER_URI: http://localhost:8090/realms/online-interview
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/online-interview/protocol/openid-connect/certs
     ports:
       - "8080:8080"
     healthcheck:
@@ -23,6 +55,11 @@ services:
       timeout: 3s
       retries: 10
       start_period: 20s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
 
   ai-service:
     build:
@@ -35,3 +72,6 @@ services:
       timeout: 3s
       retries: 10
       start_period: 10s
+
+volumes:
+  postgres-data:

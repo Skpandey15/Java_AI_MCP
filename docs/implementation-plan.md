@@ -24,9 +24,9 @@ Acceptance criteria:
 
 ## Phase 2 — Identity and interview workflow
 
-- Keycloak OIDC login and registration
-- Candidate and interviewer profile mapping
-- PostgreSQL/Flyway persistence
+- Keycloak OIDC login and candidate registration (implemented in Phase 2A)
+- Candidate and interviewer role mapping (foundation implemented in Phase 2A)
+- PostgreSQL/Flyway user-profile persistence (implemented in Phase 2A)
 - Interview definitions, assignments and scheduling
 - Candidate upcoming-interview dashboard
 - Session state machine, server timer and answer autosave

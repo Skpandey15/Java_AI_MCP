@@ -13,6 +13,11 @@ Endpoints:
 - Spring Boot actuator: http://localhost:8080/actuator/health
 - Python health: http://localhost:8000/api/v1/health
 - Python API docs: http://localhost:8000/docs
+- Keycloak: http://localhost:8090
+- Keycloak administration: http://localhost:8090/admin (local credentials: `admin` / `admin`)
+- PostgreSQL: localhost:5432 (`online_interview` database)
+
+Candidate self-registration is available from the UI. The default Keycloak realm role is `candidate`. Assign the `interviewer` realm role only through Keycloak administration.
 
 Stop the environment with:
 
