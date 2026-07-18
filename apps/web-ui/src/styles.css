@@ -20,3 +20,17 @@ h1 { margin: 0; font-size: clamp(2.6rem, 7vw, 5rem); line-height: .98; }
 .status { margin: 2rem 0 0; color: #66809c; font-size: .9rem; }
 .dashboard { width: min(960px, calc(100% - 2rem)); margin: 3rem auto; padding: 2rem; border-radius: 18px; background: white; box-shadow: 0 18px 50px rgba(35,74,122,.12); }
 @media (max-width: 600px) { .hero { padding: 2rem; } .actions button { width: 100%; } }
+
+.dashboard h1 { font-size: clamp(2rem, 5vw, 3.5rem); }
+.dashboard-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-top: 2rem; }
+.card, .form-grid { border: 1px solid #d7e2ef; border-radius: 14px; padding: 1.25rem; background: #f9fbfe; }
+.form-grid, .assignment-form { display: grid; gap: .9rem; }
+.form-grid { margin-bottom: 2rem; }
+label { display: grid; gap: .35rem; color: #52647a; font-weight: 600; }
+input, textarea, select { width: 100%; padding: .7rem; border: 1px solid #b9c8da; border-radius: 8px; font: inherit; background: white; }
+textarea { min-height: 90px; resize: vertical; }
+.card button, .form-grid button, .secondary-button { width: fit-content; padding: .7rem 1rem; border: 1px solid #1266d4; border-radius: 8px; color: white; background: #1266d4; cursor: pointer; }
+.secondary-button { color: #1266d4; background: white; }
+.status-message { padding: .8rem 1rem; border-radius: 8px; color: #175f35; background: #e8f7ed; }
+.error { color: #a32121; }
