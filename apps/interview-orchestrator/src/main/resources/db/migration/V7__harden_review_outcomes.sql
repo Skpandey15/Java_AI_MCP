@@ -8,12 +8,12 @@ ALTER TABLE interview_definition
 ALTER TABLE interview_session
     ADD COLUMN result_outcome VARCHAR(30);
 
+UPDATE interview_session
+SET result_outcome = 'NOT_SELECTED'
+WHERE review_status = 'REVIEWED';
+
 UPDATE interview_session session
-SET result_outcome = CASE
-    WHEN session.total_score * 100 >= definition.passing_percentage * question_totals.max_score
-        THEN 'PASSED'
-    ELSE 'NOT_SELECTED'
-END
+SET result_outcome = 'PASSED'
 FROM interview_assignment assignment
 JOIN interview_definition definition ON definition.id = assignment.interview_definition_id
 JOIN (
