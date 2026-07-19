@@ -27,6 +27,13 @@ public class InterviewSession {
     @Column(name = "started_at", nullable = false) private Instant startedAt;
     @Column(name = "expires_at", nullable = false) private Instant expiresAt;
     @Column(name = "submitted_at") private Instant submittedAt;
+    @Enumerated(EnumType.STRING) @Column(name = "review_status", nullable = false)
+    private ReviewStatus reviewStatus;
+    @Column(name = "objective_score", nullable = false) private int objectiveScore;
+    @Column(name = "total_score") private Integer totalScore;
+    @Column(name = "review_feedback", length = 4000) private String reviewFeedback;
+    @Column(name = "reviewed_at") private Instant reviewedAt;
+    @Column(name = "reviewer_subject") private String reviewerSubject;
     @Version private long version;
 
     protected InterviewSession() {}
@@ -40,6 +47,7 @@ public class InterviewSession {
         session.candidateId = candidateId;
         session.state = SessionState.IN_PROGRESS;
         session.startedAt = now;
+        session.reviewStatus = ReviewStatus.NOT_SUBMITTED;
         session.expiresAt = durationExpiry.isBefore(assignment.getEndsAt())
                 ? durationExpiry : assignment.getEndsAt();
         return session;
@@ -58,6 +66,25 @@ public class InterviewSession {
         }
         state = SessionState.SUBMITTED;
         submittedAt = now;
+        reviewStatus = ReviewStatus.PENDING_REVIEW;
+    }
+
+    public void recordObjectiveScore(int score) {
+        if (state != SessionState.SUBMITTED) {
+            throw new IllegalStateException("Only submitted sessions can be scored");
+        }
+        objectiveScore = score;
+    }
+
+    public void finalizeReview(int score, String feedback, String reviewer, Instant now) {
+        if (state != SessionState.SUBMITTED || reviewStatus != ReviewStatus.PENDING_REVIEW) {
+            throw new IllegalStateException("Only pending submissions can be finalized");
+        }
+        totalScore = score;
+        reviewFeedback = feedback;
+        reviewerSubject = reviewer;
+        reviewedAt = now;
+        reviewStatus = ReviewStatus.REVIEWED;
     }
 
     public UUID getId() { return id; }
@@ -67,4 +94,9 @@ public class InterviewSession {
     public Instant getStartedAt() { return startedAt; }
     public Instant getExpiresAt() { return expiresAt; }
     public Instant getSubmittedAt() { return submittedAt; }
+    public ReviewStatus getReviewStatus() { return reviewStatus; }
+    public int getObjectiveScore() { return objectiveScore; }
+    public Integer getTotalScore() { return totalScore; }
+    public String getReviewFeedback() { return reviewFeedback; }
+    public Instant getReviewedAt() { return reviewedAt; }
 }

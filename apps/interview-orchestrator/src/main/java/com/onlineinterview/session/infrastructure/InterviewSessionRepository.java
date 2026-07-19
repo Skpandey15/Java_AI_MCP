@@ -2,6 +2,7 @@ package com.onlineinterview.session.infrastructure;
 
 import com.onlineinterview.session.domain.InterviewSession;
 import com.onlineinterview.session.domain.SessionState;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -14,6 +15,14 @@ public interface InterviewSessionRepository extends JpaRepository<InterviewSessi
 
     @EntityGraph(attributePaths = {"assignment", "assignment.interviewDefinition"})
     Optional<InterviewSession> findByIdAndCandidateId(UUID id, UUID candidateId);
+
+    @EntityGraph(attributePaths = {"assignment", "assignment.interviewDefinition"})
+    List<InterviewSession> findByAssignment_InterviewDefinition_OwnerSubjectAndStateOrderBySubmittedAtDesc(
+            String ownerSubject, SessionState state);
+
+    @EntityGraph(attributePaths = {"assignment", "assignment.interviewDefinition"})
+    Optional<InterviewSession> findByIdAndAssignment_InterviewDefinition_OwnerSubject(
+            UUID id, String ownerSubject);
 
     long countByAssignmentId(UUID assignmentId);
 }

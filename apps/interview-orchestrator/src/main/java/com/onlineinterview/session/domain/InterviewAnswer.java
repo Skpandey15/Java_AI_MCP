@@ -10,6 +10,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
 import java.time.Instant;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -23,6 +24,9 @@ public class InterviewAnswer {
     @JoinColumn(name = "question_id", nullable = false) private ManualQuestion question;
     @Column(nullable = false, length = 12000) private String content;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
+    @Column(name = "awarded_score") private Integer awardedScore;
+    @Column(name = "reviewer_feedback", length = 4000) private String reviewerFeedback;
+    @Column(name = "auto_scored", nullable = false) private boolean autoScored;
     @Version private long version;
 
     protected InterviewAnswer() {}
@@ -38,6 +42,27 @@ public class InterviewAnswer {
         return answer;
     }
 
+    public void scoreObjective() {
+        if (question.getType() == QuestionType.MCQ_SINGLE) {
+            awardedScore = question.getCorrectAnswers().contains(content) ? question.getMaxScore() : 0;
+            autoScored = true;
+        } else if (question.getType() == QuestionType.MCQ_MULTIPLE) {
+            var selected = Set.copyOf(content.lines().filter(value -> !value.isBlank()).toList());
+            awardedScore = selected.equals(Set.copyOf(question.getCorrectAnswers()))
+                    ? question.getMaxScore() : 0;
+            autoScored = true;
+        }
+    }
+
+    public void review(int score, String feedback) {
+        if (score < 0 || score > question.getMaxScore()) {
+            throw new IllegalArgumentException("Score must be between 0 and " + question.getMaxScore());
+        }
+        awardedScore = score;
+        reviewerFeedback = feedback;
+        autoScored = false;
+    }
+
     public void update(String content, long expectedVersion, Instant now) {
         if (version != expectedVersion) {
             throw new IllegalStateException("Answer was updated by another request");
@@ -48,7 +73,11 @@ public class InterviewAnswer {
 
     public UUID getId() { return id; }
     public UUID getQuestionId() { return question.getId(); }
+    public ManualQuestion getQuestion() { return question; }
     public String getContent() { return content; }
     public Instant getUpdatedAt() { return updatedAt; }
     public long getVersion() { return version; }
+    public Integer getAwardedScore() { return awardedScore; }
+    public String getReviewerFeedback() { return reviewerFeedback; }
+    public boolean isAutoScored() { return autoScored; }
 }

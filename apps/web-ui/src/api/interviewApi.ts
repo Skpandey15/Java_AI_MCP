@@ -41,6 +41,27 @@ export type InterviewSession = {
   answers: SavedAnswer[]
 }
 
+export type SubmissionSummary = {
+  sessionId: string; interviewTitle: string; candidateName: string; candidateEmail: string
+  submittedAt: string; reviewStatus: string; totalScore?: number; maxScore: number
+}
+export type ReviewQuestion = {
+  questionId: string; answerId?: string; order: number; type: QuestionType; prompt: string
+  options: string[]; correctAnswers: string[]; content: string; maxScore: number
+  awardedScore?: number; feedback?: string; autoScored: boolean
+}
+export type SubmissionDetail = {
+  sessionId: string; interviewTitle: string; candidateName: string; candidateEmail: string
+  submittedAt: string; reviewStatus: string; objectiveScore: number; totalScore?: number
+  maxScore: number; feedback?: string; questions: ReviewQuestion[]
+}
+export type CandidateResult = {
+  sessionId: string; interviewTitle: string; submittedAt: string; reviewStatus: string
+  totalScore?: number; maxScore: number; feedback?: string
+  answers: Array<{ order: number; type: QuestionType; prompt: string; content: string
+    maxScore: number; awardedScore?: number; feedback?: string }>
+}
+
 export type Assignment = {
   id: string
   interviewId: string
@@ -125,6 +146,21 @@ export const interviewApi = {
     request<SavedAnswer>(`/api/v1/candidate/sessions/${sessionId}/answers/${questionId}`, {
       method: 'PUT', body: JSON.stringify({ content, expectedVersion }),
     }),
+  submissions: () => request<SubmissionSummary[]>('/api/v1/interviewer/submissions'),
+  submission: (sessionId: string) => request<SubmissionDetail>(
+    `/api/v1/interviewer/submissions/${sessionId}`,
+  ),
+  scoreAnswer: (sessionId: string, answerId: string, score: number, feedback: string) =>
+    request<SubmissionDetail>(`/api/v1/interviewer/submissions/${sessionId}/answers/${answerId}/score`, {
+      method: 'PUT', body: JSON.stringify({ score, feedback }),
+    }),
+  finalizeReview: (sessionId: string, feedback: string) =>
+    request<SubmissionDetail>(`/api/v1/interviewer/submissions/${sessionId}/finalize`, {
+      method: 'POST', body: JSON.stringify({ feedback }),
+    }),
+  candidateResult: (sessionId: string) => request<CandidateResult>(
+    `/api/v1/candidate/sessions/${sessionId}/result`,
+  ),
   submitSession: (sessionId: string) => request<InterviewSession>(
     `/api/v1/candidate/sessions/${sessionId}/submit`, { method: 'POST' },
   ),

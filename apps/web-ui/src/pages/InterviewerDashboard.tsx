@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   interviewApi, type AdminQuestion, type Interview, type Profile, type QuestionType,
 } from '../api/interviewApi'
@@ -204,6 +205,7 @@ function InterviewCard({ interview, candidates, notify, reload }: {
 
 export function InterviewerDashboard() {
   const auth = useAuth()
+  const navigate = useNavigate()
   const [interviews, setInterviews] = useState<Interview[]>([])
   const [candidates, setCandidates] = useState<Profile[]>([])
   const [form, setForm] = useState(initialForm)
@@ -240,7 +242,7 @@ export function InterviewerDashboard() {
     <main className="dashboard">
       <div className="dashboard-header">
         <div><p className="eyebrow">Interviewer workspace</p><h1>Interview management</h1></div>
-        <button className="secondary-button" onClick={auth.logout}>Sign out</button>
+        <div className="compact-actions"><button onClick={() => navigate('/interviewer/submissions')}>Review submissions</button><button className="secondary-button" onClick={auth.logout}>Sign out</button></div>
       </div>
       {message && <p className={hasError ? 'error-message' : 'status-message'}>{message}</p>}
       <form className="form-grid" onSubmit={(event) => void create(event)}>
