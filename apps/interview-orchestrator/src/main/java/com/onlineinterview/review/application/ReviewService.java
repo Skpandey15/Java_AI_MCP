@@ -5,6 +5,8 @@ import com.onlineinterview.review.api.CandidateResultResponse;
 import com.onlineinterview.review.api.ReviewQuestionResponse;
 import com.onlineinterview.review.api.SubmissionDetailResponse;
 import com.onlineinterview.review.api.SubmissionSummaryResponse;
+import com.onlineinterview.review.domain.ReviewAuditEvent;
+import com.onlineinterview.review.infrastructure.ReviewAuditEventRepository;
 import com.onlineinterview.session.domain.InterviewAnswer;
 import com.onlineinterview.session.domain.InterviewSession;
 import com.onlineinterview.session.domain.ReviewStatus;
@@ -29,13 +31,16 @@ public class ReviewService {
     private final InterviewAnswerRepository answers;
     private final ManualQuestionRepository questions;
     private final UserProfileRepository profiles;
+    private final ReviewAuditEventRepository auditEvents;
 
     public ReviewService(InterviewSessionRepository sessions, InterviewAnswerRepository answers,
-            ManualQuestionRepository questions, UserProfileRepository profiles) {
+            ManualQuestionRepository questions, UserProfileRepository profiles,
+            ReviewAuditEventRepository auditEvents) {
         this.sessions = sessions;
         this.answers = answers;
         this.questions = questions;
         this.profiles = profiles;
+        this.auditEvents = auditEvents;
     }
 
     @Transactional(readOnly = true)
@@ -54,11 +59,9 @@ public class ReviewService {
     public SubmissionDetailResponse score(String ownerSubject, UUID sessionId, UUID answerId,
             int score, String feedback) {
         var session = ownedPendingSubmission(ownerSubject, sessionId);
-        var answer = answers.findById(answerId)
+        var answer = answers.findByIdAndSession_Id(answerId, sessionId)
                 .filter(item -> item.getQuestion().getInterviewDefinition().getId()
                         .equals(session.getAssignment().getInterviewDefinition().getId()))
-                .filter(item -> answers.findBySession_Id(sessionId).stream()
-                        .anyMatch(candidate -> candidate.getId().equals(item.getId())))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Answer not found"));
         if (answer.isAutoScored()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -69,6 +72,8 @@ public class ReviewService {
         } catch (IllegalArgumentException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
         }
+        auditEvents.save(ReviewAuditEvent.answerScored(
+                sessionId, answerId, ownerSubject, score, feedback, Instant.now()));
         return detail(session);
     }
 
@@ -86,11 +91,20 @@ public class ReviewService {
         }
         int total = answerList.stream().map(InterviewAnswer::getAwardedScore)
                 .filter(java.util.Objects::nonNull).mapToInt(Integer::intValue).sum();
+        var definition = session.getAssignment().getInterviewDefinition();
+        int maxScore = questions.findByInterviewDefinitionIdOrderByOrderAsc(definition.getId())
+                .stream().mapToInt(q -> q.getMaxScore()).sum();
+        Instant now = Instant.now();
         try {
-            session.finalizeReview(total, feedback, ownerSubject, Instant.now());
+            session.finalizeReview(total, maxScore, definition.getPassingPercentage(),
+                    feedback, ownerSubject, now);
         } catch (IllegalStateException exception) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, exception.getMessage(), exception);
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
         }
+        auditEvents.save(ReviewAuditEvent.reviewFinalized(
+                sessionId, ownerSubject, total, feedback, now));
         return detail(session);
     }
 
@@ -109,7 +123,8 @@ public class ReviewService {
         if (session.getReviewStatus() != ReviewStatus.REVIEWED) {
             return new CandidateResultResponse(session.getId(), definition.getTitle(),
                     session.getSubmittedAt(), session.getReviewStatus().name(), null,
-                    maxScore, null, List.of());
+                    maxScore, definition.getPassingPercentage(), null,
+                    null, null, List.of());
         }
         Map<UUID, InterviewAnswer> byQuestion = answers.findBySession_Id(sessionId).stream()
                 .collect(Collectors.toMap(InterviewAnswer::getQuestionId, Function.identity()));
@@ -123,7 +138,9 @@ public class ReviewService {
         }).toList();
         return new CandidateResultResponse(session.getId(), definition.getTitle(),
                 session.getSubmittedAt(), session.getReviewStatus().name(),
-                session.getTotalScore(), maxScore, session.getReviewFeedback(), results);
+                session.getTotalScore(), maxScore, definition.getPassingPercentage(),
+                percentage(session.getTotalScore(), maxScore), outcome(session),
+                session.getReviewFeedback(), results);
     }
 
     private SubmissionSummaryResponse summary(InterviewSession session) {
@@ -135,7 +152,8 @@ public class ReviewService {
                 .stream().mapToInt(q -> q.getMaxScore()).sum();
         return new SubmissionSummaryResponse(session.getId(), definition.getTitle(),
                 candidate.getDisplayName(), candidate.getEmail(), session.getSubmittedAt(),
-                session.getReviewStatus().name(), session.getTotalScore(), maxScore);
+                session.getReviewStatus().name(), session.getTotalScore(), maxScore,
+                percentage(session.getTotalScore(), maxScore), outcome(session));
     }
 
     private SubmissionDetailResponse detail(InterviewSession session) {
@@ -160,7 +178,17 @@ public class ReviewService {
         return new SubmissionDetailResponse(session.getId(), definition.getTitle(),
                 candidate.getDisplayName(), candidate.getEmail(), session.getSubmittedAt(),
                 session.getReviewStatus().name(), session.getObjectiveScore(),
-                session.getTotalScore(), maxScore, session.getReviewFeedback(), reviewQuestions);
+                session.getTotalScore(), maxScore, definition.getPassingPercentage(),
+                percentage(session.getTotalScore(), maxScore), outcome(session),
+                session.getReviewFeedback(), reviewQuestions);
+    }
+
+    private Integer percentage(Integer score, int maxScore) {
+        return score == null || maxScore <= 0 ? null : (int) ((long) score * 100 / maxScore);
+    }
+
+    private String outcome(InterviewSession session) {
+        return session.getResultOutcome() == null ? null : session.getResultOutcome().name();
     }
 
     private InterviewSession ownedSubmission(String ownerSubject, UUID sessionId) {
