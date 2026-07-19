@@ -128,7 +128,9 @@ export function InterviewSessionPage() {
       ))}
       <div className="actions">
         <button className="secondary-button" onClick={() => navigate('/candidate')}>Dashboard</button>
-        <button disabled={session.state !== 'IN_PROGRESS' || secondsLeft === 0} onClick={() => void submit()}>Submit interview</button>
+        {session.state === 'SUBMITTED'
+          ? <button onClick={() => navigate(`/candidate/sessions/${session.id}/result`)}>View result</button>
+          : <button disabled={secondsLeft === 0} onClick={() => void submit()}>Submit interview</button>}
       </div>
     </main>
   )
