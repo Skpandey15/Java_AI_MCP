@@ -24,5 +24,8 @@ public interface InterviewSessionRepository extends JpaRepository<InterviewSessi
     Optional<InterviewSession> findByIdAndAssignment_InterviewDefinition_OwnerSubject(
             UUID id, String ownerSubject);
 
+    @EntityGraph(attributePaths = {"assignment", "assignment.interviewDefinition"})
+    List<InterviewSession> findByCandidateIdOrderByStartedAtDesc(UUID candidateId);
+
     long countByAssignmentId(UUID assignmentId);
 }
