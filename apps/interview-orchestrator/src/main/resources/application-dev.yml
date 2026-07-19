@@ -1,0 +1,19 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+logging:
+  level:
+    root: INFO
+    com.onlineinterview: DEBUG
+
+management:
+  endpoint:
+    health:
+      show-details: when-authorized
+
+info:
+  app:
+    environment: dev
+    logging-policy: safe-debug
