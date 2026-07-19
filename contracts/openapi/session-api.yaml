@@ -14,3 +14,13 @@ paths:
     put: { summary: Autosave an answer using its expected optimistic version }
   /api/v1/candidate/sessions/{sessionId}/submit:
     post: { summary: Submit an active session before server expiry }
+  /api/v1/interviewer/submissions:
+    get: { summary: Page through interviewer-owned submitted sessions }
+  /api/v1/interviewer/submissions/{sessionId}:
+    get: { summary: Load an owned submission for review }
+  /api/v1/interviewer/submissions/{sessionId}/answers/{answerId}/score:
+    put: { summary: Score a text answer and append an audit event }
+  /api/v1/interviewer/submissions/{sessionId}/finalize:
+    post: { summary: Atomically finalize and release score, percentage and outcome }
+  /api/v1/candidate/sessions/{sessionId}/result:
+    get: { summary: Return candidate-owned result details only after release }
