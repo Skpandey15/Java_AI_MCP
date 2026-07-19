@@ -11,4 +11,7 @@ public interface InterviewAnswerRepository extends JpaRepository<InterviewAnswer
     @EntityGraph(attributePaths = "question")
     List<InterviewAnswer> findBySession_Id(UUID sessionId);
     Optional<InterviewAnswer> findBySession_IdAndQuestion_Id(UUID sessionId, UUID questionId);
+
+    @EntityGraph(attributePaths = "question")
+    Optional<InterviewAnswer> findByIdAndSession_Id(UUID id, UUID sessionId);
 }
