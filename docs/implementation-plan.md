@@ -77,16 +77,39 @@ Acceptance criteria:
 - Correlation and redaction regression tests
 - Full distributed trace instrumentation follows after the OTLP receiver foundation
 
-## Phase 4 — RAG and MCP
+## Phase 4 — Delivery automation
+
+### Phase 4A — Trusted application artifacts
+
+- GitHub Actions publishes the three application images to GitHub Container Registry after successful main-branch CI
+- Images receive immutable `sha-<commit>` tags plus a convenience `main` tag
+- High and critical known vulnerabilities block publishing
+- SPDX SBOMs are retained as workflow artifacts
+- Images are signed keylessly with GitHub OIDC and receive build-provenance attestations
+- Registry credentials and application secrets are never embedded in images
+
+### Phase 4B — Kubernetes packaging
+
+- Helm charts or Kustomize bases with local, dev, UAT and production overlays
+- Kubernetes Secrets/External Secrets integration and non-secret ConfigMaps
+- Health probes, resource requests/limits and migration-job controls
+- Rancher Desktop validation before shared-cluster deployment
+
+### Phase 4C — GitOps deployment
+
+- Argo CD applications for dev, UAT and production
+- Automatic dev reconciliation and approval-based UAT/production promotion
+- Immutable image-digest promotion, health gates and documented rollback
+
+## Phase 5 — RAG and MCP
 
 - Document ingestion, pgvector retrieval, reranking and citations
 - Internal MCP registry and least-privilege tool policies
 - Interview, question-bank, knowledge and result MCP servers
 - Approved external MCP connection framework
 
-## Phase 5 — Production hardening
+## Phase 6 — Production hardening
 
-- Kubernetes manifests for Rancher Desktop and production profiles
 - Observability, autoscaling, backup and recovery
 - Tenant isolation and security testing
 - AI quality, groundedness, cost and latency evaluations
