@@ -1,4 +1,6 @@
 spring:
+  profiles:
+    default: local
   application:
     name: interview-orchestrator
   datasource:
@@ -49,7 +51,8 @@ management:
 info:
   app:
     name: ${spring.application.name}
-    phase: phase-3a-direct-ai-generation
+    phase: phase-3a4-observability
+    environment: ${spring.profiles.active:${spring.profiles.default}}
 
 app:
   cors:
