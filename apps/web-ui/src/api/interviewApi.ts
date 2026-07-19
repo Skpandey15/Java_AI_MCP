@@ -47,6 +47,9 @@ export type SubmissionSummary = {
   submittedAt: string; reviewStatus: string; totalScore?: number; maxScore: number
   percentage?: number; outcome?: 'PASSED' | 'NOT_SELECTED'
 }
+export type PageResponse<T> = {
+  content: T[]; page: number; size: number; totalElements: number; totalPages: number
+}
 export type ReviewQuestion = {
   questionId: string; answerId?: string; order: number; type: QuestionType; prompt: string
   options: string[]; correctAnswers: string[]; content: string; maxScore: number
@@ -159,7 +162,9 @@ export const interviewApi = {
     request<SavedAnswer>(`/api/v1/candidate/sessions/${sessionId}/answers/${questionId}`, {
       method: 'PUT', body: JSON.stringify({ content, expectedVersion }),
     }),
-  submissions: () => request<SubmissionSummary[]>('/api/v1/interviewer/submissions'),
+  submissions: (page = 0, size = 20) => request<PageResponse<SubmissionSummary>>(
+    `/api/v1/interviewer/submissions?page=${page}&size=${size}`,
+  ),
   submission: (sessionId: string) => request<SubmissionDetail>(
     `/api/v1/interviewer/submissions/${sessionId}`,
   ),
