@@ -245,6 +245,12 @@ stateDiagram-v2
 
 State transitions must be performed atomically by Spring Boot. Use optimistic locking on interview sessions and an idempotency key on start/submit operations.
 
+### Review and result release
+
+The interview definition stores a validated passing percentage. When an interviewer finalizes a review, Spring Boot calculates the result once using integer arithmetic and stores an immutable `PASSED` or `NOT_SELECTED` outcome on the session. The candidate result endpoint withholds total score, per-answer scores, feedback and outcome until the session is `REVIEWED`.
+
+Every manual answer score and finalization appends an immutable audit event containing the actor subject, target session/answer, awarded score, feedback snapshot and timestamp. PostgreSQL constraints prevent reviewed sessions without a total score, outcome, reviewer and review timestamp. Concurrent reviewer writes return HTTP 409 and require reload.
+
 ## 8. Question-generation strategies
 
 ### Direct LLM mode
@@ -384,6 +390,7 @@ erDiagram
 | difficulty | ENUM | EASY, MEDIUM, HARD, MIXED |
 | duration_minutes | INT | Positive limit |
 | question_count | INT | Validated limit |
+| passing_percentage | INT | 1–100; snapshotted into the finalized outcome |
 | skills | JSONB | Versioned skill selection |
 | knowledge_collection_id | UUID | Nullable |
 | status | ENUM | DRAFT, PUBLISHED, ARCHIVED |
@@ -415,6 +422,9 @@ erDiagram
 | expires_at | TIMESTAMP | Server-calculated |
 | current_question_index | INT | Resume support |
 | version | INT | Optimistic lock |
+| review_status | ENUM | NOT_SUBMITTED, PENDING_REVIEW, REVIEWED |
+| total_score | INT | Released aggregate score |
+| result_outcome | ENUM | PASSED, NOT_SELECTED; immutable after finalization |
 
 #### question and answer
 
