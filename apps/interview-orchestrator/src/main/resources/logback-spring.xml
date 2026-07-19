@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <springProperty scope="context" name="rootLogLevel"
+                    source="logging.level.root" defaultValue="INFO"/>
+
+    <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"service":"interview-orchestrator"}</customFields>
+            <includeMdcKeyName>requestId</includeMdcKeyName>
+            <includeKeyValuePairs>true</includeKeyValuePairs>
+            <includeContext>false</includeContext>
+            <includeCallerData>false</includeCallerData>
+            <jsonGeneratorDecorator class="net.logstash.logback.mask.MaskingJsonGeneratorDecorator">
+                <defaultMask>[REDACTED]</defaultMask>
+                <path>authorization</path>
+                <path>password</path>
+                <path>token</path>
+                <path>serviceToken</path>
+                <path>answer</path>
+                <path>content</path>
+                <path>feedback</path>
+                <value>(?i)Bearer\s+[A-Za-z0-9._~+/=-]+</value>
+                <value>sk-[A-Za-z0-9_-]{8,}</value>
+            </jsonGeneratorDecorator>
+        </encoder>
+    </appender>
+
+    <logger name="org.springframework.security" level="WARN"/>
+    <logger name="org.hibernate.SQL" level="WARN"/>
+    <logger name="org.apache.coyote.http11.Http11Processor" level="WARN"/>
+
+    <root level="${rootLogLevel}">
+        <appender-ref ref="JSON"/>
+    </root>
+</configuration>

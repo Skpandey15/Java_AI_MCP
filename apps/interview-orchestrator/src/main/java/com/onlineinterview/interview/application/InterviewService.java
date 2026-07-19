@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class InterviewService {
+    private static final Logger log = LoggerFactory.getLogger(InterviewService.class);
     private final InterviewDefinitionRepository definitions;
     private final InterviewAssignmentRepository assignments;
     private final UserProfileRepository profiles;
@@ -45,9 +48,14 @@ public class InterviewService {
     public InterviewDefinition create(String ownerSubject, String title, String description,
             List<String> skills, InterviewDifficulty difficulty, QuestionMode questionMode,
             int durationMinutes, int questionCount, int passingPercentage) {
-        return definitions.save(InterviewDefinition.draft(ownerSubject, title, description,
-                skills, difficulty, questionMode, durationMinutes, questionCount,
-                passingPercentage));
+        var definition = definitions.save(InterviewDefinition.draft(
+                ownerSubject, title, description, skills, difficulty, questionMode,
+                durationMinutes, questionCount, passingPercentage));
+        log.atInfo().addKeyValue("event", "interview.created")
+                .addKeyValue("interviewId", definition.getId())
+                .addKeyValue("questionMode", questionMode)
+                .log("Interview draft created");
+        return definition;
     }
 
     @Transactional(readOnly = true)
@@ -66,6 +74,9 @@ public class InterviewService {
         }
         try {
             definition.publish();
+            log.atInfo().addKeyValue("event", "interview.published")
+                    .addKeyValue("interviewId", definition.getId())
+                    .log("Interview published");
         } catch (IllegalStateException exception) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, exception.getMessage(), exception);
         }
@@ -82,8 +93,14 @@ public class InterviewService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Profile is not an active candidate");
         }
         try {
-            return assignments.save(InterviewAssignment.schedule(
+            var assignment = assignments.save(InterviewAssignment.schedule(
                     definition, candidateId, startsAt, endsAt, maxAttempts));
+            log.atInfo().addKeyValue("event", "interview.assigned")
+                    .addKeyValue("interviewId", interviewId)
+                    .addKeyValue("assignmentId", assignment.getId())
+                    .addKeyValue("candidateId", candidateId)
+                    .log("Candidate assigned to interview");
+            return assignment;
         } catch (IllegalStateException | IllegalArgumentException exception) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, exception.getMessage(), exception);
         }

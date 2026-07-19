@@ -4,6 +4,9 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 from app.api.question_routes import router as question_router
+from app.observability import configure_logging, request_context
+
+configure_logging()
 
 
 class HealthResponse(BaseModel):
@@ -17,6 +20,7 @@ app = FastAPI(
     version="0.1.0",
     description="Question generation, RAG and evaluation capabilities.",
 )
+app.middleware("http")(request_context)
 app.include_router(question_router)
 
 

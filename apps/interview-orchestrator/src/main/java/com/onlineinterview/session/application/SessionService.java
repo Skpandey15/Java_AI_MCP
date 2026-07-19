@@ -12,6 +12,8 @@ import com.onlineinterview.session.infrastructure.ManualQuestionRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class SessionService {
+    private static final Logger log = LoggerFactory.getLogger(SessionService.class);
     private final InterviewAssignmentRepository assignments;
     private final InterviewSessionRepository sessions;
     private final ManualQuestionRepository questions;
@@ -42,7 +45,13 @@ public class SessionService {
                 assignmentId, candidateId, SessionState.IN_PROGRESS);
         if (existing.isPresent()) {
             existing.get().enforceExpiry(Instant.now());
-            if (existing.get().getState() == SessionState.IN_PROGRESS) return existing.get();
+            if (existing.get().getState() == SessionState.IN_PROGRESS) {
+                log.atInfo().addKeyValue("event", "session.resumed")
+                        .addKeyValue("sessionId", existing.get().getId())
+                        .addKeyValue("assignmentId", assignmentId)
+                        .log("Interview session resumed");
+                return existing.get();
+            }
         }
         InterviewAssignment assignment = assignments.findByIdAndCandidateId(assignmentId, candidateId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Assignment not found"));
@@ -56,7 +65,13 @@ public class SessionService {
         if (sessions.countByAssignmentId(assignmentId) >= assignment.getMaxAttempts()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Maximum attempts reached");
         }
-        return sessions.save(InterviewSession.start(assignment, candidateId, now));
+        var session = sessions.save(InterviewSession.start(assignment, candidateId, now));
+        log.atInfo().addKeyValue("event", "session.started")
+                .addKeyValue("sessionId", session.getId())
+                .addKeyValue("assignmentId", assignmentId)
+                .addKeyValue("candidateId", candidateId)
+                .log("Interview session started");
+        return session;
     }
 
     @Transactional
@@ -89,14 +104,26 @@ public class SessionService {
             if (expectedVersion != 0) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT, "Answer version is stale");
             }
-            return answers.saveAndFlush(InterviewAnswer.create(session, question, content, now));
+            var saved = answers.saveAndFlush(InterviewAnswer.create(session, question, content, now));
+            log.atInfo().addKeyValue("event", "answer.autosaved")
+                    .addKeyValue("sessionId", sessionId)
+                    .addKeyValue("questionId", questionId)
+                    .addKeyValue("answerId", saved.getId())
+                    .log("Answer autosaved");
+            return saved;
         }
         try {
             existing.get().update(content, expectedVersion, now);
         } catch (IllegalStateException exception) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, exception.getMessage(), exception);
         }
-        return answers.saveAndFlush(existing.get());
+        var saved = answers.saveAndFlush(existing.get());
+        log.atInfo().addKeyValue("event", "answer.autosaved")
+                .addKeyValue("sessionId", sessionId)
+                .addKeyValue("questionId", questionId)
+                .addKeyValue("answerId", saved.getId())
+                .log("Answer autosaved");
+        return saved;
     }
 
     @Transactional
@@ -116,6 +143,9 @@ public class SessionService {
         } catch (IllegalStateException exception) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, exception.getMessage(), exception);
         }
+        log.atInfo().addKeyValue("event", "session.submitted")
+                .addKeyValue("sessionId", sessionId)
+                .log("Interview session submitted");
         return view(session);
     }
 

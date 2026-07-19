@@ -3,6 +3,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from app.config import settings
+from app.observability import get_request_id
 
 
 class ModelGatewayError(RuntimeError):
@@ -56,6 +57,7 @@ class LiteLLMClient:
             headers={
                 "Authorization": f"Bearer {settings.litellm_master_key}",
                 "Content-Type": "application/json",
+                "X-Request-ID": get_request_id(),
             },
             method="POST",
         )

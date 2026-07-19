@@ -67,6 +67,16 @@ Acceptance criteria:
 - Duplicate-action guards, scoring progress and section-local UI feedback
 - Outcome boundary tests plus container startup/Flyway verification in CI
 
+### Phase 3A.4 — Observability foundation
+
+- Structured JSON logs for Spring Boot and FastAPI
+- Correlation-ID propagation through Spring Boot, FastAPI and LiteLLM
+- Safe domain lifecycle events with sensitive-content exclusion and masking
+- Micrometer/Prometheus HTTP and JVM metrics
+- Optional Loki, Promtail, Grafana, Prometheus and OTLP Collector Docker profile
+- Correlation and redaction regression tests
+- Full distributed trace instrumentation follows after the OTLP receiver foundation
+
 ## Phase 4 — RAG and MCP
 
 - Document ingestion, pgvector retrieval, reranking and citations

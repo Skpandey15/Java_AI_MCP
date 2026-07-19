@@ -61,6 +61,7 @@ services:
       context: ../../apps/interview-orchestrator
     environment:
       SERVER_PORT: 8080
+      SPRING_PROFILES_ACTIVE: ${APP_ENVIRONMENT:-local}
       DATABASE_URL: jdbc:postgresql://postgres:5432/online_interview
       DATABASE_USERNAME: interview
       DATABASE_PASSWORD: interview
@@ -88,6 +89,8 @@ services:
     build:
       context: ../../apps/ai-service
     environment:
+      APP_ENVIRONMENT: ${APP_ENVIRONMENT:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LITELLM_BASE_URL: http://litellm:4000
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-local-litellm-key}
       AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-local-ai-service-token}
@@ -104,5 +107,68 @@ services:
       retries: 10
       start_period: 10s
 
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    profiles: ["observability"]
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=7d"]
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    depends_on:
+      interview-orchestrator:
+        condition: service_healthy
+
+  loki:
+    image: grafana/loki:3.4.2
+    profiles: ["observability"]
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    ports:
+      - "3100:3100"
+    volumes:
+      - ../observability/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+
+  promtail:
+    image: grafana/promtail:3.4.2
+    profiles: ["observability"]
+    command: ["-config.file=/etc/promtail/config.yml"]
+    volumes:
+      - ../observability/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:11.5.2
+    profiles: ["observability"]
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ../observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - prometheus
+      - loki
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.120.0
+    profiles: ["observability"]
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    volumes:
+      - ../observability/otel-collector.yml:/etc/otelcol-contrib/config.yaml:ro
+
 volumes:
   postgres-data:
+  prometheus-data:
+  loki-data:
+  grafana-data:

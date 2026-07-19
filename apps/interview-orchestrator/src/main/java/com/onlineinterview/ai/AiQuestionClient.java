@@ -2,9 +2,11 @@ package com.onlineinterview.ai;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.onlineinterview.common.api.CorrelationIdFilter;
 import java.net.http.HttpClient;
 import java.util.List;
 import java.util.UUID;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -44,6 +46,10 @@ public class AiQuestionClient {
                 .uri("/internal/v1/questions:generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("X-Service-Token", serviceToken)
+                .headers(headers -> {
+                    var requestId = MDC.get("requestId");
+                    if (requestId != null) headers.set(CorrelationIdFilter.HEADER, requestId);
+                })
                 .body(jsonBody(request))
                 .retrieve()
                 .body(GenerationResponse.class);
