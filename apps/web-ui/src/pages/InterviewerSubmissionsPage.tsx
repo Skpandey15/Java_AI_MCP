@@ -24,7 +24,8 @@ export function InterviewerSubmissionsPage() {
         <div className="card-heading"><h2>{submission.interviewTitle}</h2><span className="badge">{submission.reviewStatus.replaceAll('_', ' ')}</span></div>
         <p><strong>Candidate:</strong> {submission.candidateName} — {submission.candidateEmail}</p>
         <p><strong>Submitted:</strong> {new Date(submission.submittedAt).toLocaleString()}</p>
-        <p><strong>Score:</strong> {submission.totalScore == null ? 'Pending' : `${submission.totalScore} / ${submission.maxScore}`}</p>
+        <p><strong>Score:</strong> {submission.totalScore == null ? 'Pending' : `${submission.totalScore} / ${submission.maxScore} (${submission.percentage}%)`}</p>
+        {submission.outcome && <p><strong>Outcome:</strong> {submission.outcome === 'PASSED' ? 'Passed' : 'Not selected'}</p>}
         <button onClick={() => navigate(`/interviewer/submissions/${submission.sessionId}`)}>
           {submission.reviewStatus === 'REVIEWED' ? 'View review' : 'Review submission'}
         </button>
