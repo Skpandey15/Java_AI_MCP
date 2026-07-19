@@ -76,3 +76,5 @@ button:disabled, textarea:disabled { cursor: not-allowed; opacity: .55; }
 .result-outcome p { margin-bottom: 0; }
 .result-passed { background: #17643a; }
 .result-not-selected { background: #8b2c2c; }
+
+.pagination { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 1.5rem; }
