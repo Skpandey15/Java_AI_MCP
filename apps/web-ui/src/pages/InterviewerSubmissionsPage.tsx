@@ -6,11 +6,20 @@ export function InterviewerSubmissionsPage() {
   const navigate = useNavigate()
   const [submissions, setSubmissions] = useState<SubmissionSummary[]>([])
   const [error, setError] = useState('')
+  const [page, setPage] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    interviewApi.submissions().then(setSubmissions)
-      .catch((value: unknown) => setError(value instanceof Error ? value.message : 'Unable to load submissions'))
-  }, [])
+    setLoading(true)
+    setError('')
+    interviewApi.submissions(page).then((result) => {
+      setSubmissions(result.content)
+      setTotalPages(result.totalPages)
+    }).catch((value: unknown) =>
+      setError(value instanceof Error ? value.message : 'Unable to load submissions'))
+      .finally(() => setLoading(false))
+  }, [page])
 
   return <main className="dashboard">
     <div className="dashboard-header">
@@ -18,7 +27,8 @@ export function InterviewerSubmissionsPage() {
       <button className="secondary-button" onClick={() => navigate('/interviewer')}>Interview management</button>
     </div>
     {error && <p className="error-message">{error}</p>}
-    {!error && submissions.length === 0 && <p>No submitted interviews are waiting for review.</p>}
+    {loading && <p>Loading submissions…</p>}
+    {!loading && !error && submissions.length === 0 && <p>No submitted interviews were found.</p>}
     <div className="card-grid">
       {submissions.map((submission) => <article className="card" key={submission.sessionId}>
         <div className="card-heading"><h2>{submission.interviewTitle}</h2><span className="badge">{submission.reviewStatus.replaceAll('_', ' ')}</span></div>
@@ -31,5 +41,12 @@ export function InterviewerSubmissionsPage() {
         </button>
       </article>)}
     </div>
+    {totalPages > 1 && <nav className="pagination" aria-label="Submission pages">
+      <button className="secondary-button" disabled={loading || page === 0}
+        onClick={() => setPage((current) => current - 1)}>Previous</button>
+      <span>Page {page + 1} of {totalPages}</span>
+      <button className="secondary-button" disabled={loading || page + 1 >= totalPages}
+        onClick={() => setPage((current) => current + 1)}>Next</button>
+    </nav>}
   </main>
 }
