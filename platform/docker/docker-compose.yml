@@ -61,6 +61,7 @@ services:
       context: ../../apps/interview-orchestrator
     environment:
       SERVER_PORT: 8080
+      SPRING_PROFILES_ACTIVE: ${APP_ENVIRONMENT:-local}
       DATABASE_URL: jdbc:postgresql://postgres:5432/online_interview
       DATABASE_USERNAME: interview
       DATABASE_PASSWORD: interview
@@ -88,6 +89,8 @@ services:
     build:
       context: ../../apps/ai-service
     environment:
+      APP_ENVIRONMENT: ${APP_ENVIRONMENT:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LITELLM_BASE_URL: http://litellm:4000
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-local-litellm-key}
       AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-local-ai-service-token}
