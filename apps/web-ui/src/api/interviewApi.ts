@@ -71,6 +71,9 @@ export type Assignment = {
   endsAt: string
   maxAttempts: number
   status: string
+  sessionId?: string
+  sessionState?: string
+  reviewStatus?: string
 }
 
 export class ApiError extends Error {

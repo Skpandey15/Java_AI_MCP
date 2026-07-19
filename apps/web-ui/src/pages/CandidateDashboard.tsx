@@ -3,6 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { interviewApi, type Assignment } from '../api/interviewApi'
 import { useAuth } from '../auth/AuthProvider'
 
+function candidateStatus(assignment: Assignment) {
+  if (assignment.reviewStatus === 'REVIEWED') return 'REVIEWED — RESULT AVAILABLE'
+  if (assignment.sessionState === 'SUBMITTED') return 'AWAITING REVIEW'
+  if (assignment.sessionState === 'IN_PROGRESS') return 'IN PROGRESS'
+  if (assignment.sessionState === 'EXPIRED') return 'EXPIRED'
+  return assignment.status
+}
+
 export function CandidateDashboard() {
   const auth = useAuth()
   const navigate = useNavigate()
@@ -45,11 +53,21 @@ export function CandidateDashboard() {
         {assignments.map((assignment) => (
           <article className="card" key={assignment.id}>
             <h2>{assignment.interviewTitle}</h2>
-            <p><strong>Status:</strong> {assignment.status}</p>
+            <p><strong>Status:</strong> {candidateStatus(assignment)}</p>
             <p><strong>Starts:</strong> {new Date(assignment.startsAt).toLocaleString()}</p>
             <p><strong>Ends:</strong> {new Date(assignment.endsAt).toLocaleString()}</p>
             <p><strong>Maximum attempts:</strong> {assignment.maxAttempts}</p>
-            <button disabled={starting === assignment.id} onClick={() => void start(assignment.id)}>{starting === assignment.id ? 'Starting…' : 'Start or resume'}</button>
+            {assignment.sessionState === 'SUBMITTED'
+              ? assignment.reviewStatus === 'REVIEWED' && assignment.sessionId
+                ? <button onClick={() => navigate(`/candidate/sessions/${assignment.sessionId}/result`)}>
+                  View result
+                </button>
+                : <button disabled>Awaiting review</button>
+              : <button disabled={starting === assignment.id} onClick={() => void start(assignment.id)}>
+                {starting === assignment.id
+                  ? 'Starting…'
+                  : assignment.sessionState === 'IN_PROGRESS' ? 'Resume interview' : 'Start interview'}
+              </button>}
           </article>
         ))}
       </div>
