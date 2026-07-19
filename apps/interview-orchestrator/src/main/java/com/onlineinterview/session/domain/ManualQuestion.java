@@ -77,6 +77,21 @@ public class ManualQuestion {
         return question;
     }
 
+    public void validateAnswer(String content) {
+        if (type == QuestionType.MCQ_SINGLE && !options.contains(content)) {
+            throw new IllegalArgumentException("Answer must be one of the configured options");
+        }
+        if (type == QuestionType.MCQ_MULTIPLE) {
+            var selected = content.lines().filter(value -> !value.isBlank()).toList();
+            if (selected.isEmpty() || !options.containsAll(selected)) {
+                throw new IllegalArgumentException("Answers must be configured options");
+            }
+        }
+        if (type == QuestionType.SHORT_TEXT && content.length() > 1000) {
+            throw new IllegalArgumentException("Short-text answers cannot exceed 1000 characters");
+        }
+    }
+
     public void update(int order, String prompt, int maxScore, QuestionType type,
             List<String> options, List<String> correctAnswers) {
         this.order = order;
