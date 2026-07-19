@@ -60,6 +60,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Validate Docker Compose including observability profile
+        env:
+          OPENAI_API_KEY: ci-placeholder
+        run: docker compose -f platform/docker/docker-compose.yml --profile observability config --quiet
       - run: docker build -t online-interview-web-ui:ci apps/web-ui
       - run: docker build -t online-interview-orchestrator:ci apps/interview-orchestrator
       - name: Start orchestrator with PostgreSQL and verify health
@@ -75,6 +79,7 @@ jobs:
           docker run --detach --name orchestrator-smoke --network orchestrator-smoke             --publish 18080:8080             --env DATABASE_URL=jdbc:postgresql://orchestrator-postgres:5432/online_interview             --env DATABASE_USERNAME=interview             --env DATABASE_PASSWORD=interview             --env KEYCLOAK_ISSUER_URI=http://localhost:8090/realms/online-interview             --env KEYCLOAK_JWK_SET_URI=http://localhost:8090/realms/online-interview/protocol/openid-connect/certs             online-interview-orchestrator:ci
           for attempt in $(seq 1 40); do
             if curl --fail --silent http://127.0.0.1:18080/actuator/health; then
+              curl --fail --silent http://127.0.0.1:18080/actuator/prometheus > /dev/null
               exit 0
             fi
             sleep 1
