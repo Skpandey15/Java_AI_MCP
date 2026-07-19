@@ -48,6 +48,13 @@ Acceptance criteria:
 - Submitted-session timer and error-message cleanup
 - Coding questions deferred to a sandboxed execution phase
 
+### Phase 3A.2 — Synchronous scoring and review
+
+- Deterministic scoring for single- and multiple-choice answers
+- Interviewer submission queue, per-answer text scoring and feedback
+- Final review status, total score and candidate result release
+- AI evaluation remains asynchronous Phase 3B work
+
 ## Phase 4 — RAG and MCP
 
 - Document ingestion, pgvector retrieval, reranking and citations
