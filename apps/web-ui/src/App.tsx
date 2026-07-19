@@ -4,6 +4,9 @@ import { ProtectedRoute } from './auth/ProtectedRoute'
 import { CandidateDashboard } from './pages/CandidateDashboard'
 import { InterviewerDashboard } from './pages/InterviewerDashboard'
 import { InterviewSessionPage } from './pages/InterviewSessionPage'
+import { InterviewerSubmissionsPage } from './pages/InterviewerSubmissionsPage'
+import { SubmissionReviewPage } from './pages/SubmissionReviewPage'
+import { CandidateResultPage } from './pages/CandidateResultPage'
 
 export function dashboardPath(roles: string[]) {
   if (roles.includes('interviewer')) return '/interviewer'
@@ -48,7 +51,10 @@ export function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/candidate" element={<ProtectedRoute role="candidate"><CandidateDashboard /></ProtectedRoute>} />
           <Route path="/candidate/sessions/:sessionId" element={<ProtectedRoute role="candidate"><InterviewSessionPage /></ProtectedRoute>} />
+          <Route path="/candidate/sessions/:sessionId/result" element={<ProtectedRoute role="candidate"><CandidateResultPage /></ProtectedRoute>} />
           <Route path="/interviewer" element={<ProtectedRoute role="interviewer"><InterviewerDashboard /></ProtectedRoute>} />
+          <Route path="/interviewer/submissions" element={<ProtectedRoute role="interviewer"><InterviewerSubmissionsPage /></ProtectedRoute>} />
+          <Route path="/interviewer/submissions/:sessionId" element={<ProtectedRoute role="interviewer"><SubmissionReviewPage /></ProtectedRoute>} />
           <Route path="/unauthorized" element={<main className="dashboard"><h1>Access denied</h1><p>Your account does not have permission for this dashboard.</p></main>} />
         </Routes>
       </BrowserRouter>
