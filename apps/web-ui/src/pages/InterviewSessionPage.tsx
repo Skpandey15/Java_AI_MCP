@@ -4,12 +4,7 @@ import { interviewApi, type InterviewSession, type Question } from '../api/inter
 
 function selectedValues(content: string | undefined): string[] {
   if (!content) return []
-  try {
-    const parsed = JSON.parse(content)
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    return []
-  }
+  return content.split('\n').map((value) => value.trim()).filter(Boolean)
 }
 
 export function InterviewSessionPage() {
@@ -61,7 +56,7 @@ export function InterviewSessionPage() {
     const selected = new Set(selectedValues(drafts[questionId]))
     if (checked) selected.add(option)
     else selected.delete(option)
-    const content = JSON.stringify([...selected])
+    const content = [...selected].join('\n')
     setDrafts((current) => ({ ...current, [questionId]: content }))
     void save(questionId, content)
   }
