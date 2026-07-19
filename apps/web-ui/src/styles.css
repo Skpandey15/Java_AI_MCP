@@ -60,3 +60,12 @@ button:disabled, textarea:disabled { cursor: not-allowed; opacity: .55; }
 @media (max-width: 720px) {
   .inline-fields, .card-heading, .question-meta { align-items: stretch; flex-direction: column; }
 }
+
+
+.answer-panel { margin: 1rem 0; padding: 1rem; border-left: 4px solid #1769d2; background: #f5f8fc; }
+.answer-panel pre { margin: .5rem 0 0; white-space: pre-wrap; font: inherit; }
+.review-fields, .review-summary { display: grid; gap: .8rem; margin-top: 1rem; }
+.review-summary { padding: 1.25rem; border-radius: 14px; background: #eef5ff; }
+.score-hero { margin-bottom: 1.5rem; padding: 1.5rem; border-radius: 16px; color: white; background: #10233f; }
+.score-hero span, .score-hero strong { display: block; }
+.score-hero strong { margin: .4rem 0; font-size: 2.25rem; }
