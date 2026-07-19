@@ -9,6 +9,8 @@ from uuid import uuid4
 
 from fastapi import Request, Response
 
+from app.config import settings
+
 _request_id: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="")
 _SAFE_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,100}$")
 _SENSITIVE_VALUES = (
@@ -30,6 +32,7 @@ class JsonFormatter(logging.Formatter):
             "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "service": "ai-service",
+            "environment": settings.app_environment,
             "logger": record.name,
             "message": redact(record.getMessage()),
         }
@@ -50,7 +53,7 @@ def configure_logging() -> None:
     handler.setFormatter(JsonFormatter())
     root = logging.getLogger()
     root.handlers = [handler]
-    root.setLevel(logging.INFO)
+    root.setLevel(settings.log_level)
 
 
 def get_request_id() -> str:
