@@ -55,6 +55,18 @@ Acceptance criteria:
 - Final review status, total score and candidate result release
 - AI evaluation remains asynchronous Phase 3B work
 
+### Phase 3A.3 — Review production hardening
+
+- Configurable passing percentage with immutable `PASSED` / `NOT_SELECTED` outcome snapshots
+- Candidate-safe result release only after interviewer finalization
+- Immutable answer-score and review-finalization audit events
+- Database constraints for review/result consistency and non-negative scores
+- Optimistic-lock conflict responses and request correlation IDs
+- RFC 9457-style validation/conflict responses
+- Paginated review queue with batched candidate/question lookups
+- Duplicate-action guards, scoring progress and section-local UI feedback
+- Outcome boundary tests plus container startup/Flyway verification in CI
+
 ## Phase 4 — RAG and MCP
 
 - Document ingestion, pgvector retrieval, reranking and citations
