@@ -78,6 +78,11 @@ public class SessionService {
                 .filter(q -> q.getInterviewDefinition().getId()
                         .equals(session.getAssignment().getInterviewDefinition().getId()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Question not found"));
+        try {
+            question.validateAnswer(content);
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
+        }
         Instant now = Instant.now();
         var existing = answers.findBySession_IdAndQuestion_Id(sessionId, questionId);
         if (existing.isEmpty()) {

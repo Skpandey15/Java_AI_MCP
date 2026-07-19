@@ -23,7 +23,12 @@ export type Interview = {
   createdAt: string
 }
 
-export type Question = { id: string; order: number; prompt: string; maxScore: number }
+export type QuestionType = 'MCQ_SINGLE' | 'MCQ_MULTIPLE' | 'SHORT_TEXT' | 'LONG_TEXT'
+export type Question = {
+  id: string; order: number; prompt: string; maxScore: number
+  type: QuestionType; options: string[]
+}
+export type AdminQuestion = Question & { correctAnswers: string[]; source: string }
 export type SavedAnswer = { id: string; questionId: string; content: string; updatedAt: string; version: number }
 export type InterviewSession = {
   id: string
@@ -47,6 +52,10 @@ export type Assignment = {
   status: string
 }
 
+export class ApiError extends Error {
+  constructor(public status: number, message: string) { super(message) }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   await keycloak.updateToken(30)
   if (!keycloak.token) throw new Error('Authentication token is unavailable')
@@ -58,7 +67,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...init?.headers,
     },
   })
-  if (!response.ok) throw new Error(`Request failed with status ${response.status}`)
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({})) as { detail?: string; message?: string }
+    throw new ApiError(response.status, payload.detail ?? payload.message ?? `Request failed with status ${response.status}`)
+  }
+  if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
 }
 
@@ -71,6 +84,7 @@ export const interviewApi = {
     })
   },
   listOwned: () => request<Interview[]>('/api/v1/interviews'),
+  candidates: () => request<Profile[]>('/api/v1/candidates'),
   create: (body: object) => request<Interview>('/api/v1/interviews', {
     method: 'POST', body: JSON.stringify(body),
   }),
@@ -82,7 +96,7 @@ export const interviewApi = {
     { method: 'POST', body: JSON.stringify(body) },
   ),
   candidateAssignments: () => request<Assignment[]>('/api/v1/candidate/interviews'),
-  addQuestion: (interviewId: string, body: object) => request<Question>(
+  addQuestion: (interviewId: string, body: object) => request<AdminQuestion>(
     `/api/v1/interviews/${interviewId}/questions`,
     { method: 'POST', body: JSON.stringify(body) },
   ),
@@ -90,9 +104,17 @@ export const interviewApi = {
     `/api/v1/interviews/${interviewId}/questions:generate`,
     { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() } },
   ),
-  listQuestions: (interviewId: string) => request<Question[]>(
+  listQuestions: (interviewId: string) => request<AdminQuestion[]>(
     `/api/v1/interviews/${interviewId}/questions`,
   ),
+  updateQuestion: (interviewId: string, questionId: string, body: object) =>
+    request<AdminQuestion>(`/api/v1/interviews/${interviewId}/questions/${questionId}`, {
+      method: 'PUT', body: JSON.stringify(body),
+    }),
+  deleteQuestion: (interviewId: string, questionId: string) =>
+    request<void>(`/api/v1/interviews/${interviewId}/questions/${questionId}`, {
+      method: 'DELETE',
+    }),
   startSession: (assignmentId: string) => request<InterviewSession>(
     `/api/v1/candidate/assignments/${assignmentId}/sessions`, { method: 'POST' },
   ),

@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,20 +32,39 @@ public class SessionController {
 
     @PostMapping("/interviews/{interviewId}/questions")
     @PreAuthorize("hasRole('INTERVIEWER')")
-    public ResponseEntity<QuestionResponse> addQuestion(@AuthenticationPrincipal Jwt jwt,
+    public ResponseEntity<AdminQuestionResponse> addQuestion(@AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID interviewId, @Valid @RequestBody QuestionRequest request) {
         var question = questionService.add(jwt.getSubject(), interviewId,
-                request.order(), request.prompt(), request.maxScore());
+                request.order(), request.prompt(), request.maxScore(), request.type(),
+                request.options(), request.correctAnswers());
         return ResponseEntity.created(URI.create("/api/v1/interviews/" + interviewId
-                + "/questions/" + question.getId())).body(QuestionResponse.from(question));
+                + "/questions/" + question.getId())).body(AdminQuestionResponse.from(question));
     }
 
     @GetMapping("/interviews/{interviewId}/questions")
     @PreAuthorize("hasRole('INTERVIEWER')")
-    public List<QuestionResponse> questions(@AuthenticationPrincipal Jwt jwt,
+    public List<AdminQuestionResponse> questions(@AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID interviewId) {
         return questionService.list(jwt.getSubject(), interviewId).stream()
-                .map(QuestionResponse::from).toList();
+                .map(AdminQuestionResponse::from).toList();
+    }
+
+    @PutMapping("/interviews/{interviewId}/questions/{questionId}")
+    @PreAuthorize("hasRole('INTERVIEWER')")
+    public AdminQuestionResponse updateQuestion(@AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID interviewId, @PathVariable UUID questionId,
+            @Valid @RequestBody QuestionRequest request) {
+        return AdminQuestionResponse.from(questionService.update(jwt.getSubject(), interviewId,
+                questionId, request.order(), request.prompt(), request.maxScore(), request.type(),
+                request.options(), request.correctAnswers()));
+    }
+
+    @DeleteMapping("/interviews/{interviewId}/questions/{questionId}")
+    @PreAuthorize("hasRole('INTERVIEWER')")
+    public ResponseEntity<Void> deleteQuestion(@AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID interviewId, @PathVariable UUID questionId) {
+        questionService.delete(jwt.getSubject(), interviewId, questionId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/candidate/assignments/{assignmentId}/sessions")

@@ -9,6 +9,7 @@ import com.onlineinterview.interview.infrastructure.InterviewDefinitionRepositor
 import com.onlineinterview.profile.domain.UserRole;
 import com.onlineinterview.profile.domain.UserStatus;
 import com.onlineinterview.profile.infrastructure.UserProfileRepository;
+import com.onlineinterview.session.infrastructure.ManualQuestionRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -22,12 +23,15 @@ public class InterviewService {
     private final InterviewDefinitionRepository definitions;
     private final InterviewAssignmentRepository assignments;
     private final UserProfileRepository profiles;
+    private final ManualQuestionRepository questions;
 
     public InterviewService(InterviewDefinitionRepository definitions,
-            InterviewAssignmentRepository assignments, UserProfileRepository profiles) {
+            InterviewAssignmentRepository assignments, UserProfileRepository profiles,
+            ManualQuestionRepository questions) {
         this.definitions = definitions;
         this.assignments = assignments;
         this.profiles = profiles;
+        this.questions = questions;
     }
 
     @Transactional
@@ -46,6 +50,12 @@ public class InterviewService {
     @Transactional
     public InterviewDefinition publish(String ownerSubject, UUID interviewId) {
         var definition = ownedDefinition(ownerSubject, interviewId);
+        long savedQuestions = questions.countByInterviewDefinitionId(interviewId);
+        if (savedQuestions != definition.getQuestionCount()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Publishing requires exactly " + definition.getQuestionCount()
+                            + " saved questions; found " + savedQuestions);
+        }
         try {
             definition.publish();
         } catch (IllegalStateException exception) {

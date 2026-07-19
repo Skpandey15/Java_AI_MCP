@@ -39,6 +39,15 @@ Acceptance criteria:
 - Structured response schemas and prompt/model versioning (implemented in Phase 3A)
 - Kafka, transactional outbox and asynchronous answer evaluation
 
+### Phase 3A.1 — Typed questions and interview UX
+
+- MCQ single-select, MCQ multi-select, short-text and long-text question models
+- Interviewer preview, edit, delete and publish-completeness validation
+- Candidate-specific controls with server-validated autosave
+- Candidate selection by profile name/email rather than UUID entry
+- Submitted-session timer and error-message cleanup
+- Coding questions deferred to a sandboxed execution phase
+
 ## Phase 4 — RAG and MCP
 
 - Document ingestion, pgvector retrieval, reranking and citations
