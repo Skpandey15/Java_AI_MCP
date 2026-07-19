@@ -10,6 +10,10 @@ ALTER TABLE interview_session
     ADD CONSTRAINT chk_review_status
     CHECK (review_status IN ('NOT_SUBMITTED', 'PENDING_REVIEW', 'REVIEWED'));
 
+UPDATE interview_session
+SET review_status = 'PENDING_REVIEW'
+WHERE state = 'SUBMITTED';
+
 ALTER TABLE interview_answer
     ADD COLUMN awarded_score INTEGER,
     ADD COLUMN reviewer_feedback VARCHAR(4000),
