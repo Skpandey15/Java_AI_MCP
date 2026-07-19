@@ -145,9 +145,6 @@ public class SessionService {
         }
         log.atInfo().addKeyValue("event", "session.submitted")
                 .addKeyValue("sessionId", sessionId)
-                .addKeyValue("objectiveQuestionCount",
-                        answers.findBySession_Id(sessionId).stream()
-                                .filter(InterviewAnswer::isAutoScored).count())
                 .log("Interview session submitted");
         return view(session);
     }
