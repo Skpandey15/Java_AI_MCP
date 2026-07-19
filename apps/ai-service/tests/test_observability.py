@@ -3,6 +3,7 @@ import logging
 
 from fastapi.testclient import TestClient
 
+from app.config import Settings
 from app.main import app
 from app.observability import JsonFormatter
 
@@ -35,3 +36,12 @@ def test_json_formatter_redacts_bearer_tokens_and_provider_keys() -> None:
     assert "secret.token-value" not in payload["message"]
     assert "sk-sensitive12345" not in payload["message"]
     assert payload["message"].count("[REDACTED]") == 2
+
+
+def test_prod_profile_rejects_local_credentials() -> None:
+    try:
+        Settings(app_environment="prod")
+    except ValueError as exc:
+        assert "must be supplied outside local development" in str(exc)
+    else:
+        raise AssertionError("Production profile accepted local development credentials")
