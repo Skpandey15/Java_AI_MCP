@@ -71,6 +71,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     const payload = await response.json().catch(() => ({})) as { detail?: string; message?: string }
     throw new ApiError(response.status, payload.detail ?? payload.message ?? `Request failed with status ${response.status}`)
   }
+  if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
 }
 
