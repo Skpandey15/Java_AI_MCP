@@ -104,6 +104,15 @@ public class SessionService {
         var session = ownedSession(subject, sessionId);
         try {
             session.submit(Instant.now());
+            var submittedAnswers = answers.findBySession_Id(sessionId);
+            submittedAnswers.forEach(InterviewAnswer::scoreObjective);
+            int objectiveScore = submittedAnswers.stream()
+                    .filter(InterviewAnswer::isAutoScored)
+                    .map(InterviewAnswer::getAwardedScore)
+                    .filter(java.util.Objects::nonNull)
+                    .mapToInt(Integer::intValue)
+                    .sum();
+            session.recordObjectiveScore(objectiveScore);
         } catch (IllegalStateException exception) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, exception.getMessage(), exception);
         }
