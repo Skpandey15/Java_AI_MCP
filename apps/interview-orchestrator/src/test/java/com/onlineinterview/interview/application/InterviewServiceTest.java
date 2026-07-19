@@ -11,6 +11,7 @@ import com.onlineinterview.interview.domain.QuestionMode;
 import com.onlineinterview.interview.infrastructure.InterviewAssignmentRepository;
 import com.onlineinterview.interview.infrastructure.InterviewDefinitionRepository;
 import com.onlineinterview.profile.infrastructure.UserProfileRepository;
+import com.onlineinterview.session.infrastructure.ManualQuestionRepository;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -21,7 +22,8 @@ class InterviewServiceTest {
     private final InterviewDefinitionRepository definitions = mock(InterviewDefinitionRepository.class);
     private final InterviewAssignmentRepository assignments = mock(InterviewAssignmentRepository.class);
     private final UserProfileRepository profiles = mock(UserProfileRepository.class);
-    private final InterviewService service = new InterviewService(definitions, assignments, profiles);
+    private final ManualQuestionRepository questions = mock(ManualQuestionRepository.class);
+    private final InterviewService service = new InterviewService(definitions, assignments, profiles, questions);
 
     @Test
     void listsOnlyInterviewsOwnedByAuthenticatedSubject() {
