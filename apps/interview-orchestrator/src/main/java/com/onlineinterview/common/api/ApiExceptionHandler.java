@@ -1,6 +1,7 @@
 package com.onlineinterview.common.api;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import java.net.URI;
 import java.util.LinkedHashMap;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -22,6 +23,16 @@ public class ApiExceptionHandler {
                 "Correct the invalid fields and try again.", request);
         problem.setProperty("errors", errors);
         return problem;
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    ProblemDetail constraintViolation(
+            ConstraintViolationException exception, HttpServletRequest request) {
+        return problem(HttpStatus.BAD_REQUEST, "Request validation failed",
+                exception.getConstraintViolations().stream()
+                        .findFirst().map(violation -> violation.getMessage())
+                        .orElse("A request value is invalid."),
+                request);
     }
 
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
