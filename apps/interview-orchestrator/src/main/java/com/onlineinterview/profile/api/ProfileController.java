@@ -3,6 +3,8 @@ package com.onlineinterview.profile.api;
 import com.onlineinterview.profile.application.ProfileService;
 import java.net.URI;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import java.util.List;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -29,6 +31,12 @@ public class ProfileController {
                 .map(ProfileResponse::from)
                 .orElseThrow(() -> new ResponseStatusException(
                         NOT_FOUND, "Application profile registration is incomplete"));
+    }
+
+    @GetMapping("/candidates")
+    @PreAuthorize("hasRole('INTERVIEWER')")
+    public List<ProfileResponse> candidates() {
+        return profileService.activeCandidates().stream().map(ProfileResponse::from).toList();
     }
 
     @PostMapping("/profiles/registration-complete")
