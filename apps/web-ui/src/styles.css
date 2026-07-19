@@ -39,3 +39,24 @@ textarea { min-height: 90px; resize: vertical; }
 .question-card { margin: 1rem 0; padding: 1.25rem; border: 1px solid #d7e2ef; border-radius: 14px; background: #f9fbfe; }
 .question-card textarea { min-height: 180px; }
 button:disabled, textarea:disabled { cursor: not-allowed; opacity: .55; }
+
+
+.interview-card { display: grid; gap: 1rem; }
+.card-heading, .question-meta, .inline-fields, .compact-actions { display: flex; gap: .75rem; align-items: center; justify-content: space-between; }
+.badge, .question-meta span { padding: .3rem .6rem; border-radius: 999px; background: #e8f1ff; color: #1459ad; font-size: .8rem; font-weight: 700; }
+.question-list { display: grid; gap: .75rem; }
+.question-preview { padding: 1rem; border: 1px solid #d7e2ef; border-radius: 10px; background: white; }
+.question-preview p { margin: .4rem 0; }
+.question-builder { display: grid; gap: .8rem; padding: 1rem; border-radius: 12px; background: #f3f7fc; }
+.inline-fields > label { flex: 1; }
+.compact-actions { justify-content: flex-start; }
+.danger-button { background: #fff; border: 1px solid #c93636; color: #a32121; }
+.error-message { padding: .8rem 1rem; border-radius: 8px; color: #a32121; background: #fff0f0; }
+.choice-list { display: grid; gap: .65rem; padding: 1rem; border: 1px solid #d7e2ef; border-radius: 10px; }
+.choice-list label { display: flex; gap: .6rem; align-items: center; padding: .65rem; border-radius: 8px; background: white; }
+.choice-list input { width: auto; }
+.short-answer { min-height: 90px !important; }
+.question-meta { justify-content: flex-start; margin-bottom: .75rem; }
+@media (max-width: 720px) {
+  .inline-fields, .card-heading, .question-meta { align-items: stretch; flex-direction: column; }
+}
