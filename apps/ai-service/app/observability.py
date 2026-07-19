@@ -11,6 +11,17 @@ from fastapi import Request, Response
 
 _request_id: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="")
 _SAFE_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,100}$")
+_SENSITIVE_VALUES = (
+    re.compile(r"(?i)Bearer\s+[A-Za-z0-9._~+/=-]+"),
+    re.compile(r"sk-[A-Za-z0-9_-]{8,}"),
+)
+
+
+def redact(value: str) -> str:
+    redacted = value
+    for pattern in _SENSITIVE_VALUES:
+        redacted = pattern.sub("[REDACTED]", redacted)
+    return redacted
 
 
 class JsonFormatter(logging.Formatter):
@@ -20,7 +31,7 @@ class JsonFormatter(logging.Formatter):
             "level": record.levelname,
             "service": "ai-service",
             "logger": record.name,
-            "message": record.getMessage(),
+            "message": redact(record.getMessage()),
         }
         request_id = get_request_id()
         if request_id:
