@@ -22,6 +22,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -31,6 +33,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class ReviewService {
+    private static final Logger log = LoggerFactory.getLogger(ReviewService.class);
     private final InterviewSessionRepository sessions;
     private final InterviewAnswerRepository answers;
     private final ManualQuestionRepository questions;
@@ -98,6 +101,10 @@ public class ReviewService {
         }
         auditEvents.save(ReviewAuditEvent.answerScored(
                 sessionId, answerId, ownerSubject, score, feedback, Instant.now()));
+        log.atInfo().addKeyValue("event", "review.answer_scored")
+                .addKeyValue("sessionId", sessionId)
+                .addKeyValue("answerId", answerId)
+                .log("Submission answer scored");
         return detail(session);
     }
 
@@ -129,6 +136,10 @@ public class ReviewService {
         }
         auditEvents.save(ReviewAuditEvent.reviewFinalized(
                 sessionId, ownerSubject, total, feedback, now));
+        log.atInfo().addKeyValue("event", "review.finalized")
+                .addKeyValue("sessionId", sessionId)
+                .addKeyValue("outcome", session.getResultOutcome())
+                .log("Submission review finalized");
         return detail(session);
     }
 
