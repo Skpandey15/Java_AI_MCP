@@ -9,6 +9,18 @@
             <includeKeyValuePairs>true</includeKeyValuePairs>
             <includeContext>false</includeContext>
             <includeCallerData>false</includeCallerData>
+            <jsonGeneratorDecorator class="net.logstash.logback.mask.MaskingJsonGeneratorDecorator">
+                <defaultMask>[REDACTED]</defaultMask>
+                <path>authorization</path>
+                <path>password</path>
+                <path>token</path>
+                <path>serviceToken</path>
+                <path>answer</path>
+                <path>content</path>
+                <path>feedback</path>
+                <value>(?i)Bearer\s+[A-Za-z0-9._~+/=-]+</value>
+                <value>sk-[A-Za-z0-9_-]{8,}</value>
+            </jsonGeneratorDecorator>
         </encoder>
     </appender>
 
