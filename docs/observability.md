@@ -12,6 +12,26 @@ Phase 3A.4 establishes local structured logging, request correlation, metrics co
 
 The OpenTelemetry Collector is ready to receive OTLP traffic; full distributed trace instrumentation is intentionally a later step.
 
+## Environment profiles
+
+| Profile | Intended use | Application logging | Health details | Configuration policy |
+|---|---|---|---|---|
+| `local` | Developer workstation/Compose | Application DEBUG, framework INFO | Visible locally | Safe local defaults |
+| `dev` | Shared development | Application DEBUG, framework INFO | Authorized only | External overrides supported |
+| `uat` | Acceptance testing | Application INFO, framework WARN | Hidden | Database, Keycloak, CORS and service credentials required |
+| `prod` | Production | Safe business INFO, framework WARN | Hidden | Strict external configuration; no local credential fallback |
+
+Select the same environment for Spring Boot and FastAPI with `APP_ENVIRONMENT`. Docker Compose maps it to `SPRING_PROFILES_ACTIVE` for Java. FastAPI validates `APP_ENVIRONMENT` directly.
+
+```powershell
+$env:APP_ENVIRONMENT = "local"
+docker compose -f platform/docker/docker-compose.yml --profile observability up -d --build
+```
+
+For UAT and production, inject all required values from the deployment secret/configuration system. Do not use `.env` files as the production secret store. The React application uses public build-time `VITE_*` configuration; secrets must never be embedded in its build.
+
+Log levels are adjustable by profile, but the sensitive-data exclusion policy is not. DEBUG never enables payload, token, answer, prompt or feedback logging.
+
 ## Data-safety policy
 
 Application logs must never contain:
