@@ -152,7 +152,7 @@ public class ReviewService {
                     question.getOrder(), question.getType().name(), question.getPrompt(),
                     question.getOptions(), question.getCorrectAnswers(),
                     answer == null ? "" : answer.getContent(), question.getMaxScore(),
-                    answer == null ? 0 : answer.getAwardedScore(),
+                    answer == null ? null : answer.getAwardedScore(),
                     answer == null ? null : answer.getReviewerFeedback(),
                     answer != null && answer.isAutoScored());
         }).toList();
