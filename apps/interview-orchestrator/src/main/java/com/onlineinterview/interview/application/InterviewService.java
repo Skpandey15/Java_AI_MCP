@@ -44,9 +44,10 @@ public class InterviewService {
     @Transactional
     public InterviewDefinition create(String ownerSubject, String title, String description,
             List<String> skills, InterviewDifficulty difficulty, QuestionMode questionMode,
-            int durationMinutes, int questionCount) {
+            int durationMinutes, int questionCount, int passingPercentage) {
         return definitions.save(InterviewDefinition.draft(ownerSubject, title, description,
-                skills, difficulty, questionMode, durationMinutes, questionCount));
+                skills, difficulty, questionMode, durationMinutes, questionCount,
+                passingPercentage));
     }
 
     @Transactional(readOnly = true)
