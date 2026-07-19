@@ -7,6 +7,8 @@ import com.onlineinterview.session.domain.ManualQuestion;
 import com.onlineinterview.session.infrastructure.ManualQuestionRepository;
 import java.util.List;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +16,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class AiQuestionService {
+    private static final Logger log = LoggerFactory.getLogger(AiQuestionService.class);
     private final InterviewDefinitionRepository definitions;
     private final ManualQuestionRepository questions;
     private final AiQuestionClient client;
@@ -46,6 +49,13 @@ public class AiQuestionService {
                 .map(item -> ManualQuestion.generated(definition, item.order(), item.prompt(),
                         item.maxScore(), requestId, response.modelPolicy(), response.promptVersion()))
                 .toList();
-        return questions.saveAll(generated);
+        var saved = questions.saveAll(generated);
+        log.atInfo().addKeyValue("event", "ai.questions_generated")
+                .addKeyValue("interviewId", interviewId)
+                .addKeyValue("generationRequestId", requestId)
+                .addKeyValue("questionCount", saved.size())
+                .addKeyValue("modelPolicy", response.modelPolicy())
+                .log("AI questions generated");
+        return saved;
     }
 }
