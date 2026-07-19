@@ -62,6 +62,30 @@ jobs:
       - uses: actions/checkout@v4
       - run: docker build -t online-interview-web-ui:ci apps/web-ui
       - run: docker build -t online-interview-orchestrator:ci apps/interview-orchestrator
+      - name: Start orchestrator with PostgreSQL and verify health
+        run: |
+          docker network create orchestrator-smoke
+          docker run --detach --name orchestrator-postgres --network orchestrator-smoke             --env POSTGRES_DB=online_interview             --env POSTGRES_USER=interview             --env POSTGRES_PASSWORD=interview             postgres:17-alpine
+          for attempt in $(seq 1 30); do
+            if docker exec orchestrator-postgres pg_isready -U interview -d online_interview; then
+              break
+            fi
+            sleep 1
+          done
+          docker run --detach --name orchestrator-smoke --network orchestrator-smoke             --publish 18080:8080             --env DATABASE_URL=jdbc:postgresql://orchestrator-postgres:5432/online_interview             --env DATABASE_USERNAME=interview             --env DATABASE_PASSWORD=interview             --env KEYCLOAK_ISSUER_URI=http://localhost:8090/realms/online-interview             --env KEYCLOAK_JWK_SET_URI=http://localhost:8090/realms/online-interview/protocol/openid-connect/certs             online-interview-orchestrator:ci
+          for attempt in $(seq 1 40); do
+            if curl --fail --silent http://127.0.0.1:18080/actuator/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs orchestrator-smoke
+          exit 1
+      - name: Stop orchestrator smoke environment
+        if: always()
+        run: |
+          docker rm --force orchestrator-smoke orchestrator-postgres || true
+          docker network rm orchestrator-smoke || true
       - run: docker build -t online-interview-ai-service:ci apps/ai-service
       - name: Start AI service container and verify health
         run: |
