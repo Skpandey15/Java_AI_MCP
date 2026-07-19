@@ -9,10 +9,15 @@ import com.onlineinterview.interview.infrastructure.InterviewDefinitionRepositor
 import com.onlineinterview.profile.domain.UserRole;
 import com.onlineinterview.profile.domain.UserStatus;
 import com.onlineinterview.profile.infrastructure.UserProfileRepository;
+import com.onlineinterview.session.domain.ReviewStatus;
+import com.onlineinterview.session.domain.SessionState;
+import com.onlineinterview.session.infrastructure.InterviewSessionRepository;
 import com.onlineinterview.session.infrastructure.ManualQuestionRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,14 +29,16 @@ public class InterviewService {
     private final InterviewAssignmentRepository assignments;
     private final UserProfileRepository profiles;
     private final ManualQuestionRepository questions;
+    private final InterviewSessionRepository sessions;
 
     public InterviewService(InterviewDefinitionRepository definitions,
             InterviewAssignmentRepository assignments, UserProfileRepository profiles,
-            ManualQuestionRepository questions) {
+            ManualQuestionRepository questions, InterviewSessionRepository sessions) {
         this.definitions = definitions;
         this.assignments = assignments;
         this.profiles = profiles;
         this.questions = questions;
+        this.sessions = sessions;
     }
 
     @Transactional
@@ -82,12 +89,29 @@ public class InterviewService {
     }
 
     @Transactional(readOnly = true)
-    public List<InterviewAssignment> candidateAssignments(String candidateSubject) {
+    public List<CandidateAssignmentView> candidateAssignments(String candidateSubject) {
         var candidate = profiles.findByIdentitySubject(candidateSubject)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Candidate profile registration is incomplete"));
-        return assignments.findByCandidateIdOrderByStartsAtAsc(candidate.getId());
+        var latestSessionByAssignment = sessions.findByCandidateIdOrderByStartedAtDesc(candidate.getId())
+                .stream().collect(Collectors.toMap(
+                        session -> session.getAssignment().getId(),
+                        Function.identity(),
+                        (latest, ignored) -> latest));
+        return assignments.findByCandidateIdOrderByStartsAtAsc(candidate.getId()).stream()
+                .map(assignment -> {
+                    var session = latestSessionByAssignment.get(assignment.getId());
+                    return new CandidateAssignmentView(
+                            assignment,
+                            session == null ? null : session.getId(),
+                            session == null ? null : session.getState(),
+                            session == null ? null : session.getReviewStatus());
+                }).toList();
     }
+
+    public record CandidateAssignmentView(
+            InterviewAssignment assignment, UUID sessionId,
+            SessionState sessionState, ReviewStatus reviewStatus) {}
 
     private InterviewDefinition ownedDefinition(String ownerSubject, UUID interviewId) {
         var definition = definitions.findById(interviewId)
