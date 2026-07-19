@@ -24,7 +24,8 @@ JOIN (
 WHERE session.assignment_id = assignment.id
   AND session.review_status = 'REVIEWED'
   AND session.total_score IS NOT NULL
-  AND question_totals.max_score > 0;
+  AND question_totals.max_score > 0
+  AND session.total_score * 100 >= definition.passing_percentage * question_totals.max_score;
 
 ALTER TABLE interview_session
     ADD CONSTRAINT chk_result_outcome
