@@ -2,6 +2,9 @@
 <configuration>
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
+    <springProperty scope="context" name="rootLogLevel"
+                    source="logging.level.root" defaultValue="INFO"/>
+
     <appender name="JSON" class="ch.qos.logback.core.ConsoleAppender">
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <customFields>{"service":"interview-orchestrator"}</customFields>
@@ -28,7 +31,7 @@
     <logger name="org.hibernate.SQL" level="WARN"/>
     <logger name="org.apache.coyote.http11.Http11Processor" level="WARN"/>
 
-    <root level="INFO">
+    <root level="${rootLogLevel}">
         <appender-ref ref="JSON"/>
     </root>
 </configuration>
