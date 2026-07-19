@@ -12,6 +12,8 @@ export function SubmissionReviewPage() {
   const [loadError, setLoadError] = useState('')
   const [scoreNotices, setScoreNotices] = useState<Record<string, { kind: 'success' | 'error'; text: string }>>({})
   const [finalizeNotice, setFinalizeNotice] = useState<{ kind: 'success' | 'error'; text: string }>()
+  const [savingAnswer, setSavingAnswer] = useState('')
+  const [finalizing, setFinalizing] = useState(false)
 
   useEffect(() => {
     interviewApi.submission(sessionId).then((loaded) => {
@@ -43,6 +45,7 @@ export function SubmissionReviewPage() {
       delete next[answerId]
       return next
     })
+    setSavingAnswer(answerId)
     try {
       const updated = await interviewApi.scoreAnswer(
         sessionId, answerId, score, feedback[answerId] ?? '')
@@ -59,12 +62,15 @@ export function SubmissionReviewPage() {
           text: error instanceof Error ? error.message : 'Unable to save score',
         },
       }))
+    } finally {
+      setSavingAnswer('')
     }
   }
 
   async function finalize() {
     if (!window.confirm('Finalize this review? Scores will become visible to the candidate.')) return
     setFinalizeNotice(undefined)
+    setFinalizing(true)
     try {
       setSubmission(await interviewApi.finalizeReview(sessionId, overallFeedback))
       setFinalizeNotice({ kind: 'success', text: 'Review finalized and released to the candidate.' })
@@ -73,6 +79,8 @@ export function SubmissionReviewPage() {
         kind: 'error',
         text: error instanceof Error ? error.message : 'Unable to finalize review',
       })
+    } finally {
+      setFinalizing(false)
     }
   }
 
@@ -82,6 +90,8 @@ export function SubmissionReviewPage() {
     </p>
   </main>
   const pending = submission.reviewStatus === 'PENDING_REVIEW'
+  const scoredQuestions = submission.questions.filter((question) =>
+    question.autoScored || !question.answerId || question.awardedScore != null).length
 
   return <main className="dashboard">
     <div className="dashboard-header">
@@ -91,6 +101,8 @@ export function SubmissionReviewPage() {
     <p><strong>Candidate:</strong> {submission.candidateName} — {submission.candidateEmail}</p>
     <p><strong>Status:</strong> {submission.reviewStatus.replaceAll('_', ' ')}</p>
     <p><strong>Objective score:</strong> {submission.objectiveScore} / {submission.maxScore}</p>
+    <p><strong>Passing requirement:</strong> {submission.passingPercentage}%</p>
+    <p><strong>Review progress:</strong> {scoredQuestions} / {submission.questions.length} questions scored</p>
     {submission.questions.map((question) => <section className="question-card" key={question.questionId}>
       <div className="question-meta"><span>{question.type.replaceAll('_', ' ')}</span><span>{question.maxScore} points</span></div>
       <h2>{question.order}. {question.prompt}</h2>
@@ -105,7 +117,10 @@ export function SubmissionReviewPage() {
               onChange={(e) => setScores({...scores, [question.answerId!]: Number(e.target.value)})} /></label>
             <label>Feedback<textarea disabled={!pending} value={feedback[question.answerId] ?? ''}
               onChange={(e) => setFeedback({...feedback, [question.answerId!]: e.target.value})} /></label>
-            {pending && <button onClick={() => void save(question.answerId!)}>Save score</button>}
+            {pending && <button disabled={savingAnswer === question.answerId || finalizing}
+              onClick={() => void save(question.answerId!)}>
+              {savingAnswer === question.answerId ? 'Saving…' : 'Save score'}
+            </button>}
             {scoreNotices[question.answerId] && <p
               className={scoreNotices[question.answerId].kind === 'error' ? 'error-message' : 'status-message'}
               role={scoreNotices[question.answerId].kind === 'error' ? 'alert' : 'status'}>
@@ -118,8 +133,13 @@ export function SubmissionReviewPage() {
       <label>Overall feedback<textarea disabled={!pending} value={overallFeedback}
         onChange={(e) => setOverallFeedback(e.target.value)} /></label>
       {pending
-        ? <button onClick={() => void finalize()}>Finalize and release result</button>
-        : <h2>Total score: {submission.totalScore} / {submission.maxScore}</h2>}
+        ? <button disabled={finalizing || Boolean(savingAnswer)} onClick={() => void finalize()}>
+          {finalizing ? 'Finalizing…' : 'Finalize and release result'}
+        </button>
+        : <>
+          <h2>Total score: {submission.totalScore} / {submission.maxScore} ({submission.percentage}%)</h2>
+          <p><strong>Outcome:</strong> {submission.outcome === 'PASSED' ? 'Passed' : 'Not selected'}</p>
+        </>}
       {finalizeNotice && <p
         className={finalizeNotice.kind === 'error' ? 'error-message' : 'status-message'}
         role={finalizeNotice.kind === 'error' ? 'alert' : 'status'}>

@@ -17,5 +17,6 @@ public record CreateInterviewRequest(
         @NotNull InterviewDifficulty difficulty,
         @NotNull QuestionMode questionMode,
         @Min(5) @Max(480) int durationMinutes,
-        @Min(1) @Max(100) int questionCount) {
+        @Min(1) @Max(100) int questionCount,
+        @Min(1) @Max(100) int passingPercentage) {
 }

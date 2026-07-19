@@ -19,6 +19,7 @@ export type Interview = {
   questionMode: string
   durationMinutes: number
   questionCount: number
+  passingPercentage: number
   status: string
   createdAt: string
 }
@@ -44,6 +45,10 @@ export type InterviewSession = {
 export type SubmissionSummary = {
   sessionId: string; interviewTitle: string; candidateName: string; candidateEmail: string
   submittedAt: string; reviewStatus: string; totalScore?: number; maxScore: number
+  percentage?: number; outcome?: 'PASSED' | 'NOT_SELECTED'
+}
+export type PageResponse<T> = {
+  content: T[]; page: number; size: number; totalElements: number; totalPages: number
 }
 export type ReviewQuestion = {
   questionId: string; answerId?: string; order: number; type: QuestionType; prompt: string
@@ -53,11 +58,13 @@ export type ReviewQuestion = {
 export type SubmissionDetail = {
   sessionId: string; interviewTitle: string; candidateName: string; candidateEmail: string
   submittedAt: string; reviewStatus: string; objectiveScore: number; totalScore?: number
-  maxScore: number; feedback?: string; questions: ReviewQuestion[]
+  maxScore: number; passingPercentage: number; percentage?: number
+  outcome?: 'PASSED' | 'NOT_SELECTED'; feedback?: string; questions: ReviewQuestion[]
 }
 export type CandidateResult = {
   sessionId: string; interviewTitle: string; submittedAt: string; reviewStatus: string
-  totalScore?: number; maxScore: number; feedback?: string
+  totalScore?: number; maxScore: number; passingPercentage: number; percentage?: number
+  outcome?: 'PASSED' | 'NOT_SELECTED'; feedback?: string
   answers: Array<{ order: number; type: QuestionType; prompt: string; content: string
     maxScore: number; awardedScore?: number; feedback?: string }>
 }
@@ -92,8 +99,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     },
   })
   if (!response.ok) {
-    const payload = await response.json().catch(() => ({})) as { detail?: string; message?: string }
-    throw new ApiError(response.status, payload.detail ?? payload.message ?? `Request failed with status ${response.status}`)
+    const payload = await response.json().catch(() => ({})) as {
+      detail?: string; message?: string; requestId?: string; errors?: Record<string, string>
+    }
+    const fieldError = payload.errors && Object.entries(payload.errors)[0]
+    const message = fieldError
+      ? `${fieldError[0]}: ${fieldError[1]}`
+      : payload.detail ?? payload.message ?? `Request failed with status ${response.status}`
+    throw new ApiError(response.status, payload.requestId ? `${message} (Request ID: ${payload.requestId})` : message)
   }
   if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
@@ -149,7 +162,9 @@ export const interviewApi = {
     request<SavedAnswer>(`/api/v1/candidate/sessions/${sessionId}/answers/${questionId}`, {
       method: 'PUT', body: JSON.stringify({ content, expectedVersion }),
     }),
-  submissions: () => request<SubmissionSummary[]>('/api/v1/interviewer/submissions'),
+  submissions: (page = 0, size = 20) => request<PageResponse<SubmissionSummary>>(
+    `/api/v1/interviewer/submissions?page=${page}&size=${size}`,
+  ),
   submission: (sessionId: string) => request<SubmissionDetail>(
     `/api/v1/interviewer/submissions/${sessionId}`,
   ),

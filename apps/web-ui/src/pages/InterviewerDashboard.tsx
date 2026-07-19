@@ -7,7 +7,7 @@ import { useAuth } from '../auth/AuthProvider'
 
 const initialForm = {
   title: '', description: '', skills: '', difficulty: 'MEDIUM',
-  questionMode: 'MANUAL', durationMinutes: 60, questionCount: 5,
+  questionMode: 'MANUAL', durationMinutes: 60, questionCount: 5, passingPercentage: 70,
 }
 
 type QuestionDraft = {
@@ -144,6 +144,7 @@ function InterviewCard({ interview, candidates, notify, reload }: {
         <span className="badge">{interview.status}</span>
       </div>
       <p><strong>Questions:</strong> {questions.length} / {interview.questionCount}</p>
+      <p><strong>Passing score:</strong> {interview.passingPercentage}%</p>
 
       {questions.length > 0 && <div className="question-list">
         {questions.map((question) => (
@@ -254,6 +255,7 @@ export function InterviewerDashboard() {
         <label>Question mode<select value={form.questionMode} onChange={(e) => setForm({...form, questionMode: e.target.value})}><option>MANUAL</option><option>DIRECT_LLM</option></select></label>
         <label>Duration (minutes)<input type="number" min="5" max="480" value={form.durationMinutes} onChange={(e) => setForm({...form, durationMinutes: Number(e.target.value)})} /></label>
         <label>Question count<input type="number" min="1" max="100" value={form.questionCount} onChange={(e) => setForm({...form, questionCount: Number(e.target.value)})} /></label>
+        <label>Passing percentage<input type="number" min="1" max="100" value={form.passingPercentage} onChange={(e) => setForm({...form, passingPercentage: Number(e.target.value)})} /></label>
         <button type="submit">Create draft</button>
       </form>
       <div className="card-grid">

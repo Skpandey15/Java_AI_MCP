@@ -31,6 +31,8 @@ public class InterviewSession {
     private ReviewStatus reviewStatus;
     @Column(name = "objective_score", nullable = false) private int objectiveScore;
     @Column(name = "total_score") private Integer totalScore;
+    @Enumerated(EnumType.STRING) @Column(name = "result_outcome")
+    private ResultOutcome resultOutcome;
     @Column(name = "review_feedback", length = 4000) private String reviewFeedback;
     @Column(name = "reviewed_at") private Instant reviewedAt;
     @Column(name = "reviewer_subject") private String reviewerSubject;
@@ -76,11 +78,20 @@ public class InterviewSession {
         objectiveScore = score;
     }
 
-    public void finalizeReview(int score, String feedback, String reviewer, Instant now) {
+    public void finalizeReview(int score, int maxScore, int passingPercentage,
+            String feedback, String reviewer, Instant now) {
         if (state != SessionState.SUBMITTED || reviewStatus != ReviewStatus.PENDING_REVIEW) {
             throw new IllegalStateException("Only pending submissions can be finalized");
         }
+        if (maxScore <= 0 || score < 0 || score > maxScore) {
+            throw new IllegalArgumentException("Final score must be between 0 and the maximum score");
+        }
+        if (passingPercentage < 1 || passingPercentage > 100) {
+            throw new IllegalArgumentException("Passing percentage must be between 1 and 100");
+        }
         totalScore = score;
+        resultOutcome = (long) score * 100 >= (long) maxScore * passingPercentage
+                ? ResultOutcome.PASSED : ResultOutcome.NOT_SELECTED;
         reviewFeedback = feedback;
         reviewerSubject = reviewer;
         reviewedAt = now;
@@ -97,6 +108,7 @@ public class InterviewSession {
     public ReviewStatus getReviewStatus() { return reviewStatus; }
     public int getObjectiveScore() { return objectiveScore; }
     public Integer getTotalScore() { return totalScore; }
+    public ResultOutcome getResultOutcome() { return resultOutcome; }
     public String getReviewFeedback() { return reviewFeedback; }
     public Instant getReviewedAt() { return reviewedAt; }
 }

@@ -31,7 +31,7 @@ public class InterviewController {
             @AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateInterviewRequest request) {
         var definition = service.create(jwt.getSubject(), request.title(), request.description(),
                 request.skills(), request.difficulty(), request.questionMode(),
-                request.durationMinutes(), request.questionCount());
+                request.durationMinutes(), request.questionCount(), request.passingPercentage());
         return ResponseEntity.created(URI.create("/api/v1/interviews/" + definition.getId()))
                 .body(InterviewResponse.from(definition));
     }

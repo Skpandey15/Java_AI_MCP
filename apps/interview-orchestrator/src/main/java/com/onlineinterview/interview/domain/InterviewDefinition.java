@@ -35,6 +35,7 @@ public class InterviewDefinition {
     @Enumerated(EnumType.STRING) @Column(name = "question_mode", nullable = false) private QuestionMode questionMode;
     @Column(name = "duration_minutes", nullable = false) private int durationMinutes;
     @Column(name = "question_count", nullable = false) private int questionCount;
+    @Column(name = "passing_percentage", nullable = false) private int passingPercentage;
     @Enumerated(EnumType.STRING) @Column(nullable = false) private InterviewStatus status;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
@@ -45,6 +46,16 @@ public class InterviewDefinition {
     public static InterviewDefinition draft(String ownerSubject, String title, String description,
             List<String> skills, InterviewDifficulty difficulty, QuestionMode questionMode,
             int durationMinutes, int questionCount) {
+        return draft(ownerSubject, title, description, skills, difficulty, questionMode,
+                durationMinutes, questionCount, 70);
+    }
+
+    public static InterviewDefinition draft(String ownerSubject, String title, String description,
+            List<String> skills, InterviewDifficulty difficulty, QuestionMode questionMode,
+            int durationMinutes, int questionCount, int passingPercentage) {
+        if (passingPercentage < 1 || passingPercentage > 100) {
+            throw new IllegalArgumentException("Passing percentage must be between 1 and 100");
+        }
         var definition = new InterviewDefinition();
         definition.id = UUID.randomUUID();
         definition.ownerSubject = ownerSubject;
@@ -55,6 +66,7 @@ public class InterviewDefinition {
         definition.questionMode = questionMode;
         definition.durationMinutes = durationMinutes;
         definition.questionCount = questionCount;
+        definition.passingPercentage = passingPercentage;
         definition.status = InterviewStatus.DRAFT;
         definition.createdAt = Instant.now();
         definition.updatedAt = definition.createdAt;
@@ -78,6 +90,7 @@ public class InterviewDefinition {
     public QuestionMode getQuestionMode() { return questionMode; }
     public int getDurationMinutes() { return durationMinutes; }
     public int getQuestionCount() { return questionCount; }
+    public int getPassingPercentage() { return passingPercentage; }
     public InterviewStatus getStatus() { return status; }
     public Instant getCreatedAt() { return createdAt; }
 }

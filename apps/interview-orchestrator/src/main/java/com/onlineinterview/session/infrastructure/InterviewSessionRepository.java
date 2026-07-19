@@ -5,6 +5,8 @@ import com.onlineinterview.session.domain.SessionState;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -19,6 +21,10 @@ public interface InterviewSessionRepository extends JpaRepository<InterviewSessi
     @EntityGraph(attributePaths = {"assignment", "assignment.interviewDefinition"})
     List<InterviewSession> findByAssignment_InterviewDefinition_OwnerSubjectAndStateOrderBySubmittedAtDesc(
             String ownerSubject, SessionState state);
+
+    @EntityGraph(attributePaths = {"assignment", "assignment.interviewDefinition"})
+    Page<InterviewSession> findByAssignment_InterviewDefinition_OwnerSubjectAndState(
+            String ownerSubject, SessionState state, Pageable pageable);
 
     @EntityGraph(attributePaths = {"assignment", "assignment.interviewDefinition"})
     Optional<InterviewSession> findByIdAndAssignment_InterviewDefinition_OwnerSubject(
