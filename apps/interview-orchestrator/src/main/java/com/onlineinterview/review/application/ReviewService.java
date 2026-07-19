@@ -1,5 +1,7 @@
 package com.onlineinterview.review.application;
 
+import com.onlineinterview.common.api.PageResponse;
+import com.onlineinterview.profile.domain.UserProfile;
 import com.onlineinterview.profile.infrastructure.UserProfileRepository;
 import com.onlineinterview.review.api.CandidateResultResponse;
 import com.onlineinterview.review.api.ReviewQuestionResponse;
@@ -20,6 +22,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,10 +48,30 @@ public class ReviewService {
     }
 
     @Transactional(readOnly = true)
-    public List<SubmissionSummaryResponse> queue(String ownerSubject) {
-        return sessions.findByAssignment_InterviewDefinition_OwnerSubjectAndStateOrderBySubmittedAtDesc(
-                        ownerSubject, SessionState.SUBMITTED)
-                .stream().map(this::summary).toList();
+    public PageResponse<SubmissionSummaryResponse> queue(
+            String ownerSubject, int page, int size) {
+        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "submittedAt"));
+        var sessionPage = sessions.findByAssignment_InterviewDefinition_OwnerSubjectAndState(
+                ownerSubject, SessionState.SUBMITTED, pageable);
+        var candidateIds = sessionPage.stream().map(InterviewSession::getCandidateId).collect(Collectors.toSet());
+        Map<UUID, UserProfile> candidates = profiles.findAllById(candidateIds).stream()
+                .collect(Collectors.toMap(UserProfile::getId, Function.identity()));
+        var definitionIds = sessionPage.stream()
+                .map(session -> session.getAssignment().getInterviewDefinition().getId())
+                .collect(Collectors.toSet());
+        Map<UUID, Integer> maxScores = questions.findByInterviewDefinition_IdIn(definitionIds).stream()
+                .collect(Collectors.groupingBy(
+                        question -> question.getInterviewDefinition().getId(),
+                        Collectors.summingInt(question -> question.getMaxScore())));
+        var summaries = sessionPage.map(session -> {
+            var candidate = candidates.get(session.getCandidateId());
+            if (candidate == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidate profile not found");
+            }
+            var definitionId = session.getAssignment().getInterviewDefinition().getId();
+            return summary(session, candidate, maxScores.getOrDefault(definitionId, 0));
+        });
+        return PageResponse.from(summaries);
     }
 
     @Transactional(readOnly = true)
@@ -143,13 +167,9 @@ public class ReviewService {
                 session.getReviewFeedback(), results);
     }
 
-    private SubmissionSummaryResponse summary(InterviewSession session) {
+    private SubmissionSummaryResponse summary(
+            InterviewSession session, UserProfile candidate, int maxScore) {
         var definition = session.getAssignment().getInterviewDefinition();
-        var candidate = profiles.findById(session.getCandidateId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Candidate profile not found"));
-        int maxScore = questions.findByInterviewDefinitionIdOrderByOrderAsc(definition.getId())
-                .stream().mapToInt(q -> q.getMaxScore()).sum();
         return new SubmissionSummaryResponse(session.getId(), definition.getTitle(),
                 candidate.getDisplayName(), candidate.getEmail(), session.getSubmittedAt(),
                 session.getReviewStatus().name(), session.getTotalScore(), maxScore,
