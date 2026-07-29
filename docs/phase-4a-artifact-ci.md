@@ -27,7 +27,7 @@ The `release-images` workflow runs only after `platform-ci` succeeds on `main`, 
 4. Generates an SPDX JSON SBOM and retains it for 30 days.
 5. Publishes the immutable and `main` tags to GHCR.
 6. Signs the image with Cosign using GitHub's short-lived OIDC identity.
-7. Publishes a GitHub build-provenance attestation for the image digest.
+7. Publishes a GitHub build-provenance attestation for the image digest when repository visibility and account ownership support that feature.
 
 The workflow uses the repository-scoped `GITHUB_TOKEN`. It does not require a personal access token, OpenAI key, LiteLLM key, database password or Keycloak credential.
 
@@ -55,7 +55,7 @@ cosign verify \
   ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator@sha256:<digest>
 ```
 
-GitHub's artifact attestation can also be verified with GitHub CLI:
+GitHub does not persist artifact attestations for user-owned private repositories. In that configuration, verify the immutable digest and Cosign signature. When attestations are supported, verify them with GitHub CLI:
 
 ```bash
 gh attestation verify \
