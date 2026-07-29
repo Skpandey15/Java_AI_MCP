@@ -56,6 +56,11 @@ spec:
                   key: DATABASE_PASSWORD
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
+            - name: KEYCLOAK_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: KEYCLOAK_DB_PASSWORD
           readinessProbe:
             exec:
               command: [sh, -c, pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"]
@@ -70,16 +75,28 @@ spec:
             requests: {cpu: 100m, memory: 256Mi}
             limits: {cpu: "1", memory: 1Gi}
           securityContext:
+            runAsUser: 70
+            runAsGroup: 70
+            runAsNonRoot: true
             allowPrivilegeEscalation: false
             capabilities:
               drop: [ALL]
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
+            - name: postgres-init
+              mountPath: /docker-entrypoint-initdb.d/10-keycloak.sh
+              subPath: postgres-init.sh
+              readOnly: true
           lifecycle:
             preStop:
               exec:
                 command: [sh, -c, pg_ctl -D "$PGDATA" -m fast stop]
+      volumes:
+        - name: postgres-init
+          configMap:
+            name: postgres-init
+            defaultMode: 0555
   volumeClaimTemplates:
     - metadata:
         name: data
