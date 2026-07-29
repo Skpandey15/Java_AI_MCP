@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-ui
+spec:
+  replicas: 3
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-service
+spec:
+  replicas: 3
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: interview-orchestrator
+spec:
+  replicas: 3
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: web-ui
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels: {app.kubernetes.io/name: web-ui}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: ai-service
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels: {app.kubernetes.io/name: ai-service}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: interview-orchestrator
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels: {app.kubernetes.io/name: interview-orchestrator}
