@@ -7,6 +7,10 @@ plugins {
 group = 'com.onlineinterview'
 version = '0.1.0-SNAPSHOT'
 
+ext['jackson-bom.version'] = '2.21.4'
+ext['tomcat.version'] = '10.1.55'
+ext['postgresql.version'] = '42.7.12'
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
