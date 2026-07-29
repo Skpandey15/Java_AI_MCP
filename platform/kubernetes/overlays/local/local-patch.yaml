@@ -24,3 +24,39 @@ spec:
   type: NodePort
   ports:
     - {name: http, port: 8080, targetPort: http, nodePort: 30090}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-ui
+spec:
+  template:
+    spec:
+      containers:
+        - name: web-ui
+          imagePullPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: interview-orchestrator
+spec:
+  template:
+    spec:
+      initContainers:
+        - name: wait-for-migration
+          imagePullPolicy: Always
+      containers:
+        - name: interview-orchestrator
+          imagePullPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-service
+spec:
+  template:
+    spec:
+      containers:
+        - name: ai-service
+          imagePullPolicy: Always
