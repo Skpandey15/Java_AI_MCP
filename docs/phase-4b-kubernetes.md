@@ -5,7 +5,7 @@ Phase 4B packages the Online Interview platform with Kustomize. It does not inst
 ## Layout
 
 - `base`: PostgreSQL, Keycloak, LiteLLM, web UI, orchestrator, AI service, Services, probes, resources, persistence and Flyway migration Job
-- `overlays/local`: Rancher Desktop defaults and NodePorts
+- `overlays/local`: k3d/Rancher Desktop defaults, NodePort fallbacks, and Traefik Ingress
 - `overlays/dev`, `uat`, `prod`: separate namespaces, immutable application image tags and External Secrets
 - production additionally defines three PodDisruptionBudgets
 
@@ -64,15 +64,24 @@ kubectl -n online-interview wait --for=condition=complete job/database-migration
 kubectl -n online-interview get pods,svc,pvc,jobs
 ```
 
-For predictable browser URLs, use three PowerShell windows:
+The local overlay includes a Traefik Ingress. In the standard k3d setup, host port `8081` forwards to the cluster's HTTP entrypoint, and `localtest.me` resolves to `127.0.0.1` without editing the Windows hosts file.
+
+Open these URLs:
+
+- Web UI: `http://interview.localtest.me:8081`
+- Orchestrator API: `http://api.interview.localtest.me:8081`
+- Keycloak: `http://auth.interview.localtest.me:8081`
+- AI service: `http://ai.interview.localtest.me:8081`
+- LiteLLM: `http://litellm.interview.localtest.me:8081`
+
+Confirm the route objects with:
 
 ```powershell
-kubectl -n online-interview port-forward service/web-ui 3000:80
-kubectl -n online-interview port-forward service/interview-orchestrator 8080:8080
-kubectl -n online-interview port-forward service/keycloak 8090:8080
+kubectl -n online-interview get ingress
+kubectl -n online-interview describe ingress online-interview
 ```
 
-Open `http://localhost:3000`. Health checks are available at `http://localhost:8080/actuator/health` and `http://localhost:8090/health/ready` (Keycloak management health may remain cluster-internal depending on the image configuration).
+These routes become usable only after their backend pods are Running and Ready. If the k3d cluster was created without host port `8081` mapped to load-balancer port `80`, recreate that mapping or use `kubectl port-forward service/traefik -n kube-system 8081:80` as a temporary fallback.
 
 ## Migration control
 
