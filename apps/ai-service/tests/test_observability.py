@@ -40,7 +40,11 @@ def test_json_formatter_redacts_bearer_tokens_and_provider_keys() -> None:
 
 def test_prod_profile_rejects_local_credentials() -> None:
     try:
-        Settings(app_environment="prod")
+        Settings(
+            app_environment="prod",
+            litellm_master_key="local-development-key",
+            ai_service_token="local-ai-service-token",
+        )
     except ValueError as exc:
         assert "must be supplied outside local development" in str(exc)
     else:

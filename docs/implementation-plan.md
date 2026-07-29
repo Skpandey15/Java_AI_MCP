@@ -90,7 +90,9 @@ Acceptance criteria:
 
 ### Phase 4B — Kubernetes packaging
 
-- Helm charts or Kustomize bases with local, dev, UAT and production overlays
+Status: implemented with Kustomize; Rancher Desktop runtime validation remains the acceptance gate.
+
+- Kustomize bases with local, dev, UAT and production overlays
 - Kubernetes Secrets/External Secrets integration and non-secret ConfigMaps
 - Health probes, resource requests/limits and migration-job controls
 - Rancher Desktop validation before shared-cluster deployment

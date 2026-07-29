@@ -106,3 +106,28 @@ jobs:
       - name: Stop AI service smoke container
         if: always()
         run: docker rm --force ai-service-smoke || true
+
+  kubernetes-manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-kubectl@v4
+        with:
+          version: v1.33.3
+      - name: Render every Kustomize overlay
+        run: |
+          set -euo pipefail
+          for environment in local dev uat prod; do
+            kubectl kustomize "platform/kubernetes/overlays/$environment" > "/tmp/$environment.yaml"
+            test -s "/tmp/$environment.yaml"
+          done
+      - name: Validate rendered Kubernetes schemas
+        run: |
+          set -euo pipefail
+          docker run --rm -v /tmp:/manifests:ro \
+            ghcr.io/yannh/kubeconform:v0.7.0 \
+            -strict -summary -ignore-missing-schemas \
+            /manifests/local.yaml /manifests/dev.yaml /manifests/uat.yaml /manifests/prod.yaml
+      - name: Enforce Phase 4B manifest policies
+        shell: pwsh
+        run: ./platform/kubernetes/validate-manifests.ps1 -RenderedDirectory /tmp

@@ -3,6 +3,8 @@ package com.onlineinterview.ai;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onlineinterview.common.api.CorrelationIdFilter;
+import com.onlineinterview.interview.domain.QuestionComposition;
+import com.onlineinterview.session.domain.QuestionType;
 import java.net.http.HttpClient;
 import java.util.List;
 import java.util.UUID;
@@ -64,8 +66,10 @@ public class AiQuestionClient {
     }
 
     public record GenerationRequest(UUID requestId, UUID interviewId, List<String> skills,
-            String difficulty, int questionCount) {}
-    public record GeneratedQuestion(int order, String prompt, int maxScore) {}
+            String difficulty, int questionCount, QuestionComposition questionComposition) {}
+    public record GeneratedQuestion(
+            int order, String prompt, int maxScore, QuestionType type,
+            List<String> options, List<String> correctAnswers) {}
     public record GenerationResponse(UUID requestId, UUID interviewId, String modelPolicy,
             String promptVersion, List<GeneratedQuestion> questions) {}
 }

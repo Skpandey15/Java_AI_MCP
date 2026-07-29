@@ -7,6 +7,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.onlineinterview.interview.domain.QuestionComposition;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -36,7 +37,13 @@ class AiQuestionClientTest {
                           "interviewId": "%s",
                           "skills": ["Java"],
                           "difficulty": "MEDIUM",
-                          "questionCount": 1
+                          "questionCount": 1,
+                          "questionComposition": {
+                            "mcqSingle": 0,
+                            "mcqMultiple": 0,
+                            "shortText": 0,
+                            "longText": 1
+                          }
                         }
                         """.formatted(requestId, interviewId)))
                 .andRespond(withSuccess("""
@@ -48,13 +55,17 @@ class AiQuestionClientTest {
                           "questions": [{
                             "order": 1,
                             "prompt": "Explain Java memory visibility.",
-                            "maxScore": 10
+                            "maxScore": 10,
+                            "type": "LONG_TEXT",
+                            "options": [],
+                            "correctAnswers": []
                           }]
                         }
                         """.formatted(requestId, interviewId), MediaType.APPLICATION_JSON));
 
         var response = client.generate(new AiQuestionClient.GenerationRequest(
-                requestId, interviewId, List.of("Java"), "MEDIUM", 1));
+                requestId, interviewId, List.of("Java"), "MEDIUM", 1,
+                QuestionComposition.allLongText(1)));
 
         assertThat(response.questions()).hasSize(1);
         server.verify();

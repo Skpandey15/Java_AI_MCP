@@ -4,6 +4,7 @@ import com.onlineinterview.interview.domain.InterviewAssignment;
 import com.onlineinterview.interview.domain.InterviewDefinition;
 import com.onlineinterview.interview.domain.InterviewDifficulty;
 import com.onlineinterview.interview.domain.QuestionMode;
+import com.onlineinterview.interview.domain.QuestionComposition;
 import com.onlineinterview.interview.infrastructure.InterviewAssignmentRepository;
 import com.onlineinterview.interview.infrastructure.InterviewDefinitionRepository;
 import com.onlineinterview.profile.domain.UserRole;
@@ -48,9 +49,23 @@ public class InterviewService {
     public InterviewDefinition create(String ownerSubject, String title, String description,
             List<String> skills, InterviewDifficulty difficulty, QuestionMode questionMode,
             int durationMinutes, int questionCount, int passingPercentage) {
+        return create(ownerSubject, title, description, skills, difficulty, questionMode,
+                durationMinutes, questionCount, passingPercentage,
+                QuestionComposition.allLongText(questionCount));
+    }
+
+    @Transactional
+    public InterviewDefinition create(String ownerSubject, String title, String description,
+            List<String> skills, InterviewDifficulty difficulty, QuestionMode questionMode,
+            int durationMinutes, int questionCount, int passingPercentage,
+            QuestionComposition composition) {
+        if (composition.total() != questionCount) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Question composition total must equal question count");
+        }
         var definition = definitions.save(InterviewDefinition.draft(
                 ownerSubject, title, description, skills, difficulty, questionMode,
-                durationMinutes, questionCount, passingPercentage));
+                durationMinutes, questionCount, passingPercentage, composition));
         log.atInfo().addKeyValue("event", "interview.created")
                 .addKeyValue("interviewId", definition.getId())
                 .addKeyValue("questionMode", questionMode)
@@ -71,6 +86,18 @@ public class InterviewService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Publishing requires exactly " + definition.getQuestionCount()
                             + " saved questions; found " + savedQuestions);
+        }
+        var actualComposition = questions.findByInterviewDefinitionIdOrderByOrderAsc(interviewId)
+                .stream().collect(Collectors.groupingBy(
+                        question -> question.getType(), Collectors.counting()));
+        var expectedComposition = definition.getQuestionComposition();
+        var mismatch = expectedComposition.asMap().entrySet().stream()
+                .filter(entry -> actualComposition.getOrDefault(entry.getKey(), 0L)
+                        != entry.getValue().longValue())
+                .findFirst();
+        if (mismatch.isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Saved question types do not match the configured composition");
         }
         try {
             definition.publish();

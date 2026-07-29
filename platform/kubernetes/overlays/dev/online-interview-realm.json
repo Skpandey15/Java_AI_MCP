@@ -1,0 +1,36 @@
+{
+  "realm": "online-interview",
+  "enabled": true,
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "loginWithEmailAllowed": true,
+  "verifyEmail": false,
+  "roles": {
+    "realm": [
+      { "name": "candidate", "description": "Candidate platform access" },
+      { "name": "interviewer", "description": "Administratively assigned interviewer access" }
+    ]
+  },
+  "defaultRole": {
+    "name": "default-roles-online-interview",
+    "composite": true,
+    "composites": {
+      "realm": ["offline_access", "uma_authorization", "candidate"]
+    }
+  },
+  "clients": [
+    {
+      "clientId": "online-interview-web",
+      "name": "Online Interview Web",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "rootUrl": "https://interview.dev.example.com",
+      "baseUrl": "https://interview.dev.example.com",
+      "redirectUris": ["https://interview.dev.example.com/*"],
+      "webOrigins": ["https://interview.dev.example.com"],
+      "attributes": { "pkce.code.challenge.method": "S256" }
+    }
+  ]
+}
