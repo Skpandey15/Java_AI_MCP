@@ -4,7 +4,7 @@
   "registrationAllowed": true,
   "registrationEmailAsUsername": true,
   "loginWithEmailAllowed": true,
-  "verifyEmail": false,
+  "verifyEmail": true,
   "roles": {
     "realm": [
       { "name": "candidate", "description": "Candidate platform access" },
@@ -26,10 +26,10 @@
       "publicClient": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
-      "rootUrl": "http://interview.localhost:8081",
-      "baseUrl": "http://interview.localhost:8081",
-      "redirectUris": ["http://interview.localhost:8081/*", "http://localhost:30080/*"],
-      "webOrigins": ["http://interview.localhost:8081", "http://localhost:30080"],
+      "rootUrl": "https://interview.example.com",
+      "baseUrl": "https://interview.example.com",
+      "redirectUris": ["https://interview.example.com/*"],
+      "webOrigins": ["https://interview.example.com"],
       "attributes": { "pkce.code.challenge.method": "S256" }
     }
   ]

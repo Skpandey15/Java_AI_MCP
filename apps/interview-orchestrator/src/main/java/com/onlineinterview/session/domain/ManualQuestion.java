@@ -66,10 +66,10 @@ public class ManualQuestion {
     }
 
     public static ManualQuestion generated(InterviewDefinition definition, int order,
-            String prompt, int maxScore, UUID generationRequestId,
+            String prompt, int maxScore, QuestionType type,
+            List<String> options, List<String> correctAnswers, UUID generationRequestId,
             String modelPolicy, String promptVersion) {
-        var question = create(definition, order, prompt, maxScore,
-                QuestionType.LONG_TEXT, List.of(), List.of());
+        var question = create(definition, order, prompt, maxScore, type, options, correctAnswers);
         question.source = QuestionSource.AI_DIRECT;
         question.generationRequestId = generationRequestId;
         question.modelPolicy = modelPolicy;

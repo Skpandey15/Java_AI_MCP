@@ -26,10 +26,10 @@
       "publicClient": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
-      "rootUrl": "http://interview.localhost:8081",
-      "baseUrl": "http://interview.localhost:8081",
-      "redirectUris": ["http://interview.localhost:8081/*", "http://localhost:30080/*"],
-      "webOrigins": ["http://interview.localhost:8081", "http://localhost:30080"],
+      "rootUrl": "https://interview.dev.example.com",
+      "baseUrl": "https://interview.dev.example.com",
+      "redirectUris": ["https://interview.dev.example.com/*"],
+      "webOrigins": ["https://interview.dev.example.com"],
       "attributes": { "pkce.code.challenge.method": "S256" }
     }
   ]

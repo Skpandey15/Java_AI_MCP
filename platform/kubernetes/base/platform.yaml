@@ -37,7 +37,7 @@ spec:
         fsGroup: 70
       containers:
         - name: postgres
-          image: postgres:17-alpine
+          image: postgres:17.10-alpine3.24@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
           ports:
             - name: postgres
               containerPort: 5432
@@ -135,11 +135,11 @@ spec:
       serviceAccountName: platform-runtime
       initContainers:
         - name: wait-for-postgres
-          image: postgres:17-alpine
+          image: postgres:17.10-alpine3.24@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
           command: [sh, -c, until pg_isready -h postgres -U interview; do sleep 2; done]
       containers:
         - name: keycloak
-          image: quay.io/keycloak/keycloak:26.1.0
+          image: quay.io/keycloak/keycloak:26.1.0@sha256:c0675d484530e65446f38b28ea2e7854915c33afb0de5356899794410caf03be
           args: [start-dev, --import-realm, --health-enabled=true]
           ports:
             - name: http
@@ -206,7 +206,7 @@ spec:
       serviceAccountName: platform-runtime
       containers:
         - name: litellm
-          image: ghcr.io/berriai/litellm:main-stable
+          image: ghcr.io/berriai/litellm:main-stable@sha256:65d84a2282137b4dc73bbe184650a7c807177c533e4223b3bfbc87963fe3fabe
           args: [--config, /app/config.yaml, --port, "4000"]
           ports:
             - name: http
@@ -225,8 +225,8 @@ spec:
             tcpSocket: {port: http}
             periodSeconds: 20
           resources:
-            requests: {cpu: 100m, memory: 256Mi}
-            limits: {cpu: "1", memory: 1Gi}
+            requests: {cpu: 250m, memory: 512Mi}
+            limits: {cpu: "1", memory: 2Gi}
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
@@ -323,14 +323,21 @@ spec:
       imagePullSecrets:
         - name: ghcr-pull
       initContainers:
-        - name: wait-for-migration
+        - name: validate-migrated-schema
           image: ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator
-          args: [--spring.main.web-application-type=none, --spring.flyway.enabled=false]
+          command: [/bin/sh, -c]
+          args:
+            - >-
+              until java -jar /app/app.jar
+              --spring.main.web-application-type=none
+              --spring.flyway.enabled=false;
+              do echo "Schema is not ready; retrying in 5 seconds"; sleep 5; done
           envFrom:
             - configMapRef: {name: platform-config}
           env:
             - {name: DATABASE_PASSWORD, valueFrom: {secretKeyRef: {name: platform-secrets, key: DATABASE_PASSWORD}}}
             - {name: AI_SERVICE_TOKEN, valueFrom: {secretKeyRef: {name: platform-secrets, key: AI_SERVICE_TOKEN}}}
+            - {name: SPRING_FLYWAY_ENABLED, value: "false"}
       containers:
         - name: interview-orchestrator
           image: ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator
@@ -341,6 +348,7 @@ spec:
           env:
             - {name: DATABASE_PASSWORD, valueFrom: {secretKeyRef: {name: platform-secrets, key: DATABASE_PASSWORD}}}
             - {name: AI_SERVICE_TOKEN, valueFrom: {secretKeyRef: {name: platform-secrets, key: AI_SERVICE_TOKEN}}}
+            - {name: SPRING_FLYWAY_ENABLED, value: "false"}
           startupProbe:
             httpGet: {path: /actuator/health/liveness, port: http}
             failureThreshold: 30
@@ -389,6 +397,8 @@ spec:
       containers:
         - name: web-ui
           image: ghcr.io/skpandey15/java-ai-mcp-web-ui
+          command: [/usr/sbin/nginx]
+          args: [-g, "daemon off;"]
           ports:
             - {name: http, containerPort: 8080}
           startupProbe:
@@ -408,3 +418,12 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: [ALL]
+          volumeMounts:
+            - name: runtime-config
+              mountPath: /usr/share/nginx/html/config.js
+              subPath: config.js
+              readOnly: true
+      volumes:
+        - name: runtime-config
+          configMap:
+            name: web-ui-runtime-config

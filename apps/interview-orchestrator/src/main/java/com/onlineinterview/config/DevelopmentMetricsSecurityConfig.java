@@ -2,6 +2,7 @@ package com.onlineinterview.config;
 
 import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest;
 import org.springframework.boot.actuate.metrics.export.prometheus.PrometheusScrapeEndpoint;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -15,6 +16,7 @@ import org.springframework.security.web.SecurityFilterChain;
  */
 @Configuration
 @Profile({"local", "dev"})
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class DevelopmentMetricsSecurityConfig {
 
     @Bean

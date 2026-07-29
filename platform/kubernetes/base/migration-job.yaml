@@ -6,6 +6,7 @@ metadata:
     phase4b.online-interview/run-before-rollout: "true"
 spec:
   backoffLimit: 2
+  activeDeadlineSeconds: 600
   ttlSecondsAfterFinished: 86400
   template:
     metadata:
@@ -18,7 +19,7 @@ spec:
         - name: ghcr-pull
       initContainers:
         - name: wait-for-postgres
-          image: postgres:17-alpine
+          image: postgres:17.10-alpine3.24@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
           command: [sh, -c, until pg_isready -h postgres -U interview; do sleep 2; done]
       containers:
         - name: migrate
@@ -31,6 +32,7 @@ spec:
           env:
             - {name: DATABASE_PASSWORD, valueFrom: {secretKeyRef: {name: platform-secrets, key: DATABASE_PASSWORD}}}
             - {name: AI_SERVICE_TOKEN, valueFrom: {secretKeyRef: {name: platform-secrets, key: AI_SERVICE_TOKEN}}}
+            - {name: SPRING_FLYWAY_ENABLED, value: "true"}
           resources:
             requests: {cpu: 100m, memory: 256Mi}
             limits: {cpu: 500m, memory: 768Mi}

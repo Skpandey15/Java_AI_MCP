@@ -18,17 +18,42 @@ h1 { margin: 0; font-size: clamp(2.6rem, 7vw, 5rem); line-height: .98; }
 .actions button { padding: .9rem 1.2rem; border: 1px solid #1266d4; border-radius: 10px; color: white; background: #1266d4; cursor: pointer; }
 .actions .secondary { color: #1266d4; background: white; }
 .status { margin: 2rem 0 0; color: #66809c; font-size: .9rem; }
-.dashboard { width: min(960px, calc(100% - 2rem)); margin: 3rem auto; padding: 2rem; border-radius: 18px; background: white; box-shadow: 0 18px 50px rgba(35,74,122,.12); }
+.dashboard { width: min(1200px, calc(100% - 2rem)); margin: 3rem auto; padding: 2rem; border-radius: 18px; background: white; box-shadow: 0 18px 50px rgba(35,74,122,.12); }
 @media (max-width: 600px) { .hero { padding: 2rem; } .actions button { width: 100%; } }
 
 .dashboard h1 { font-size: clamp(2rem, 5vw, 3.5rem); }
 .dashboard-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 2rem; }
+.workspace-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 2rem; align-items: start; }
+.workspace-nav { position: sticky; top: 1rem; display: grid; gap: .55rem; padding: .75rem; border: 1px solid #d7e2ef; border-radius: 14px; background: #f5f8fc; }
+.workspace-nav button { display: flex; align-items: center; gap: .7rem; width: 100%; padding: .8rem; border: 1px solid transparent; border-radius: 9px; color: #36516f; background: transparent; text-align: left; cursor: pointer; }
+.workspace-nav button span { display: grid; flex: 0 0 1.7rem; height: 1.7rem; place-items: center; border-radius: 50%; color: #1459ad; background: #e1edff; font-size: .8rem; font-weight: 800; }
+.workspace-nav button:hover { border-color: #b9cdea; background: white; }
+.workspace-nav button.active { color: white; background: #1266d4; font-weight: 700; }
+.workspace-nav button.active span { color: #1266d4; background: white; }
+.workspace-content { min-width: 0; }
+.workspace-content .form-grid { margin: 0; }
+.section-heading { margin-bottom: 1rem; }
+.section-heading h2, .section-heading p { margin-top: 0; }
+.section-heading p { color: #52647a; }
+.empty-state { padding: 2rem; border: 1px dashed #b9c8da; border-radius: 12px; color: #52647a; text-align: center; background: #f9fbfe; }
 .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-top: 2rem; }
 .card, .form-grid { border: 1px solid #d7e2ef; border-radius: 14px; padding: 1.25rem; background: #f9fbfe; }
 .form-grid, .assignment-form { display: grid; gap: .9rem; }
 .form-grid { margin-bottom: 2rem; }
 label { display: grid; gap: .35rem; color: #52647a; font-weight: 600; }
 input, textarea, select { width: 100%; padding: .7rem; border: 1px solid #b9c8da; border-radius: 8px; font: inherit; background: white; }
+label small { color: #718096; font-weight: 400; }
+.technology-field { display: grid; gap: .35rem; color: #52647a; font-weight: 600; }
+.technology-dropdown { position: relative; }
+.technology-dropdown summary { padding: .7rem; border: 1px solid #b9c8da; border-radius: 8px; color: #10233f; background: white; cursor: pointer; }
+.technology-options { position: absolute; z-index: 5; top: calc(100% + .3rem); right: 0; left: 0; max-height: 18rem; overflow-y: auto; padding: .5rem; border: 1px solid #b9c8da; border-radius: 10px; background: white; box-shadow: 0 12px 28px rgba(35,74,122,.18); }
+.technology-options label { display: flex; gap: .55rem; align-items: center; padding: .55rem; border-radius: 7px; color: #36516f; cursor: pointer; }
+.technology-options label:hover, .technology-options label:focus-within { color: #0f55ac; background: #eaf3ff; }
+.technology-options input { width: auto; }
+.technology-description { display: grid; align-content: start; gap: .75rem; height: 13rem; overflow-y: auto; padding: .8rem; border-left: 4px solid #1266d4; border-radius: 8px; color: #36516f; background: #eef5ff; font-size: .88rem; font-weight: 400; }
+.technology-description-item { display: grid; gap: .2rem; padding-bottom: .7rem; border-bottom: 1px solid #cbdcf3; }
+.technology-description-item:last-child { padding-bottom: 0; border-bottom: 0; }
+.technology-description strong { color: #10233f; }
 textarea { min-height: 90px; resize: vertical; }
 .card button, .form-grid button, .secondary-button { width: fit-content; padding: .7rem 1rem; border: 1px solid #1266d4; border-radius: 8px; color: white; background: #1266d4; cursor: pointer; }
 .secondary-button { color: #1266d4; background: white; }
@@ -48,7 +73,19 @@ button:disabled, textarea:disabled { cursor: not-allowed; opacity: .55; }
 .question-preview { padding: 1rem; border: 1px solid #d7e2ef; border-radius: 10px; background: white; }
 .question-preview p { margin: .4rem 0; }
 .question-builder { display: grid; gap: .8rem; padding: 1rem; border-radius: 12px; background: #f3f7fc; }
+.generation-progress { display: grid; gap: .55rem; color: #1459ad; font-size: .9rem; font-weight: 600; }
+.generation-progress::before { content: ""; grid-area: 1 / 1; height: 10px; overflow: hidden; border-radius: 999px; background: #dceaff; }
+.generation-progress-bar { z-index: 1; grid-area: 1 / 1; width: 42%; height: 10px; border-radius: 999px; background: #1266d4; animation: generation-progress 1.25s ease-in-out infinite alternate; }
+.generation-progress span { grid-column: 1; }
+@keyframes generation-progress {
+  from { transform: translateX(0); }
+  to { transform: translateX(138%); }
+}
 .inline-fields > label { flex: 1; }
+.question-composition { border: 1px solid #cbd8ec; border-radius: 12px; padding: 1rem; }
+.question-composition legend { font-weight: 700; padding: 0 .4rem; }
+.question-composition p { margin-top: 0; }
+.field-error { color: #b42318; }
 .compact-actions { justify-content: flex-start; }
 .danger-button { background: #fff; border: 1px solid #c93636; color: #a32121; }
 .error-message { padding: .8rem 1rem; border-radius: 8px; color: #a32121; background: #fff0f0; }
@@ -59,6 +96,10 @@ button:disabled, textarea:disabled { cursor: not-allowed; opacity: .55; }
 .question-meta { justify-content: flex-start; margin-bottom: .75rem; }
 @media (max-width: 720px) {
   .inline-fields, .card-heading, .question-meta { align-items: stretch; flex-direction: column; }
+  .dashboard { margin: 1rem auto; padding: 1rem; }
+  .dashboard-header { align-items: stretch; flex-direction: column; }
+  .workspace-layout { grid-template-columns: 1fr; gap: 1rem; }
+  .workspace-nav { position: static; }
 }
 
 

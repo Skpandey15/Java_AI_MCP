@@ -3,6 +3,16 @@ kind: Kustomization
 resources:
   - ../../base
   - ingress.yaml
+images:
+  - name: ghcr.io/skpandey15/java-ai-mcp-web-ui
+    newName: online-interview-web-ui
+    newTag: phase4b-local
+  - name: ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator
+    newName: online-interview-orchestrator
+    newTag: phase4b-local
+  - name: ghcr.io/skpandey15/java-ai-mcp-ai-service
+    newName: online-interview-ai-service
+    newTag: phase4b-local
 secretGenerator:
   - name: platform-secrets
     literals:

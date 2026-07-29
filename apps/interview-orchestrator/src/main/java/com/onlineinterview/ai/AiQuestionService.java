@@ -44,10 +44,12 @@ public class AiQuestionService {
         }
         var response = client.generate(new AiQuestionClient.GenerationRequest(
                 requestId, interviewId, definition.getSkills(),
-                definition.getDifficulty().name(), definition.getQuestionCount()));
+                definition.getDifficulty().name(), definition.getQuestionCount(),
+                definition.getQuestionComposition()));
         var generated = response.questions().stream()
                 .map(item -> ManualQuestion.generated(definition, item.order(), item.prompt(),
-                        item.maxScore(), requestId, response.modelPolicy(), response.promptVersion()))
+                        item.maxScore(), item.type(), item.options(), item.correctAnswers(),
+                        requestId, response.modelPolicy(), response.promptVersion()))
                 .toList();
         var saved = questions.saveAll(generated);
         log.atInfo().addKeyValue("event", "ai.questions_generated")

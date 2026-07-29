@@ -25,8 +25,16 @@ class LiteLLMClient:
                             "order": {"type": "integer", "minimum": 1},
                             "prompt": {"type": "string"},
                             "max_score": {"type": "integer", "minimum": 1, "maximum": 100},
+                            "type": {
+                                "type": "string",
+                                "enum": ["MCQ_SINGLE", "MCQ_MULTIPLE", "SHORT_TEXT", "LONG_TEXT"],
+                            },
+                            "options": {"type": "array", "items": {"type": "string"}},
+                            "correct_answers": {"type": "array", "items": {"type": "string"}},
                         },
-                        "required": ["order", "prompt", "max_score"],
+                        "required": [
+                            "order", "prompt", "max_score", "type", "options", "correct_answers"
+                        ],
                         "additionalProperties": False,
                     },
                 }
@@ -41,7 +49,8 @@ class LiteLLMClient:
                     "role": "system",
                     "content": (
                         "You create fair, unambiguous technical interview questions. "
-                        "Return only the requested structured result. Do not include answers."
+                        "Return only the requested structured result. Include correct answers "
+                        "only in the structured correct_answers field."
                     ),
                 },
                 {"role": "user", "content": prompt},

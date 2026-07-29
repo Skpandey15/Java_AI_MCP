@@ -8,7 +8,7 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-    - host: interview.localtest.me
+    - host: interview.localhost
       http:
         paths:
           - path: /
@@ -18,7 +18,7 @@ spec:
                 name: web-ui
                 port:
                   number: 80
-    - host: api.interview.localtest.me
+    - host: api.interview.localhost
       http:
         paths:
           - path: /
@@ -28,7 +28,7 @@ spec:
                 name: interview-orchestrator
                 port:
                   number: 8080
-    - host: auth.interview.localtest.me
+    - host: auth.interview.localhost
       http:
         paths:
           - path: /
@@ -38,7 +38,7 @@ spec:
                 name: keycloak
                 port:
                   number: 8080
-    - host: ai.interview.localtest.me
+    - host: ai.interview.localhost
       http:
         paths:
           - path: /
@@ -48,7 +48,7 @@ spec:
                 name: ai-service
                 port:
                   number: 8000
-    - host: litellm.interview.localtest.me
+    - host: litellm.interview.localhost
       http:
         paths:
           - path: /

@@ -17,12 +17,12 @@ configMapGenerator:
       - LOG_LEVEL=INFO
       - DATABASE_URL=jdbc:postgresql://postgres:5432/online_interview
       - DATABASE_USERNAME=interview
-      - KEYCLOAK_ISSUER_URI=http://localhost:8090/realms/online-interview
+      - KEYCLOAK_ISSUER_URI=http://auth.interview.localhost:8081/realms/online-interview
       - KEYCLOAK_JWK_SET_URI=http://keycloak:8080/realms/online-interview/protocol/openid-connect/certs
       - AI_SERVICE_BASE_URL=http://ai-service:8000
       - LITELLM_BASE_URL=http://litellm:4000
       - INTERVIEW_QUESTION_MODEL=interview-question-model
-      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+      - CORS_ALLOWED_ORIGINS=http://interview.localhost:8081,http://localhost:30080
   - name: postgres-init
     files:
       - postgres-init.sh
@@ -32,6 +32,9 @@ configMapGenerator:
   - name: litellm-config
     files:
       - config.yaml=litellm-config.yaml
+  - name: web-ui-runtime-config
+    files:
+      - config.js=web-ui-config.js
 generatorOptions:
   disableNameSuffixHash: true
 images:

@@ -35,6 +35,10 @@ public class InterviewDefinition {
     @Enumerated(EnumType.STRING) @Column(name = "question_mode", nullable = false) private QuestionMode questionMode;
     @Column(name = "duration_minutes", nullable = false) private int durationMinutes;
     @Column(name = "question_count", nullable = false) private int questionCount;
+    @Column(name = "mcq_single_count", nullable = false) private int mcqSingleCount;
+    @Column(name = "mcq_multiple_count", nullable = false) private int mcqMultipleCount;
+    @Column(name = "short_text_count", nullable = false) private int shortTextCount;
+    @Column(name = "long_text_count", nullable = false) private int longTextCount;
     @Column(name = "passing_percentage", nullable = false) private int passingPercentage;
     @Enumerated(EnumType.STRING) @Column(nullable = false) private InterviewStatus status;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
@@ -47,14 +51,27 @@ public class InterviewDefinition {
             List<String> skills, InterviewDifficulty difficulty, QuestionMode questionMode,
             int durationMinutes, int questionCount) {
         return draft(ownerSubject, title, description, skills, difficulty, questionMode,
-                durationMinutes, questionCount, 70);
+                durationMinutes, questionCount, 70, QuestionComposition.allLongText(questionCount));
     }
 
     public static InterviewDefinition draft(String ownerSubject, String title, String description,
             List<String> skills, InterviewDifficulty difficulty, QuestionMode questionMode,
             int durationMinutes, int questionCount, int passingPercentage) {
+        return draft(ownerSubject, title, description, skills, difficulty, questionMode,
+                durationMinutes, questionCount, passingPercentage,
+                QuestionComposition.allLongText(questionCount));
+    }
+
+    public static InterviewDefinition draft(String ownerSubject, String title, String description,
+            List<String> skills, InterviewDifficulty difficulty, QuestionMode questionMode,
+            int durationMinutes, int questionCount, int passingPercentage,
+            QuestionComposition composition) {
         if (passingPercentage < 1 || passingPercentage > 100) {
             throw new IllegalArgumentException("Passing percentage must be between 1 and 100");
+        }
+        if (composition.total() != questionCount) {
+            throw new IllegalArgumentException(
+                    "Question composition total must equal question count");
         }
         var definition = new InterviewDefinition();
         definition.id = UUID.randomUUID();
@@ -66,6 +83,10 @@ public class InterviewDefinition {
         definition.questionMode = questionMode;
         definition.durationMinutes = durationMinutes;
         definition.questionCount = questionCount;
+        definition.mcqSingleCount = composition.mcqSingle();
+        definition.mcqMultipleCount = composition.mcqMultiple();
+        definition.shortTextCount = composition.shortText();
+        definition.longTextCount = composition.longText();
         definition.passingPercentage = passingPercentage;
         definition.status = InterviewStatus.DRAFT;
         definition.createdAt = Instant.now();
@@ -90,6 +111,10 @@ public class InterviewDefinition {
     public QuestionMode getQuestionMode() { return questionMode; }
     public int getDurationMinutes() { return durationMinutes; }
     public int getQuestionCount() { return questionCount; }
+    public QuestionComposition getQuestionComposition() {
+        return new QuestionComposition(
+                mcqSingleCount, mcqMultipleCount, shortTextCount, longTextCount);
+    }
     public int getPassingPercentage() { return passingPercentage; }
     public InterviewStatus getStatus() { return status; }
     public Instant getCreatedAt() { return createdAt; }

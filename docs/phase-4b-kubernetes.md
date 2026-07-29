@@ -8,6 +8,8 @@ Phase 4B packages the Online Interview platform with Kustomize. It does not inst
 - `overlays/local`: k3d/Rancher Desktop defaults, NodePort fallbacks, and Traefik Ingress
 - `overlays/dev`, `uat`, `prod`: separate namespaces, immutable application image tags and External Secrets
 - production additionally defines three PodDisruptionBudgets
+- the web UI reads `/config.js` at runtime, allowing one immutable image to be promoted with environment-specific API and Keycloak endpoints
+- Keycloak client redirect URIs and web origins are generated separately for each environment
 
 No real credential is committed. The local overlay contains development-only defaults and an explicit OpenAI placeholder. Shared overlays expect External Secrets Operator and a `ClusterSecretStore` named `platform-secret-store`.
 
@@ -36,7 +38,9 @@ kubectl kustomize platform/kubernetes/overlays/uat | Out-Null
 kubectl kustomize platform/kubernetes/overlays/prod | Out-Null
 ```
 
-CI performs the same four renders.
+CI performs the same four renders, validates built-in resource schemas with
+`kubeconform`, and enforces Phase 4B policies with
+`platform/kubernetes/validate-manifests.ps1`.
 
 ## Rancher Desktop / k3d local validation
 
@@ -66,13 +70,20 @@ kubectl -n online-interview get pods,svc,pvc,jobs
 
 The local overlay includes a Traefik Ingress. In the standard k3d setup, host port `8081` forwards to the cluster's HTTP entrypoint, and `localtest.me` resolves to `127.0.0.1` without editing the Windows hosts file.
 
-Open these URLs:
+For the authenticated browser flow, use the reserved `.localhost` Ingress
+routes. Browsers treat `.localhost` names as secure development contexts, which
+is required for OIDC PKCE:
 
-- Web UI: `http://interview.localtest.me:8081`
-- Orchestrator API: `http://api.interview.localtest.me:8081`
-- Keycloak: `http://auth.interview.localtest.me:8081`
-- AI service: `http://ai.interview.localtest.me:8081`
-- LiteLLM: `http://litellm.interview.localtest.me:8081`
+- Web UI: `http://interview.localhost:8081`
+
+The browser redirects to Keycloak and sends API requests through the
+service-specific Ingress routes below:
+
+- Web UI: `http://interview.localhost:8081`
+- Orchestrator API: `http://api.interview.localhost:8081`
+- Keycloak: `http://auth.interview.localhost:8081`
+- AI service: `http://ai.interview.localhost:8081`
+- LiteLLM: `http://litellm.interview.localhost:8081`
 
 Confirm the route objects with:
 
@@ -85,7 +96,12 @@ These routes become usable only after their backend pods are Running and Ready. 
 
 ## Migration control
 
-The `database-migration` Job runs Flyway with the exact orchestrator image selected by the overlay. The orchestrator Deployment uses an init container that validates the migrated schema before application startup. Before every shared-environment rollout:
+The `database-migration` Job is the only workload allowed to run Flyway and uses
+the exact orchestrator image selected by the overlay. Normal orchestrator
+containers set `SPRING_FLYWAY_ENABLED=false`. The Deployment init container
+retries Hibernate schema validation until the migration has completed, so an
+application replica cannot become ready against an older schema. Before every
+shared-environment rollout:
 
 1. update all three application images to the same tested immutable release SHA or digest;
 2. delete the completed migration Job so it can be recreated;
@@ -112,3 +128,8 @@ Do not use the mutable `main` tag in UAT or production. The initial shared overl
 - a suitable default StorageClass or an explicit storage-class patch
 
 Stateful production services should ultimately use managed PostgreSQL and managed identity infrastructure. This base keeps the current self-contained architecture deployable for Phase 4B validation.
+
+The shared UAT and production overlays run Keycloak with the production `start`
+command, external hostnames and forwarded-header processing. Local and dev retain
+development mode for cluster validation. Third-party runtime images are pinned by
+digest so a repeated deployment resolves to the same content.

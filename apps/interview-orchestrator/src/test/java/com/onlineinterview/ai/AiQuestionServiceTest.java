@@ -9,6 +9,7 @@ import com.onlineinterview.interview.domain.InterviewDifficulty;
 import com.onlineinterview.interview.domain.QuestionMode;
 import com.onlineinterview.interview.infrastructure.InterviewDefinitionRepository;
 import com.onlineinterview.session.infrastructure.ManualQuestionRepository;
+import com.onlineinterview.session.domain.QuestionType;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -31,7 +32,8 @@ class AiQuestionServiceTest {
                 new AiQuestionClient.GenerationResponse(requestId, interview.getId(),
                         "interview-question-model", "direct-question-v1",
                         List.of(new AiQuestionClient.GeneratedQuestion(
-                                1, "Explain a production RAG architecture.", 10))));
+                                1, "Explain a production RAG architecture.", 10,
+                                QuestionType.LONG_TEXT, List.of(), List.of()))));
         when(questions.saveAll(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation ->
                 invocation.getArgument(0));
 

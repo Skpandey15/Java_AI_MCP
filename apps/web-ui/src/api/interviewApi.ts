@@ -1,6 +1,7 @@
 import { keycloak } from '../auth/keycloak'
+import { appConfig } from '../config'
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
+const apiBaseUrl = appConfig.apiBaseUrl
 
 export type Profile = {
   id: string
@@ -19,6 +20,9 @@ export type Interview = {
   questionMode: string
   durationMinutes: number
   questionCount: number
+  questionComposition: {
+    mcqSingle: number; mcqMultiple: number; shortText: number; longText: number
+  }
   passingPercentage: number
   status: string
   createdAt: string

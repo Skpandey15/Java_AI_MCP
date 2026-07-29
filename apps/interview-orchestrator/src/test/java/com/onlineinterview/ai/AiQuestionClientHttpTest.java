@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
+import com.onlineinterview.interview.domain.QuestionComposition;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestClient;
 
@@ -32,7 +33,10 @@ class AiQuestionClientHttpTest {
                       "questions": [{
                         "order": 1,
                         "prompt": "Explain Java memory visibility.",
-                        "maxScore": 10
+                        "maxScore": 10,
+                        "type": "LONG_TEXT",
+                        "options": [],
+                        "correctAnswers": []
                       }]
                     }
                     """.getBytes(StandardCharsets.UTF_8);
@@ -49,11 +53,13 @@ class AiQuestionClientHttpTest {
             client.generate(new AiQuestionClient.GenerationRequest(
                     UUID.fromString("00000000-0000-0000-0000-000000000001"),
                     UUID.fromString("00000000-0000-0000-0000-000000000002"),
-                    List.of("Java"), "MEDIUM", 1));
+                    List.of("Java"), "MEDIUM", 1, QuestionComposition.allLongText(1)));
 
             assertThat(protocol.get()).isEqualTo("HTTP/1.1");
             assertThat(receivedBody.get().get("questionCount").asInt()).isEqualTo(1);
             assertThat(receivedBody.get().get("skills").get(0).asText()).isEqualTo("Java");
+            assertThat(receivedBody.get().get("questionComposition").get("longText").asInt())
+                    .isEqualTo(1);
         } finally {
             server.stop(0);
         }

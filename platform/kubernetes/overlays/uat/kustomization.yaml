@@ -16,8 +16,21 @@ configMapGenerator:
       - APP_ENVIRONMENT=uat
       - CORS_ALLOWED_ORIGINS=https://interview.uat.example.com
       - KEYCLOAK_ISSUER_URI=https://auth.uat.example.com/realms/online-interview
+  - name: web-ui-runtime-config
+    behavior: replace
+    files:
+      - config.js=web-ui-config.js
+  - name: keycloak-realm
+    behavior: replace
+    files:
+      - online-interview-realm.json
 patches:
   - target: {kind: Namespace, name: online-interview}
     patch: |-
       - {op: replace, path: /metadata/name, value: online-interview-uat}
   - path: shared-patch.yaml
+  - target: {kind: Deployment, name: keycloak}
+    patch: |-
+      - op: replace
+        path: /spec/template/spec/containers/0/args
+        value: [start, --import-realm, --health-enabled=true, --http-enabled=true, --hostname=https://auth.uat.example.com, --proxy-headers=xforwarded]

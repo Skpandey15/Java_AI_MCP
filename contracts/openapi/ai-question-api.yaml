@@ -6,6 +6,7 @@ paths:
   /api/v1/interviews/{interviewId}/questions:generate:
     post:
       summary: Idempotently generate and persist direct-LLM questions
+      description: Generates the exact MCQ-single, MCQ-multiple, short-text and long-text composition stored on the interview draft.
       security: [{ bearerAuth: [] }]
       parameters:
         - in: header
