@@ -23,6 +23,9 @@ configMapGenerator:
       - LITELLM_BASE_URL=http://litellm:4000
       - INTERVIEW_QUESTION_MODEL=interview-question-model
       - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
+  - name: postgres-init
+    files:
+      - postgres-init.sh
   - name: keycloak-realm
     files:
       - online-interview-realm.json
