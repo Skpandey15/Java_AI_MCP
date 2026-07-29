@@ -390,7 +390,7 @@ spec:
         - name: web-ui
           image: ghcr.io/skpandey15/java-ai-mcp-web-ui
           ports:
-            - {name: http, containerPort: 80}
+            - {name: http, containerPort: 8080}
           startupProbe:
             httpGet: {path: /health, port: http}
             failureThreshold: 12
