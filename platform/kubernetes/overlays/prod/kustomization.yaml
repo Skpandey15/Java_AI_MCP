@@ -4,6 +4,7 @@ namespace: online-interview-prod
 resources:
   - ../../base
   - external-secret.yaml
+  - pod-disruption-budgets.yaml
 images:
   - {name: ghcr.io/skpandey15/java-ai-mcp-web-ui, newTag: sha-b3ac0c34e03ebce5f02f26859d8c58a382646cf9}
   - {name: ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator, newTag: sha-b3ac0c34e03ebce5f02f26859d8c58a382646cf9}
