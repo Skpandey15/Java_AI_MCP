@@ -46,7 +46,7 @@ spec:
     matchExpressions:
       - key: app.kubernetes.io/name
         operator: In
-        values: [postgres, interview-orchestrator, ai-service, litellm]
+        values: [postgres, redis, minio, kafka, interview-orchestrator, ai-service, litellm]
   policyTypes: [Ingress]
   ingress:
     - from:
@@ -54,7 +54,7 @@ spec:
             matchExpressions:
               - key: app.kubernetes.io/name
                 operator: In
-                values: [web-ui, keycloak, interview-orchestrator, ai-service, litellm]
+                values: [web-ui, keycloak, interview-orchestrator, ai-service, litellm, kafka]
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -73,12 +73,31 @@ spec:
             matchExpressions:
               - key: app.kubernetes.io/name
                 operator: In
-                values: [postgres, keycloak, interview-orchestrator, ai-service, litellm]
+                values: [postgres, redis, minio, kafka, keycloak, interview-orchestrator, ai-service, litellm]
     - to:
         - ipBlock:
             cidr: 0.0.0.0/0
       ports:
         - {protocol: TCP, port: 9092}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: runtime-dependency-egress
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values: [redis, minio, kafka]
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values: [redis, minio, kafka]
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy

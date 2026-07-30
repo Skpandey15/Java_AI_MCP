@@ -82,17 +82,24 @@ jobs:
         run: docker compose -f platform/docker/docker-compose.yml --profile observability config --quiet
       - run: docker build -t online-interview-web-ui:ci apps/web-ui
       - run: docker build -t online-interview-orchestrator:ci apps/interview-orchestrator
-      - name: Start orchestrator with PostgreSQL and verify health
+      - name: Start orchestrator with PostgreSQL and Redis and verify health
         run: |
           docker network create orchestrator-smoke
           docker run --detach --name orchestrator-postgres --network orchestrator-smoke             --env POSTGRES_DB=online_interview             --env POSTGRES_USER=interview             --env POSTGRES_PASSWORD=interview             pgvector/pgvector:0.8.5-pg17-bookworm
+          docker run --detach --name orchestrator-redis --network orchestrator-smoke             redis:7.4.2-alpine redis-server --requirepass interview-redis
           for attempt in $(seq 1 30); do
             if docker exec orchestrator-postgres pg_isready -U interview -d online_interview; then
               break
             fi
             sleep 1
           done
-          docker run --detach --name orchestrator-smoke --network orchestrator-smoke             --publish 18080:8080             --env DATABASE_URL=jdbc:postgresql://orchestrator-postgres:5432/online_interview             --env DATABASE_USERNAME=interview             --env DATABASE_PASSWORD=interview             --env KEYCLOAK_ISSUER_URI=http://localhost:8090/realms/online-interview             --env KEYCLOAK_JWK_SET_URI=http://localhost:8090/realms/online-interview/protocol/openid-connect/certs             online-interview-orchestrator:ci
+          for attempt in $(seq 1 30); do
+            if docker exec orchestrator-redis redis-cli -a interview-redis ping | grep --quiet PONG; then
+              break
+            fi
+            sleep 1
+          done
+          docker run --detach --name orchestrator-smoke --network orchestrator-smoke             --publish 18080:8080             --env DATABASE_URL=jdbc:postgresql://orchestrator-postgres:5432/online_interview             --env DATABASE_USERNAME=interview             --env DATABASE_PASSWORD=interview             --env REDIS_HOST=orchestrator-redis             --env REDIS_PORT=6379             --env REDIS_PASSWORD=interview-redis             --env KEYCLOAK_ISSUER_URI=http://localhost:8090/realms/online-interview             --env KEYCLOAK_JWK_SET_URI=http://localhost:8090/realms/online-interview/protocol/openid-connect/certs             online-interview-orchestrator:ci
           for attempt in $(seq 1 40); do
             if curl --fail --silent http://127.0.0.1:18080/actuator/health; then
               curl --fail --silent http://127.0.0.1:18080/actuator/prometheus > /dev/null
@@ -105,7 +112,7 @@ jobs:
       - name: Stop orchestrator smoke environment
         if: always()
         run: |
-          docker rm --force orchestrator-smoke orchestrator-postgres || true
+          docker rm --force orchestrator-smoke orchestrator-postgres orchestrator-redis || true
           docker network rm orchestrator-smoke || true
       - run: docker build -t online-interview-ai-service:ci apps/ai-service
       - name: Start AI service container and verify health

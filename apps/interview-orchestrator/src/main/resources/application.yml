@@ -37,6 +37,15 @@ spring:
       isolation-level: read_committed
     listener:
       ack-mode: record
+  data:
+    redis:
+      repositories:
+        enabled: false
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      connect-timeout: ${REDIS_CONNECT_TIMEOUT:2s}
+      timeout: ${REDIS_COMMAND_TIMEOUT:2s}
   security:
     oauth2:
       resourceserver:
@@ -93,6 +102,13 @@ app:
   rag:
     minimum-similarity: ${RAG_MINIMUM_SIMILARITY:0.55}
     retrieval-limit: ${RAG_RETRIEVAL_LIMIT:8}
+  object-storage:
+    enabled: ${OBJECT_STORAGE_ENABLED:false}
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY:interview}
+    secret-key: ${MINIO_SECRET_KEY:interview-secret}
+    bucket: ${MINIO_KNOWLEDGE_BUCKET:knowledge-documents}
+    maximum-object-bytes: ${KNOWLEDGE_MAXIMUM_OBJECT_BYTES:10485760}
   mcp:
     authorization-secret: ${MCP_AUTHORIZATION_SECRET:local-mcp-authorization-secret-change-me}
     execution:

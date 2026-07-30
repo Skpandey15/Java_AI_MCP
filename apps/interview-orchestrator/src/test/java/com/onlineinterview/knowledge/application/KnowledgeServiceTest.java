@@ -10,12 +10,15 @@ import com.onlineinterview.knowledge.infrastructure.KnowledgeChunkRepository;
 import com.onlineinterview.knowledge.infrastructure.KnowledgeDocumentRepository;
 import com.onlineinterview.knowledge.infrastructure.KnowledgeEmbeddingClient;
 import com.onlineinterview.knowledge.infrastructure.KnowledgeVectorStore;
+import com.onlineinterview.knowledge.infrastructure.KnowledgeObjectStorage;
 import java.util.Optional;
 import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 class KnowledgeServiceTest {
     private final KnowledgeCollectionRepository collections =
@@ -40,6 +43,82 @@ class KnowledgeServiceTest {
 
         assertThat(document.getCollection()).isEqualTo(collection);
         assertThat(document.getStatus().name()).isEqualTo("PENDING");
+        assertThat(document.getContent()).isEqualTo("# Spring");
+        assertThat(document.getObjectKey()).isNull();
+        assertThat(document.getObjectSize()).isNull();
+        assertThat(document.getContentSha256()).isNull();
+    }
+
+    @Test
+    void storesOriginalDocumentInObjectStorageAndCleansUpRolledBackUpload() {
+        var storage = mock(KnowledgeObjectStorage.class);
+        var storedService = new KnowledgeService(collections, documents, chunks,
+                new DocumentChunker(), embeddingClient, vectorStore, storage);
+        var collection = KnowledgeCollection.create("owner", "Stored", "References");
+        when(collections.findById(collection.getId())).thenReturn(Optional.of(collection));
+        when(storage.put(eq("owner"), eq("source.md"), eq("text/markdown"), any()))
+                .thenReturn(new KnowledgeObjectStorage.StoredObject("owner/key", 7, "a".repeat(64)));
+        when(documents.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            var document = storedService.addDocument("owner", collection.getId(),
+                    "source.md", "text/markdown", "content");
+            assertThat(document.getContent()).isNull();
+            assertThat(document.getObjectKey()).isEqualTo("owner/key");
+            assertThat(document.getObjectSize()).isEqualTo(7);
+            assertThat(document.getContentSha256()).isEqualTo("a".repeat(64));
+            TransactionSynchronizationManager.getSynchronizations().forEach(value ->
+                    value.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK));
+            verify(storage).delete("owner/key");
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    void preparesStoredDocumentByReadingObjectContent() {
+        var storage = mock(KnowledgeObjectStorage.class);
+        var storedService = new KnowledgeService(collections, documents, chunks,
+                new DocumentChunker(), embeddingClient, vectorStore, storage);
+        var collection = KnowledgeCollection.create("owner", "Stored", "References");
+        var digest = java.util.HexFormat.of().formatHex(sha256("content"));
+        var document = com.onlineinterview.knowledge.domain.KnowledgeDocument.pendingStored(
+                collection, "source.md", "text/markdown", "owner/key", 7, digest);
+        when(documents.findById(document.getId())).thenReturn(Optional.of(document));
+        when(storage.get("owner/key")).thenReturn("content".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        storedService.prepareDocument("owner", document.getId());
+
+        verify(chunks).save(argThat(value -> value.getContent().equals("content")));
+    }
+
+    @Test
+    void rejectsStoredDocumentWithIntegrityMismatch() {
+        var storage = mock(KnowledgeObjectStorage.class);
+        var storedService = new KnowledgeService(collections, documents, chunks,
+                new DocumentChunker(), embeddingClient, vectorStore, storage);
+        var collection = KnowledgeCollection.create("owner", "Stored", "References");
+        var document = com.onlineinterview.knowledge.domain.KnowledgeDocument.pendingStored(
+                collection, "source.md", "text/markdown", "owner/key", 7, "a".repeat(64));
+        when(documents.findById(document.getId())).thenReturn(Optional.of(document));
+        when(storage.get("owner/key")).thenReturn("content".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        assertThatThrownBy(() -> storedService.prepareDocument("owner", document.getId()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Knowledge document integrity check failed");
+    }
+
+    @Test
+    void failsClosedWhenStoredDocumentBackendIsNotConfigured() {
+        var collection = KnowledgeCollection.create("owner", "Stored", "References");
+        var document = com.onlineinterview.knowledge.domain.KnowledgeDocument.pendingStored(
+                collection, "source.md", "text/markdown", "owner/key", 7, "a".repeat(64));
+        when(documents.findById(document.getId())).thenReturn(Optional.of(document));
+
+        assertThatThrownBy(() -> service.prepareDocument("owner", document.getId()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Knowledge object storage is not configured");
     }
 
     @Test
@@ -106,5 +185,14 @@ class KnowledgeServiceTest {
         assertThatThrownBy(() -> service.search("owner", collection.getId(), "bad", 3))
                 .isInstanceOfSatisfying(ResponseStatusException.class,
                         exception -> assertThat(exception.getStatusCode().value()).isEqualTo(502));
+    }
+
+    private static byte[] sha256(String value) {
+        try {
+            return java.security.MessageDigest.getInstance("SHA-256")
+                    .digest(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        } catch (java.security.NoSuchAlgorithmException exception) {
+            throw new AssertionError(exception);
+        }
     }
 }

@@ -23,7 +23,10 @@ secretGenerator:
       - LITELLM_MASTER_KEY=local-litellm-key
       - AI_SERVICE_TOKEN=local-ai-service-token
       - MCP_AUTHORIZATION_SECRET=local-mcp-authorization-secret-change-me
-      - KAFKA_BOOTSTRAP_SERVERS=unused-local-kafka:9092
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - REDIS_PASSWORD=local-redis-password
+      - MINIO_ACCESS_KEY=interview
+      - MINIO_SECRET_KEY=local-minio-secret-change-me
       - OPENAI_API_KEY=replace-before-apply
 generatorOptions:
   disableNameSuffixHash: true

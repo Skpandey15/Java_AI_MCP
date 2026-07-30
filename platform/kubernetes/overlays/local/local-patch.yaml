@@ -44,7 +44,7 @@ spec:
   template:
     spec:
       initContainers:
-        - name: wait-for-migration
+        - name: validate-migrated-schema
           imagePullPolicy: Always
       containers:
         - name: interview-orchestrator

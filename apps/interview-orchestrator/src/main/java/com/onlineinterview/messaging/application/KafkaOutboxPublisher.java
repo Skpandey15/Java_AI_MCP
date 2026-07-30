@@ -5,6 +5,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -21,6 +22,7 @@ public class KafkaOutboxPublisher {
     private final String topic;
     private final int maximumAttempts;
 
+    @Autowired
     public KafkaOutboxPublisher(OutboxEventRepository events, KafkaTemplate<String, String> kafka,
             MeterRegistry meters, @Value("${app.messaging.topic}") String topic,
             @Value("${app.messaging.maximum-attempts:8}") int maximumAttempts) {

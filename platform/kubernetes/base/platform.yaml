@@ -345,7 +345,9 @@ spec:
             - {name: DATABASE_PASSWORD, valueFrom: {secretKeyRef: {name: platform-secrets, key: DATABASE_PASSWORD}}}
             - {name: AI_SERVICE_TOKEN, valueFrom: {secretKeyRef: {name: platform-secrets, key: AI_SERVICE_TOKEN}}}
             - {name: MCP_AUTHORIZATION_SECRET, valueFrom: {secretKeyRef: {name: platform-secrets, key: MCP_AUTHORIZATION_SECRET}}}
-            - {name: KAFKA_BOOTSTRAP_SERVERS, valueFrom: {secretKeyRef: {name: platform-secrets, key: KAFKA_BOOTSTRAP_SERVERS}}}
+            - {name: REDIS_PASSWORD, valueFrom: {secretKeyRef: {name: platform-secrets, key: REDIS_PASSWORD}}}
+            - {name: MINIO_ACCESS_KEY, valueFrom: {secretKeyRef: {name: platform-secrets, key: MINIO_ACCESS_KEY}}}
+            - {name: MINIO_SECRET_KEY, valueFrom: {secretKeyRef: {name: platform-secrets, key: MINIO_SECRET_KEY}}}
             - {name: SPRING_FLYWAY_ENABLED, value: "false"}
       containers:
         - name: interview-orchestrator
@@ -358,7 +360,9 @@ spec:
             - {name: DATABASE_PASSWORD, valueFrom: {secretKeyRef: {name: platform-secrets, key: DATABASE_PASSWORD}}}
             - {name: AI_SERVICE_TOKEN, valueFrom: {secretKeyRef: {name: platform-secrets, key: AI_SERVICE_TOKEN}}}
             - {name: MCP_AUTHORIZATION_SECRET, valueFrom: {secretKeyRef: {name: platform-secrets, key: MCP_AUTHORIZATION_SECRET}}}
-            - {name: KAFKA_BOOTSTRAP_SERVERS, valueFrom: {secretKeyRef: {name: platform-secrets, key: KAFKA_BOOTSTRAP_SERVERS}}}
+            - {name: REDIS_PASSWORD, valueFrom: {secretKeyRef: {name: platform-secrets, key: REDIS_PASSWORD}}}
+            - {name: MINIO_ACCESS_KEY, valueFrom: {secretKeyRef: {name: platform-secrets, key: MINIO_ACCESS_KEY}}}
+            - {name: MINIO_SECRET_KEY, valueFrom: {secretKeyRef: {name: platform-secrets, key: MINIO_SECRET_KEY}}}
             - {name: SPRING_FLYWAY_ENABLED, value: "false"}
           startupProbe:
             httpGet: {path: /actuator/health/liveness, port: http}

@@ -17,12 +17,15 @@ An AI-assisted online interview platform for the Java and AI ecosystems.
 - Bidirectional MCP integration for internal platform tools and approved external tools
 - React web application
 - Auditable answer evaluation and results
+- Redis-backed distributed coordination
+- MinIO-backed knowledge-source storage
+- Persistent Kafka outbox delivery and local backup/restore
 
 ### Architecture
 
 See the complete [High-Level Design and Low-Level Design](docs/architecture-design.md).
 
-### Planned stack
+### Implemented stack
 
 - Java 21+ and Spring Boot 3.x
 - Python, FastAPI, and an LLM/RAG framework
@@ -33,6 +36,10 @@ See the complete [High-Level Design and Low-Level Design](docs/architecture-desi
 - LiteLLM Gateway and OpenAI
 - Model Context Protocol (MCP)
 - Docker and Kubernetes
+
+Phase 7 adds a production-like local runtime for PostgreSQL/pgvector, Redis,
+Kafka and MinIO. See the
+[runtime storage runbook](docs/runbooks/phase-7-runtime-storage.md).
 
 ### Status
 
