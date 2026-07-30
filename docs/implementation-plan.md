@@ -94,6 +94,8 @@ Status: implemented with Kustomize and validated on the local k3d/Rancher Deskto
 
 - Kustomize bases with local, dev, UAT and production overlays
 - Kubernetes Secrets/External Secrets integration and non-secret ConfigMaps
+- Managed TLS ingress, ExternalSecret rotation/retention policy and manifest
+  security validation for development, UAT and production
 - Health probes, resource requests/limits and migration-job controls
 - Rancher Desktop validation before shared-cluster deployment
 
