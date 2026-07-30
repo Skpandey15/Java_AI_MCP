@@ -1,0 +1,233 @@
+name: promote-gitops
+
+on:
+  workflow_run:
+    workflows: ["release-images"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: Environment to promote
+        required: true
+        type: choice
+        options: [uat, prod]
+      source_sha:
+        description: Full source commit SHA whose immutable images will be promoted
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  packages: read
+
+concurrency:
+  group: gitops-promotion-${{ github.event.inputs.target_environment || 'dev' }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.release.outputs.environment }}
+      source_environment: ${{ steps.release.outputs.source_environment }}
+      source_sha: ${{ steps.release.outputs.source_sha }}
+      promote: ${{ steps.scope.outputs.promote }}
+    steps:
+      - id: release
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          MANUAL_ENVIRONMENT: ${{ inputs.target_environment }}
+          MANUAL_SHA: ${{ inputs.source_sha }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "workflow_run" ]]; then
+            environment=dev
+            source_environment=
+            source_sha="$RELEASE_SHA"
+          else
+            environment="$MANUAL_ENVIRONMENT"
+            source_sha="$MANUAL_SHA"
+            [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]]
+            if [[ "$environment" == "uat" ]]; then
+              source_environment=dev
+            else
+              source_environment=uat
+            fi
+          fi
+          {
+            echo "environment=$environment"
+            echo "source_environment=$source_environment"
+            echo "source_sha=$source_sha"
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        if: github.event_name == 'workflow_run'
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+      - name: Ignore digest-only GitOps commits
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "promote=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed="$(git diff-tree --no-commit-id --name-only -r HEAD)"
+          if [[ -n "$changed" ]] &&
+             ! grep -Ev '^platform/kubernetes/overlays/(dev|uat|prod)/kustomization\.yaml$' <<< "$changed" | grep -q .; then
+            echo "promote=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "promote=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  promote:
+    needs: prepare
+    if: needs.prepare.outputs.promote == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ format('{0}-promotion', needs.prepare.outputs.environment) }}
+    steps:
+      - name: Require GitOps bot credential
+        env:
+          GITOPS_BOT_TOKEN: ${{ secrets.GITOPS_BOT_TOKEN }}
+        run: |
+          test -n "$GITOPS_BOT_TOKEN" || {
+            echo "::error::Configure GITOPS_BOT_TOKEN so promotion pull requests trigger CI."
+            exit 1
+          }
+
+      - name: Verify source environment is healthy
+        if: needs.prepare.outputs.source_environment != ''
+        env:
+          ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+          ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
+          SOURCE_APPLICATION: online-interview-${{ needs.prepare.outputs.source_environment }}
+          ARGOCD_VERSION: v3.4.2
+        run: |
+          set -euo pipefail
+          test -n "$ARGOCD_SERVER"
+          test -n "$ARGOCD_AUTH_TOKEN"
+          curl --fail --silent --show-error --location \
+            --output argocd-linux-amd64 \
+            "https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/argocd-linux-amd64"
+          curl --fail --silent --show-error --location \
+            --output cli_checksums.txt \
+            "https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/cli_checksums.txt"
+          grep 'argocd-linux-amd64$' cli_checksums.txt | sha256sum --check
+          install -m 0755 argocd-linux-amd64 /usr/local/bin/argocd
+          argocd app wait "$SOURCE_APPLICATION" \
+            --server "$ARGOCD_SERVER" \
+            --auth-token "$ARGOCD_AUTH_TOKEN" \
+            --grpc-web \
+            --sync --health --timeout 600
+
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITOPS_BOT_TOKEN }}
+          fetch-depth: 0
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Authenticate to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve immutable image digests
+        id: digests
+        env:
+          SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+          tag="sha-$SOURCE_SHA"
+          resolve() {
+            docker buildx imagetools inspect "$1:$tag" \
+              --format '{{json .Manifest.Digest}}' | tr -d '"'
+          }
+          {
+            echo "web_ui=$(resolve ghcr.io/skpandey15/java-ai-mcp-web-ui)"
+            echo "orchestrator=$(resolve ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator)"
+            echo "ai_service=$(resolve ghcr.io/skpandey15/java-ai-mcp-ai-service)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Verify source environment uses the requested release
+        if: needs.prepare.outputs.source_environment != ''
+        shell: pwsh
+        run: |
+          $sourcePath = 'platform/kubernetes/overlays/${{ needs.prepare.outputs.source_environment }}/kustomization.yaml'
+          $source = Get-Content -LiteralPath $sourcePath -Raw
+          foreach ($digest in @(
+            '${{ steps.digests.outputs.web_ui }}',
+            '${{ steps.digests.outputs.orchestrator }}',
+            '${{ steps.digests.outputs.ai_service }}'
+          )) {
+            if (-not $source.Contains($digest)) {
+              throw "Requested release is not the healthy desired state in $sourcePath"
+            }
+          }
+
+      - name: Update desired state
+        shell: pwsh
+        run: |
+          ./platform/gitops/update-image-digests.ps1 `
+            -Environment '${{ needs.prepare.outputs.environment }}' `
+            -WebUiDigest '${{ steps.digests.outputs.web_ui }}' `
+            -OrchestratorDigest '${{ steps.digests.outputs.orchestrator }}' `
+            -AiServiceDigest '${{ steps.digests.outputs.ai_service }}'
+
+      - uses: azure/setup-kubectl@v4
+        with:
+          version: v1.33.3
+
+      - name: Render and validate promoted environment
+        env:
+          ENVIRONMENT: ${{ needs.prepare.outputs.environment }}
+        run: |
+          set -euo pipefail
+          mkdir rendered
+          kubectl kustomize "platform/kubernetes/overlays/$ENVIRONMENT" > "rendered/$ENVIRONMENT.yaml"
+          docker run --rm -v "$PWD/rendered:/manifests:ro" \
+            ghcr.io/yannh/kubeconform:v0.7.0 \
+            -strict -summary -ignore-missing-schemas "/manifests/$ENVIRONMENT.yaml"
+          pwsh ./platform/gitops/validate-gitops.ps1 \
+            -RenderedDirectory rendered \
+            -GitOpsDirectory platform/gitops/argocd
+
+      - name: Open promotion pull request
+        id: pull_request
+        env:
+          GH_TOKEN: ${{ secrets.GITOPS_BOT_TOKEN }}
+          ENVIRONMENT: ${{ needs.prepare.outputs.environment }}
+          SOURCE_SHA: ${{ needs.prepare.outputs.source_sha }}
+        run: |
+          set -euo pipefail
+          short_sha="${SOURCE_SHA:0:12}"
+          branch="gitops/promote-${ENVIRONMENT}-${short_sha}-${GITHUB_RUN_ID}"
+          git config user.name "online-interview-gitops"
+          git config user.email "online-interview-gitops@users.noreply.github.com"
+          git switch -c "$branch"
+          git add "platform/kubernetes/overlays/$ENVIRONMENT/kustomization.yaml"
+          git commit -m "promote ${ENVIRONMENT} images from ${short_sha}"
+          git push --set-upstream origin "$branch"
+          pr_url="$(gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "promote: ${ENVIRONMENT} images from ${short_sha}" \
+            --body "Promotes the three application images built from \`${SOURCE_SHA}\` to **${ENVIRONMENT}** by immutable registry digest. The source-environment health gate and rendered-manifest validation passed.")"
+          echo "url=$pr_url" >> "$GITHUB_OUTPUT"
+
+      - name: Enable automatic dev merge after required checks
+        if: needs.prepare.outputs.environment == 'dev'
+        env:
+          GH_TOKEN: ${{ secrets.GITOPS_BOT_TOKEN }}
+          PR_URL: ${{ steps.pull_request.outputs.url }}
+        run: gh pr merge "$PR_URL" --auto --squash

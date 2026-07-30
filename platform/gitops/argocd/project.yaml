@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: online-interview
+  namespace: argocd
+spec:
+  description: Online Interview GitOps delivery boundaries
+  sourceRepos:
+    - https://github.com/Skpandey15/Java_AI_MCP.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: online-interview-dev
+    - server: https://kubernetes.default.svc
+      namespace: online-interview-uat
+    - server: https://kubernetes.default.svc
+      namespace: online-interview-prod
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"
+  orphanedResources:
+    warn: true
