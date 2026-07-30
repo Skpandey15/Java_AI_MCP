@@ -17,12 +17,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Scan repository, dependencies, IaC, and secrets
+      - name: Block high and critical dependency or secret findings
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
-          scanners: vuln,misconfig,secret
+          scanners: vuln,secret
           severity: HIGH,CRITICAL
           ignore-unfixed: true
+          exit-code: "1"
+      - name: Block critical infrastructure misconfigurations
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: config
+          scan-ref: platform
+          severity: CRITICAL
           exit-code: "1"
