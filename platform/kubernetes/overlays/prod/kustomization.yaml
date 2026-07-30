@@ -4,6 +4,7 @@ namespace: online-interview-prod
 resources:
   - ../../base
   - external-secret.yaml
+  - tls-ingress.yaml
   - pod-disruption-budgets.yaml
   - horizontal-pod-autoscalers.yaml
 images:
