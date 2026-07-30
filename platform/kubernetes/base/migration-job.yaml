@@ -36,6 +36,8 @@ spec:
             - {name: DATABASE_PASSWORD, valueFrom: {secretKeyRef: {name: platform-secrets, key: DATABASE_PASSWORD}}}
             - {name: AI_SERVICE_TOKEN, valueFrom: {secretKeyRef: {name: platform-secrets, key: AI_SERVICE_TOKEN}}}
             - {name: SPRING_FLYWAY_ENABLED, value: "true"}
+            - {name: OBJECT_STORAGE_ENABLED, value: "false"}
+            - {name: MESSAGING_ENABLED, value: "false"}
           resources:
             requests: {cpu: 100m, memory: 256Mi}
             limits: {cpu: 500m, memory: 768Mi}

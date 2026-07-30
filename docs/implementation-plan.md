@@ -149,3 +149,19 @@ IaC and secret scanning.
 Phase 6D completes Phase 6 with deterministic groundedness, relevance, citation
 and safety release gates; model token/cost/latency telemetry; Prometheus alerts;
 and Grafana operational views.
+
+## Phase 7 — Local production runtime
+
+Phase 7.1 through 7.4 are implemented:
+
+- Redis AOF persistence and atomic, fail-closed cross-replica MCP quotas
+- MinIO-backed original knowledge documents with bounded size, SHA-256 integrity
+  metadata and rollback cleanup
+- Persistent KRaft Kafka packaging for Kubernetes connected to the transactional
+  outbox publisher
+- Persistent PostgreSQL, Redis, Kafka and MinIO volumes
+- Checksum-protected PostgreSQL and MinIO backup/restore scripts
+- Runtime health indicators for PostgreSQL, Redis, Kafka and MinIO
+
+The local single-node stateful topology is production-like. External production
+deployments must use replicated operators or managed data services.
