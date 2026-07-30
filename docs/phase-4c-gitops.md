@@ -40,6 +40,19 @@ kubectl get applications -n argocd
 For a private repository, configure an Argo CD repository credential Secret
 outside this repository. Never commit a GitHub token or SSH private key.
 
+For the local k3d cluster with Traefik exposed on host port `8081`, enable the
+local-only Argo CD ingress and restart the server after changing its listener:
+
+```powershell
+kubectl apply -k platform/gitops/local-access
+kubectl rollout restart deployment/argocd-server -n argocd
+kubectl rollout status deployment/argocd-server -n argocd
+```
+
+Argo CD is then available at `http://argocd.localhost:8081`. Do not apply this
+local-access package to shared environments; their ingress and TLS settings
+must use the environment's real hostname and certificate.
+
 The applications track `main`. Development automatically reconciles changes.
 UAT and production have `automated.enabled: false`, so an approved digest change
 becomes `OutOfSync` until an operator reviews the Argo CD diff and starts sync.
