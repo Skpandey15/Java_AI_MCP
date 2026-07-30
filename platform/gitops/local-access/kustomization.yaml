@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - argocd-cmd-params.yaml
   - argocd-ingress.yaml
+  - application-dev-local.yaml
