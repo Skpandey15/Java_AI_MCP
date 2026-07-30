@@ -93,6 +93,12 @@ public class KnowledgeService {
     @Transactional(readOnly = true)
     public List<KnowledgeVectorStore.SearchHit> search(
             String owner, UUID collectionId, String query, int limit) {
+        return search(owner, collectionId, query, limit, -1);
+    }
+
+    @Transactional(readOnly = true)
+    public List<KnowledgeVectorStore.SearchHit> search(
+            String owner, UUID collectionId, String query, int limit, double minimumSimilarity) {
         ownedCollection(owner, collectionId);
         var response = embeddingClient.embed(List.of(query));
         if (response == null || response.embeddings() == null
@@ -100,7 +106,8 @@ public class KnowledgeService {
             throw new ResponseStatusException(
                     HttpStatus.BAD_GATEWAY, "Embedding service returned an invalid response");
         }
-        return vectorStore.search(owner, collectionId, response.embeddings().getFirst(), limit);
+        return vectorStore.search(owner, collectionId, response.embeddings().getFirst(),
+                limit, minimumSimilarity);
     }
 
     private KnowledgeCollection ownedCollection(String owner, UUID id) {

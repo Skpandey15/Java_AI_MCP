@@ -79,3 +79,18 @@ Grafana local credentials default to `admin/admin`. Override `GRAFANA_ADMIN_USER
 3. Search that ID in Grafana Explore using the Loki data source.
 4. Confirm the same ID appears in Spring Boot and downstream AI-service logs for AI generation.
 5. Confirm prompts, answers, tokens and feedback are absent.
+
+## RAG quality metrics
+
+The orchestrator exposes these low-cardinality Prometheus series:
+
+- `rag_retrieval_duration_seconds`
+- `rag_retrieval_hits`
+- `rag_retrieval_similarity`
+- `rag_citations_per_question`
+- `rag_citation_similarity`
+- `rag_generation_total{outcome=...}`
+- `rag_evaluation_duration_seconds`
+- `rag_evaluation_precision`, `rag_evaluation_recall`, `rag_evaluation_mrr`
+
+No owner, collection, document, prompt or chunk content is used as a metric tag.

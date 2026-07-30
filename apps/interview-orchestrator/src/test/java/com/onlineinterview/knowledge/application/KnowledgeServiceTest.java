@@ -95,7 +95,7 @@ class KnowledgeServiceTest {
         when(collections.findById(collection.getId())).thenReturn(Optional.of(collection));
         when(embeddingClient.embed(List.of("query"))).thenReturn(
                 new KnowledgeEmbeddingClient.EmbeddingResponse("model", List.of(vector)));
-        when(vectorStore.search("owner", collection.getId(), vector, 3))
+        when(vectorStore.search("owner", collection.getId(), vector, 3, -1))
                 .thenReturn(List.of(hit));
 
         assertThat(service.search("owner", collection.getId(), "query", 3))

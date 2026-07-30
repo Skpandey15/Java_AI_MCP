@@ -110,6 +110,8 @@ Status: implemented declaratively; shared Argo CD installation, repository crede
 Phase 5A.1 through 5A.3 implemented: knowledge collections, document ingestion,
 deterministic chunking, pgvector embeddings, ownership-filtered retrieval and
 citation-backed question generation with persisted source evidence.
+Phase 5A.4 adds thresholded retrieval, repeatable precision/recall/MRR evaluation,
+citation-quality indicators and Prometheus RAG observability.
 
 - Document ingestion, pgvector retrieval, reranking and citations
 - Internal MCP registry and least-privilege tool policies

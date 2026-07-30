@@ -13,6 +13,8 @@ import com.onlineinterview.interview.infrastructure.InterviewDefinitionRepositor
 import com.onlineinterview.session.infrastructure.ManualQuestionRepository;
 import com.onlineinterview.session.domain.QuestionType;
 import com.onlineinterview.knowledge.application.KnowledgeService;
+import com.onlineinterview.knowledge.application.RagProperties;
+import com.onlineinterview.knowledge.application.RagQualityMetrics;
 import com.onlineinterview.knowledge.infrastructure.KnowledgeVectorStore;
 import java.util.List;
 import java.util.Optional;
@@ -27,7 +29,8 @@ class AiQuestionServiceTest {
         var questions = mock(ManualQuestionRepository.class);
         var client = mock(AiQuestionClient.class);
         var knowledge = mock(KnowledgeService.class);
-        var service = new AiQuestionService(definitions, questions, client, knowledge);
+        var service = new AiQuestionService(definitions, questions, client, knowledge,
+                new RagProperties(), mock(RagQualityMetrics.class));
         var interview = InterviewDefinition.draft("owner", "Java AI", "Senior interview",
                 List.of("Java", "Spring AI"), InterviewDifficulty.HARD,
                 QuestionMode.DIRECT_LLM, 60, 1);
@@ -56,7 +59,9 @@ class AiQuestionServiceTest {
         var questions = mock(ManualQuestionRepository.class);
         var client = mock(AiQuestionClient.class);
         var knowledge = mock(KnowledgeService.class);
-        var service = new AiQuestionService(definitions, questions, client, knowledge);
+        var metrics = mock(RagQualityMetrics.class);
+        var service = new AiQuestionService(definitions, questions, client, knowledge,
+                new RagProperties(), metrics);
         var collectionId = UUID.randomUUID();
         var interview = InterviewDefinition.draft("owner", "Java RAG", "Grounded interview",
                 List.of("Java"), InterviewDifficulty.MEDIUM, QuestionMode.RAG, 60, 1, 70,
@@ -66,7 +71,7 @@ class AiQuestionServiceTest {
                 "java-guide.md", 2, "Records are immutable data carriers.", 0.91);
         when(questions.findByGenerationRequestIdOrderByOrderAsc(requestId)).thenReturn(List.of());
         when(definitions.findById(interview.getId())).thenReturn(Optional.of(interview));
-        when(knowledge.search("owner", collectionId, "Java RAG Java", 8))
+        when(knowledge.search("owner", collectionId, "Java RAG Java", 8, 0.55))
                 .thenReturn(List.of(hit));
         when(client.generate(org.mockito.ArgumentMatchers.any())).thenReturn(
                 new AiQuestionClient.GenerationResponse(requestId, interview.getId(),
@@ -93,7 +98,8 @@ class AiQuestionServiceTest {
         var questions = mock(ManualQuestionRepository.class);
         var client = mock(AiQuestionClient.class);
         var knowledge = mock(KnowledgeService.class);
-        var service = new AiQuestionService(definitions, questions, client, knowledge);
+        var service = new AiQuestionService(definitions, questions, client, knowledge,
+                new RagProperties(), mock(RagQualityMetrics.class));
         var collectionId = UUID.randomUUID();
         var interview = InterviewDefinition.draft("owner", "Java RAG", "Grounded interview",
                 List.of("Java"), InterviewDifficulty.MEDIUM, QuestionMode.RAG, 60, 1, 70,
@@ -105,7 +111,8 @@ class AiQuestionServiceTest {
         when(definitions.findById(interview.getId())).thenReturn(Optional.of(interview));
         when(knowledge.search(org.mockito.ArgumentMatchers.anyString(),
                 org.mockito.ArgumentMatchers.eq(collectionId),
-                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(8)))
+                org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(8),
+                org.mockito.ArgumentMatchers.eq(0.55)))
                 .thenReturn(List.of(hit));
         when(client.generate(org.mockito.ArgumentMatchers.any())).thenReturn(
                 new AiQuestionClient.GenerationResponse(requestId, interview.getId(), "model", "v1",
