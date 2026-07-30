@@ -25,6 +25,8 @@ configMapGenerator:
       - KNOWLEDGE_EMBEDDING_MODEL=knowledge-embedding-model
       - RAG_MINIMUM_SIMILARITY=0.55
       - RAG_RETRIEVAL_LIMIT=8
+      - MCP_EXECUTION_TIMEOUT_SECONDS=10
+      - MCP_CALLS_PER_MINUTE=20
       - CORS_ALLOWED_ORIGINS=http://interview.localhost:8081,http://localhost:30080
   - name: postgres-init
     files:

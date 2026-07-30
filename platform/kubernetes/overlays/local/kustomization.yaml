@@ -22,6 +22,7 @@ secretGenerator:
       - KEYCLOAK_ADMIN_PASSWORD=admin
       - LITELLM_MASTER_KEY=local-litellm-key
       - AI_SERVICE_TOKEN=local-ai-service-token
+      - MCP_AUTHORIZATION_SECRET=local-mcp-authorization-secret-change-me
       - OPENAI_API_KEY=replace-before-apply
 generatorOptions:
   disableNameSuffixHash: true

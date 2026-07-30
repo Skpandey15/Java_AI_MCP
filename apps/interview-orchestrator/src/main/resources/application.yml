@@ -63,3 +63,8 @@ app:
   rag:
     minimum-similarity: ${RAG_MINIMUM_SIMILARITY:0.55}
     retrieval-limit: ${RAG_RETRIEVAL_LIMIT:8}
+  mcp:
+    authorization-secret: ${MCP_AUTHORIZATION_SECRET:local-mcp-authorization-secret-change-me}
+    execution:
+      timeout-seconds: ${MCP_EXECUTION_TIMEOUT_SECONDS:10}
+      calls-per-minute: ${MCP_CALLS_PER_MINUTE:20}

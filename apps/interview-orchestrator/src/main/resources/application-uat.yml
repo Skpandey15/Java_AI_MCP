@@ -38,3 +38,5 @@ app:
   ai-service:
     base-url: ${AI_SERVICE_BASE_URL}
     service-token: ${AI_SERVICE_TOKEN}
+  mcp:
+    authorization-secret: ${MCP_AUTHORIZATION_SECRET}

@@ -69,6 +69,9 @@ services:
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/online-interview/protocol/openid-connect/certs
       AI_SERVICE_BASE_URL: http://ai-service:8000
       AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-local-ai-service-token}
+      MCP_AUTHORIZATION_SECRET: ${MCP_AUTHORIZATION_SECRET:-local-mcp-authorization-secret-change-me}
+      MCP_EXECUTION_TIMEOUT_SECONDS: ${MCP_EXECUTION_TIMEOUT_SECONDS:-10}
+      MCP_CALLS_PER_MINUTE: ${MCP_CALLS_PER_MINUTE:-20}
       RAG_MINIMUM_SIMILARITY: ${RAG_MINIMUM_SIMILARITY:-0.55}
       RAG_RETRIEVAL_LIMIT: ${RAG_RETRIEVAL_LIMIT:-8}
     ports:

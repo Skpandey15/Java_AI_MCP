@@ -118,6 +118,14 @@ citation-quality indicators and Prometheus RAG observability.
 - Interview, question-bank, knowledge and result MCP servers
 - Approved external MCP connection framework
 
+Phase 5B.1 implemented the database-backed internal MCP registry, strict tool
+schemas, streamable-HTTP metadata and interviewer-safe registry discovery.
+Phase 5B.2 adds exact workflow/actor/tool allow lists and signed, short-lived,
+resource-bound authorization contexts. Phase 5B.3 adds stable MCP 2025-11-25
+Streamable HTTP lifecycle, JSON/SSE transport, schema validation and a governed
+host dispatcher. Phase 5B.4 adds resource-owner approval, persisted idempotency,
+atomic context quotas and cancellable execution deadlines.
+
 ## Phase 6 — Production hardening
 
 - Observability, autoscaling, backup and recovery

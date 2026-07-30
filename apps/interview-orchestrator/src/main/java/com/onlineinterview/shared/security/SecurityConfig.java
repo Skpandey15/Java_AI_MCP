@@ -31,6 +31,7 @@ public class SecurityConfig {
                 .cors(cors -> { })
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health/**", "/api/v1/health").permitAll()
+                        .requestMatchers("/internal/mcp/**").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt ->
                         jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
