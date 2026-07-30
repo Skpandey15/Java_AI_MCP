@@ -37,6 +37,8 @@ configMapGenerator:
       - config.js=web-ui-config.js
 generatorOptions:
   disableNameSuffixHash: true
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
 images:
   - name: ghcr.io/skpandey15/java-ai-mcp-web-ui
     newTag: main
@@ -44,3 +46,29 @@ images:
     newTag: main
   - name: ghcr.io/skpandey15/java-ai-mcp-ai-service
     newTag: main
+patches:
+  - target:
+      kind: ServiceAccount
+    patch: |-
+      - op: add
+        path: /metadata/annotations
+        value: {argocd.argoproj.io/sync-wave: "-2"}
+  - target:
+      kind: Service
+    patch: |-
+      - op: add
+        path: /metadata/annotations
+        value: {argocd.argoproj.io/sync-wave: "-2"}
+  - target:
+      kind: StatefulSet
+      name: postgres
+    patch: |-
+      - op: add
+        path: /metadata/annotations
+        value: {argocd.argoproj.io/sync-wave: "-1"}
+  - target:
+      kind: Deployment
+    patch: |-
+      - op: add
+        path: /metadata/annotations
+        value: {argocd.argoproj.io/sync-wave: "1"}

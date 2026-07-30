@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: online-interview-uat
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: online-interview
+  source:
+    repoURL: https://github.com/Skpandey15/Java_AI_MCP.git
+    targetRevision: main
+    path: platform/kubernetes/overlays/uat
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: online-interview-uat
+  revisionHistoryLimit: 10
+  syncPolicy:
+    automated:
+      enabled: false
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
+    syncOptions:
+      - CreateNamespace=true
+      - PruneLast=true

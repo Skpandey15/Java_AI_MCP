@@ -90,7 +90,7 @@ Acceptance criteria:
 
 ### Phase 4B — Kubernetes packaging
 
-Status: implemented with Kustomize; Rancher Desktop runtime validation remains the acceptance gate.
+Status: implemented with Kustomize and validated on the local k3d/Rancher Desktop-compatible runtime.
 
 - Kustomize bases with local, dev, UAT and production overlays
 - Kubernetes Secrets/External Secrets integration and non-secret ConfigMaps
@@ -98,6 +98,8 @@ Status: implemented with Kustomize; Rancher Desktop runtime validation remains t
 - Rancher Desktop validation before shared-cluster deployment
 
 ### Phase 4C — GitOps deployment
+
+Status: implemented declaratively; shared Argo CD installation, repository credentials and GitHub Environment approvals remain operator acceptance gates.
 
 - Argo CD applications for dev, UAT and production
 - Automatic dev reconciliation and approval-based UAT/production promotion

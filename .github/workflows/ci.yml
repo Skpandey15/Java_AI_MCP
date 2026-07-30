@@ -121,6 +121,8 @@ jobs:
             kubectl kustomize "platform/kubernetes/overlays/$environment" > "/tmp/$environment.yaml"
             test -s "/tmp/$environment.yaml"
           done
+          kubectl kustomize platform/gitops/argocd > /tmp/argocd.yaml
+          test -s /tmp/argocd.yaml
       - name: Validate rendered Kubernetes schemas
         run: |
           set -euo pipefail
@@ -131,3 +133,6 @@ jobs:
       - name: Enforce Phase 4B manifest policies
         shell: pwsh
         run: ./platform/kubernetes/validate-manifests.ps1 -RenderedDirectory /tmp
+      - name: Enforce Phase 4C GitOps policies
+        shell: pwsh
+        run: ./platform/gitops/validate-gitops.ps1 -RenderedDirectory /tmp -GitOpsDirectory platform/gitops/argocd
