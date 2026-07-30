@@ -20,6 +20,7 @@ public class McpControlledExecutionService implements AutoCloseable {
     private final McpToolDispatcher dispatcher;
     private final McpExecutionProperties properties;
     private final ObjectMapper mapper;
+    private final McpExecutionObserver observer;
     private final ExecutorService executor;
     private final Clock clock;
 
@@ -27,8 +28,8 @@ public class McpControlledExecutionService implements AutoCloseable {
     public McpControlledExecutionService(McpApprovalService approvals,
             McpContextUsageStore usage, McpToolExecutionRepository executions,
             McpToolDispatcher dispatcher, McpExecutionProperties properties,
-            ObjectMapper mapper) {
-        this(approvals, usage, executions, dispatcher, properties, mapper,
+            ObjectMapper mapper, McpExecutionObserver observer) {
+        this(approvals, usage, executions, dispatcher, properties, mapper, observer,
                 Executors.newVirtualThreadPerTaskExecutor(), Clock.systemUTC());
     }
 
@@ -36,12 +37,22 @@ public class McpControlledExecutionService implements AutoCloseable {
             McpContextUsageStore usage, McpToolExecutionRepository executions,
             McpToolDispatcher dispatcher, McpExecutionProperties properties,
             ObjectMapper mapper, ExecutorService executor, Clock clock) {
+        this(approvals, usage, executions, dispatcher, properties, mapper,
+                McpExecutionObserver.noop(), executor, clock);
+    }
+
+    McpControlledExecutionService(McpApprovalService approvals,
+            McpContextUsageStore usage, McpToolExecutionRepository executions,
+            McpToolDispatcher dispatcher, McpExecutionProperties properties,
+            ObjectMapper mapper, McpExecutionObserver observer,
+            ExecutorService executor, Clock clock) {
         this.approvals = approvals;
         this.usage = usage;
         this.executions = executions;
         this.dispatcher = dispatcher;
         this.properties = properties;
         this.mapper = mapper;
+        this.observer = observer;
         this.executor = executor;
         this.clock = clock;
     }
@@ -66,9 +77,11 @@ public class McpControlledExecutionService implements AutoCloseable {
                     .map(this::replay)
                     .orElseThrow(() -> conflict);
         }
+        observer.started(record.getId(), context);
         Future<JsonNode> future = executor.submit(() -> dispatcher.execute(context, arguments));
         try {
             JsonNode result = future.get(properties.getTimeoutSeconds(), TimeUnit.SECONDS);
+            result = observer.succeeded(record.getId(), context, result, record.getStartedAt());
             record.succeed(result.toString(), clock.instant());
             executions.save(record);
             return result;
@@ -76,17 +89,25 @@ public class McpControlledExecutionService implements AutoCloseable {
             future.cancel(true);
             record.fail(clock.instant());
             executions.save(record);
+            observer.failed(record.getId(), context, "timeout", record.getStartedAt());
             throw new McpProtocolException(-32009, "MCP tool execution timed out");
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             record.fail(clock.instant());
             executions.save(record);
+            observer.failed(record.getId(), context, "interrupted", record.getStartedAt());
             throw new McpProtocolException(-32009, "MCP tool execution interrupted");
         } catch (ExecutionException exception) {
             record.fail(clock.instant());
             executions.save(record);
+            observer.failed(record.getId(), context, "execution", record.getStartedAt());
             if (exception.getCause() instanceof McpProtocolException protocol) throw protocol;
             throw new McpProtocolException(-32603, "MCP tool execution failed");
+        } catch (McpProtocolException exception) {
+            record.fail(clock.instant());
+            executions.save(record);
+            observer.failed(record.getId(), context, "unsafe_result", record.getStartedAt());
+            throw exception;
         }
     }
 
