@@ -59,7 +59,31 @@ Runtime controls:
 - `MCP_EXECUTION_TIMEOUT_SECONDS` — 1 to 60 seconds; default 10
 - `MCP_CALLS_PER_MINUTE` — 1 to 100 calls; default 20
 
-## Remaining Phase 5B increments
+## Phase 5B.5 implemented
 
-1. Result scanning, immutable tool-call auditing and telemetry
-2. Internal server tool implementations and adversarial security tests
+- Recursive result scanning rejects secret-bearing fields, bearer credentials,
+  private keys and empty tool results
+- Append-only lifecycle audit events protected from update and deletion by a
+  PostgreSQL trigger
+- Resource-owner-scoped interviewer audit API
+- Prometheus counters and timers for calls, failures, outcomes and latency
+- Audit records deliberately exclude tool arguments and result bodies
+
+## Phase 5B.6 implemented
+
+- `get_interview_context` returns only the signed context's owned interview
+- `search_approved_questions` searches only saved questions for an authorized
+  interview skill
+- `search_knowledge` searches only the collection bound to the authorized interview
+- `submit_ai_evaluation` stores a pending human-review recommendation and never
+  finalizes a candidate result
+- Every handler validates signed resource binding again at the domain boundary
+- Knowledge MCP traffic is routed to the orchestrator through migration V16
+- Adversarial tests cover cross-resource access, malformed identifiers,
+  unauthorized collections, invalid limits and sensitive-result exfiltration
+
+## Phase 5 status
+
+Phase 5A (RAG) and Phase 5B (governed MCP) are complete. Remaining production
+hardening, penetration/load testing, retention operations and AI quality
+benchmarking belong to Phase 6.

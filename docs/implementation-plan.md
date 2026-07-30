@@ -125,6 +125,10 @@ resource-bound authorization contexts. Phase 5B.3 adds stable MCP 2025-11-25
 Streamable HTTP lifecycle, JSON/SSE transport, schema validation and a governed
 host dispatcher. Phase 5B.4 adds resource-owner approval, persisted idempotency,
 atomic context quotas and cancellable execution deadlines.
+Phase 5B.5 and 5B.6 complete Phase 5 with sensitive-result rejection,
+append-only tool audit events, MCP metrics, interviewer-owned audit discovery,
+real interview/question/knowledge/result handlers and adversarial resource-binding
+tests. AI scores are persisted only as pending human-review recommendations.
 
 ## Phase 6 — Production hardening
 
