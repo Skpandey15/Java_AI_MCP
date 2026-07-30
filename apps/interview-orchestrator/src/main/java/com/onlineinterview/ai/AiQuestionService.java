@@ -4,6 +4,8 @@ import com.onlineinterview.interview.domain.InterviewStatus;
 import com.onlineinterview.interview.domain.QuestionMode;
 import com.onlineinterview.interview.infrastructure.InterviewDefinitionRepository;
 import com.onlineinterview.knowledge.application.KnowledgeService;
+import com.onlineinterview.knowledge.application.RagProperties;
+import com.onlineinterview.knowledge.application.RagQualityMetrics;
 import com.onlineinterview.knowledge.infrastructure.KnowledgeVectorStore;
 import com.onlineinterview.session.domain.ManualQuestion;
 import com.onlineinterview.session.domain.QuestionCitation;
@@ -27,14 +29,19 @@ public class AiQuestionService {
     private final ManualQuestionRepository questions;
     private final AiQuestionClient client;
     private final KnowledgeService knowledge;
+    private final RagProperties ragProperties;
+    private final RagQualityMetrics ragMetrics;
 
     public AiQuestionService(InterviewDefinitionRepository definitions,
             ManualQuestionRepository questions, AiQuestionClient client,
-            KnowledgeService knowledge) {
+            KnowledgeService knowledge, RagProperties ragProperties,
+            RagQualityMetrics ragMetrics) {
         this.definitions = definitions;
         this.questions = questions;
         this.client = client;
         this.knowledge = knowledge;
+        this.ragProperties = ragProperties;
+        this.ragMetrics = ragMetrics;
     }
 
     @Transactional
@@ -67,6 +74,12 @@ public class AiQuestionService {
                 .map(item -> toQuestion(definition, item, requestId, response, authorized))
                 .toList();
         var saved = questions.saveAll(generated);
+        if (definition.getQuestionMode() == QuestionMode.RAG) {
+            var citations = saved.stream().flatMap(question -> question.getCitations().stream())
+                    .toList();
+            ragMetrics.generationCompleted(saved.size(), citations.size(),
+                    citations.stream().map(QuestionCitation::getScore).toList());
+        }
         log.atInfo().addKeyValue("event", "ai.questions_generated")
                 .addKeyValue("interviewId", interviewId)
                 .addKeyValue("generationRequestId", requestId)
@@ -80,11 +93,24 @@ public class AiQuestionService {
             String ownerSubject, com.onlineinterview.interview.domain.InterviewDefinition definition) {
         if (definition.getQuestionMode() != QuestionMode.RAG) return List.of();
         var query = definition.getTitle() + " " + String.join(" ", definition.getSkills());
-        var hits = knowledge.search(ownerSubject, definition.getKnowledgeCollectionId(), query, 8);
+        var sample = ragMetrics.startRetrieval();
+        var hits = knowledge.search(ownerSubject, definition.getKnowledgeCollectionId(), query,
+                ragProperties.getRetrievalLimit(), ragProperties.getMinimumSimilarity());
+        ragMetrics.retrievalCompleted(sample,
+                hits.stream().map(KnowledgeVectorStore.SearchHit::score).toList());
         if (hits.isEmpty()) {
+            ragMetrics.generationRejected("no_relevant_context");
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
-                    "Knowledge collection has no searchable content");
+                    "Knowledge collection has no content above the similarity threshold");
         }
+        double averageScore = hits.stream().mapToDouble(KnowledgeVectorStore.SearchHit::score)
+                .average().orElse(0);
+        log.atInfo().addKeyValue("event", "rag.retrieval_completed")
+                .addKeyValue("interviewId", definition.getId())
+                .addKeyValue("hitCount", hits.size())
+                .addKeyValue("minimumSimilarity", ragProperties.getMinimumSimilarity())
+                .addKeyValue("averageSimilarity", averageScore)
+                .log("RAG retrieval completed");
         return hits;
     }
 
@@ -106,6 +132,7 @@ public class AiQuestionService {
         var citations = citationIds.stream().distinct().map(id -> {
             var hit = authorized.get(id);
             if (hit == null) {
+                ragMetrics.generationRejected("unauthorized_citation");
                 throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                         "AI service returned an unauthorized citation");
             }
@@ -113,6 +140,7 @@ public class AiQuestionService {
                     hit.chunkIndex(), hit.content(), hit.score());
         }).toList();
         if (citations.isEmpty()) {
+            ragMetrics.generationRejected("missing_citation");
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                     "RAG generation returned a question without citations");
         }

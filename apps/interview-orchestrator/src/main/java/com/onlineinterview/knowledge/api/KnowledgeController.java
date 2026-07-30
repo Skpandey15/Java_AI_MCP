@@ -1,6 +1,8 @@
 package com.onlineinterview.knowledge.api;
 
 import com.onlineinterview.knowledge.application.KnowledgeService;
+import com.onlineinterview.knowledge.application.RagProperties;
+import com.onlineinterview.knowledge.application.RetrievalEvaluationService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -16,8 +18,15 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("hasRole('INTERVIEWER')")
 public class KnowledgeController {
     private final KnowledgeService service;
+    private final RetrievalEvaluationService evaluationService;
+    private final RagProperties ragProperties;
 
-    public KnowledgeController(KnowledgeService service) { this.service = service; }
+    public KnowledgeController(KnowledgeService service,
+            RetrievalEvaluationService evaluationService, RagProperties ragProperties) {
+        this.service = service;
+        this.evaluationService = evaluationService;
+        this.ragProperties = ragProperties;
+    }
 
     @PostMapping("/collections")
     public ResponseEntity<CollectionResponse> createCollection(
@@ -68,5 +77,14 @@ public class KnowledgeController {
             @Valid @RequestBody SearchKnowledgeRequest request) {
         return KnowledgeSearchResponse.from(service.search(
                 jwt.getSubject(), collectionId, request.query(), request.limit()));
+    }
+
+    @PostMapping("/collections/{collectionId}:evaluate")
+    public RetrievalEvaluationResponse evaluate(
+            @AuthenticationPrincipal Jwt jwt, @PathVariable UUID collectionId,
+            @Valid @RequestBody EvaluateRetrievalRequest request) {
+        return RetrievalEvaluationResponse.from(evaluationService.evaluate(
+                jwt.getSubject(), collectionId, request.cases()),
+                ragProperties.getRetrievalLimit(), ragProperties.getMinimumSimilarity());
     }
 }

@@ -26,11 +26,21 @@ public class KnowledgeVectorStore {
 
     public List<SearchHit> search(
             String ownerSubject, UUID collectionId, List<Double> embedding, int limit) {
+        return search(ownerSubject, collectionId, embedding, limit, -1);
+    }
+
+    public List<SearchHit> search(String ownerSubject, UUID collectionId,
+            List<Double> embedding, int limit, double minimumSimilarity) {
         if (limit < 1 || limit > 20) throw new IllegalArgumentException("Limit must be 1-20");
+        if (!Double.isFinite(minimumSimilarity)
+                || minimumSimilarity < -1 || minimumSimilarity > 1) {
+            throw new IllegalArgumentException("Minimum similarity must be between -1 and 1");
+        }
         var parameters = new MapSqlParameterSource()
                 .addValue("embedding", vectorLiteral(embedding))
                 .addValue("owner", ownerSubject)
                 .addValue("collectionId", collectionId)
+                .addValue("minimumSimilarity", minimumSimilarity)
                 .addValue("limit", limit);
         return jdbc.query("""
                 SELECT kc.id, kd.id AS document_id, kd.file_name, kc.chunk_index,
@@ -42,6 +52,7 @@ public class KnowledgeVectorStore {
                   AND col.id = :collectionId
                   AND kd.status = 'READY'
                   AND kc.embedding IS NOT NULL
+                  AND 1 - (kc.embedding <=> CAST(:embedding AS vector)) >= :minimumSimilarity
                 ORDER BY kc.embedding <=> CAST(:embedding AS vector)
                 LIMIT :limit
                 """, parameters, (rs, row) -> new SearchHit(

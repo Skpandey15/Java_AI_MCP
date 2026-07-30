@@ -64,6 +64,9 @@ class KnowledgeVectorStoreTest {
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> store.search("owner", UUID.randomUUID(), vector(0), 21))
                 .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> store.search(
+                "owner", UUID.randomUUID(), vector(0), 5, 1.1))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     private static java.util.ArrayList<Double> vector(double value) {

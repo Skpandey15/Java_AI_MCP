@@ -60,3 +60,6 @@ app:
   ai-service:
     base-url: ${AI_SERVICE_BASE_URL:http://localhost:8000}
     service-token: ${AI_SERVICE_TOKEN:local-ai-service-token}
+  rag:
+    minimum-similarity: ${RAG_MINIMUM_SIMILARITY:0.55}
+    retrieval-limit: ${RAG_RETRIEVAL_LIMIT:8}

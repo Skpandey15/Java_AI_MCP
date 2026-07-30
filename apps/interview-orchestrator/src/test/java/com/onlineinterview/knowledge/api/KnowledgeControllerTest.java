@@ -95,7 +95,7 @@ class KnowledgeControllerTest {
         var hit = new KnowledgeVectorStore.SearchHit(
                 UUID.randomUUID(), UUID.fromString(documentId), "spring.md", 0,
                 "Typed application framework.", 0.91);
-        when(vectorStore.search(eq("owner"), any(UUID.class), eq(vector), eq(2)))
+        when(vectorStore.search(eq("owner"), any(UUID.class), eq(vector), eq(2), eq(-1.0)))
                 .thenReturn(List.of(hit));
         mvc.perform(post("/api/v1/knowledge/collections/{id}:search", collectionId)
                         .with(interviewer("owner"))
@@ -104,6 +104,22 @@ class KnowledgeControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.citations[0].fileName").value("spring.md"))
                 .andExpect(jsonPath("$.citations[0].score").value(0.91));
+
+        when(vectorStore.search(eq("owner"), any(UUID.class), eq(vector), eq(8), eq(0.55)))
+                .thenReturn(List.of(hit));
+        mvc.perform(post("/api/v1/knowledge/collections/{id}:evaluate", collectionId)
+                        .with(interviewer("owner"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"cases":[{"query":"Spring","expectedChunkIds":["%s"]}]}
+                                """.formatted(hit.chunkId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.meanPrecisionAtK").value(1.0))
+                .andExpect(jsonPath("$.meanRecallAtK").value(1.0))
+                .andExpect(jsonPath("$.meanReciprocalRank").value(1.0))
+                .andExpect(jsonPath("$.caseCount").value(1))
+                .andExpect(jsonPath("$.retrievalLimit").value(8))
+                .andExpect(jsonPath("$.minimumSimilarity").value(0.55));
 
         mvc.perform(get("/api/v1/knowledge/collections/{id}/documents", collectionId)
                         .with(interviewer("other")))
