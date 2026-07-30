@@ -1,3 +1,5 @@
+import json
+from urllib.error import URLError
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -9,10 +11,13 @@ from app.domain.question_models import (
     GeneratedQuestion,
     GenerateQuestionsRequest,
     GenerateQuestionsResponse,
+    GenerationUsage,
     GroundingChunk,
     QuestionComposition,
 )
+from app.llm.litellm_client import LiteLLMClient, ModelGatewayError
 from app.main import app
+from app.quality_metrics import record_failure, record_success
 
 client = TestClient(app)
 
@@ -79,6 +84,59 @@ def test_returns_schema_valid_questions(monkeypatch) -> None:
     )
     assert response.status_code == 200
     assert response.json()["questions"][0]["order"] == 1
+
+
+def test_route_records_usage_and_hides_generation_failures(monkeypatch) -> None:
+    def generated(request):
+        return GenerateQuestionsResponse(
+            request_id=request.request_id,
+            interview_id=request.interview_id,
+            model_policy="policy",
+            prompt_version="v1",
+            questions=[GeneratedQuestion(
+                order=1,
+                prompt="Explain a reliable distributed system design.",
+                max_score=10,
+                type="LONG_TEXT",
+            )],
+            usage=GenerationUsage(
+                prompt_tokens=20,
+                completion_tokens=10,
+                total_tokens=30,
+                estimated_cost_usd=0.001,
+                latency_ms=200,
+            ),
+        )
+
+    payload = {
+        "request_id": str(uuid4()),
+        "interview_id": str(uuid4()),
+        "skills": ["Java"],
+        "difficulty": "MEDIUM",
+        "question_count": 1,
+        "question_composition": {
+            "mcq_single": 0, "mcq_multiple": 0, "short_text": 0, "long_text": 1,
+        },
+    }
+    monkeypatch.setattr(question_routes.generator, "generate", generated)
+    assert client.post(
+        "/internal/v1/questions:generate",
+        headers={"X-Service-Token": settings.ai_service_token},
+        json=payload,
+    ).status_code == 200
+
+    monkeypatch.setattr(
+        question_routes.generator,
+        "generate",
+        lambda request: (_ for _ in ()).throw(ValueError("unsafe model output")),
+    )
+    failed = client.post(
+        "/internal/v1/questions:generate",
+        headers={"X-Service-Token": settings.ai_service_token},
+        json=payload,
+    )
+    assert failed.status_code == 502
+    assert failed.json()["detail"] == "Question generation failed"
 
 
 def test_generator_enforces_mixed_question_composition() -> None:
@@ -194,3 +252,50 @@ def test_generator_rejects_unknown_grounding_citation() -> None:
         raise AssertionError("Expected unknown citation rejection")
     except ValueError as exc:
         assert "unknown citation" in str(exc)
+
+
+def test_litellm_client_captures_usage_cost_and_latency(monkeypatch) -> None:
+    payload = {
+        "model": "resolved-model",
+        "choices": [{"message": {"content": json.dumps({"questions": []})}}],
+        "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150},
+    }
+
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self):
+            return json.dumps(payload).encode()
+
+    monkeypatch.setattr("app.llm.litellm_client.urlopen", lambda request, timeout: Response())
+    questions, model, usage = LiteLLMClient().generate("prompt", 1)
+    assert questions == []
+    assert model == "resolved-model"
+    assert usage["total_tokens"] == 150
+    assert usage["estimated_cost_usd"] > 0
+    assert usage["latency_ms"] >= 0
+
+    monkeypatch.setattr(
+        "app.llm.litellm_client.urlopen",
+        lambda request, timeout: (_ for _ in ()).throw(URLError("offline")),
+    )
+    try:
+        LiteLLMClient().generate("prompt", 1)
+        raise AssertionError("expected gateway error")
+    except ModelGatewayError:
+        pass
+
+
+def test_quality_metrics_and_metrics_endpoint() -> None:
+    record_success("test-policy", 10, 5, 0.001, 250)
+    record_failure()
+
+    response = client.get("/metrics")
+
+    assert response.status_code == 200
+    assert "ai_question_generations_total" in response.text
+    assert "ai_question_generation_tokens_total" in response.text

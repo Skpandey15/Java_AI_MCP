@@ -1,0 +1,3 @@
+# The web UI is a browser-only SPA and does not enable React Router's RSC mode.
+# GHSA-qwww-vcr4-c8h2 affects only RSC action execution.
+GHSA-qwww-vcr4-c8h2

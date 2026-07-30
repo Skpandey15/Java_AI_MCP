@@ -70,9 +70,18 @@ class GeneratedQuestion(ApiModel):
         return self
 
 
+class GenerationUsage(ApiModel):
+    prompt_tokens: int = Field(ge=0)
+    completion_tokens: int = Field(ge=0)
+    total_tokens: int = Field(ge=0)
+    estimated_cost_usd: float = Field(ge=0)
+    latency_ms: int = Field(ge=0)
+
+
 class GenerateQuestionsResponse(ApiModel):
     request_id: UUID
     interview_id: UUID
     model_policy: str
     prompt_version: str
     questions: list[GeneratedQuestion]
+    usage: GenerationUsage | None = None

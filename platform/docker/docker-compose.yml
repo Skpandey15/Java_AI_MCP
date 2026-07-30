@@ -5,6 +5,7 @@ services:
       POSTGRES_DB: online_interview
       POSTGRES_USER: interview
       POSTGRES_PASSWORD: interview
+    command: ["postgres", "-c", "max_connections=150", "-c", "shared_buffers=256MB"]
     ports:
       - "5432:5432"
     volumes:
@@ -14,6 +15,28 @@ services:
       test: ["CMD-SHELL", "pg_isready -U interview -d online_interview"]
       interval: 5s
       timeout: 3s
+      retries: 20
+
+  kafka:
+    image: apache/kafka:3.9.1
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
       retries: 20
 
   keycloak:
@@ -65,6 +88,7 @@ services:
       DATABASE_URL: jdbc:postgresql://postgres:5432/online_interview
       DATABASE_USERNAME: interview
       DATABASE_PASSWORD: interview
+      DATABASE_MAX_POOL_SIZE: ${DATABASE_MAX_POOL_SIZE:-20}
       KEYCLOAK_ISSUER_URI: http://localhost:8090/realms/online-interview
       KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/online-interview/protocol/openid-connect/certs
       AI_SERVICE_BASE_URL: http://ai-service:8000
@@ -72,6 +96,10 @@ services:
       MCP_AUTHORIZATION_SECRET: ${MCP_AUTHORIZATION_SECRET:-local-mcp-authorization-secret-change-me}
       MCP_EXECUTION_TIMEOUT_SECONDS: ${MCP_EXECUTION_TIMEOUT_SECONDS:-10}
       MCP_CALLS_PER_MINUTE: ${MCP_CALLS_PER_MINUTE:-20}
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://otel-collector:4318/v1/traces
+      TRACING_SAMPLING_PROBABILITY: ${TRACING_SAMPLING_PROBABILITY:-1.0}
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MESSAGING_ENABLED: "true"
       RAG_MINIMUM_SIMILARITY: ${RAG_MINIMUM_SIMILARITY:-0.55}
       RAG_RETRIEVAL_LIMIT: ${RAG_RETRIEVAL_LIMIT:-8}
     ports:
@@ -89,6 +117,8 @@ services:
         condition: service_started
       ai-service:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
 
   ai-service:
     build:
@@ -101,6 +131,8 @@ services:
       AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-local-ai-service-token}
       INTERVIEW_QUESTION_MODEL: interview-question-model
       KNOWLEDGE_EMBEDDING_MODEL: knowledge-embedding-model
+      INPUT_COST_PER_MILLION_TOKENS_USD: ${INPUT_COST_PER_MILLION_TOKENS_USD:-0.15}
+      OUTPUT_COST_PER_MILLION_TOKENS_USD: ${OUTPUT_COST_PER_MILLION_TOKENS_USD:-0.60}
     ports:
       - "8000:8000"
     depends_on:
@@ -121,6 +153,7 @@ services:
       - "9090:9090"
     volumes:
       - ../observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../observability/prometheus-rules.yml:/etc/prometheus/rules/platform.yml:ro
       - prometheus-data:/prometheus
     depends_on:
       interview-orchestrator:
@@ -159,9 +192,11 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
       - ../observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - prometheus
       - loki
+      - tempo
 
   otel-collector:
     image: otel/opentelemetry-collector-contrib:0.120.0
@@ -172,9 +207,23 @@ services:
       - "4318:4318"
     volumes:
       - ../observability/otel-collector.yml:/etc/otelcol-contrib/config.yaml:ro
+    depends_on:
+      - tempo
+
+  tempo:
+    image: grafana/tempo:2.7.1
+    profiles: ["observability"]
+    command: ["-config.file=/etc/tempo.yml"]
+    ports:
+      - "3200:3200"
+    volumes:
+      - ../observability/tempo.yml:/etc/tempo.yml:ro
+      - tempo-data:/var/tempo
 
 volumes:
   postgres-data:
   prometheus-data:
   loki-data:
   grafana-data:
+  tempo-data:
+  kafka-data:

@@ -39,7 +39,10 @@ class JsonFormatter(logging.Formatter):
         request_id = get_request_id()
         if request_id:
             payload["requestId"] = request_id
-        for key in ("event", "interviewId", "generationRequestId", "modelPolicy", "statusCode"):
+        for key in (
+            "event", "interviewId", "generationRequestId", "modelPolicy", "statusCode",
+            "promptTokens", "completionTokens", "estimatedCostUsd", "latencyMs",
+        ):
             value = getattr(record, key, None)
             if value is not None:
                 payload[key] = value

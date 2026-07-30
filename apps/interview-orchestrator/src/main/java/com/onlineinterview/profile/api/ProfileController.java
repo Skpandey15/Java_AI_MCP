@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import com.onlineinterview.shared.security.TenantClaim;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -35,8 +36,9 @@ public class ProfileController {
 
     @GetMapping("/candidates")
     @PreAuthorize("hasRole('INTERVIEWER')")
-    public List<ProfileResponse> candidates() {
-        return profileService.activeCandidates().stream().map(ProfileResponse::from).toList();
+    public List<ProfileResponse> candidates(@AuthenticationPrincipal Jwt jwt) {
+        return profileService.activeCandidates(TenantClaim.required(jwt))
+                .stream().map(ProfileResponse::from).toList();
     }
 
     @PostMapping("/profiles/registration-complete")
@@ -47,7 +49,8 @@ public class ProfileController {
         if (email == null || email.isBlank()) {
             throw new IllegalArgumentException("A verified email claim is required");
         }
-        var profile = profileService.registerCandidate(jwt.getSubject(), email, request.displayName());
+        var profile = profileService.registerCandidate(
+                TenantClaim.required(jwt), jwt.getSubject(), email, request.displayName());
         return ResponseEntity.created(URI.create("/api/v1/me")).body(ProfileResponse.from(profile));
     }
 }

@@ -3,6 +3,7 @@ package com.onlineinterview.ai;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.onlineinterview.common.api.CorrelationIdFilter;
+import com.onlineinterview.common.resilience.DownstreamCallExecutor;
 import com.onlineinterview.interview.domain.QuestionComposition;
 import com.onlineinterview.session.domain.QuestionType;
 import java.net.http.HttpClient;
@@ -11,6 +12,7 @@ import java.util.UUID;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
@@ -21,9 +23,11 @@ public class AiQuestionClient {
     private final RestClient client;
     private final ObjectMapper objectMapper;
     private final String serviceToken;
+    private final DownstreamCallExecutor resilience;
 
     @Autowired
     public AiQuestionClient(RestClient.Builder builder, ObjectMapper objectMapper,
+            ObjectProvider<DownstreamCallExecutor> resilience,
             @Value("${app.ai-service.base-url}") String baseUrl,
             @Value("${app.ai-service.service-token}") String serviceToken) {
         var httpClient = HttpClient.newBuilder()
@@ -35,16 +39,23 @@ public class AiQuestionClient {
                 .build();
         this.objectMapper = objectMapper;
         this.serviceToken = serviceToken;
+        this.resilience = resilience.getIfAvailable();
     }
 
     AiQuestionClient(RestClient client, ObjectMapper objectMapper, String serviceToken) {
         this.client = client;
         this.objectMapper = objectMapper;
         this.serviceToken = serviceToken;
+        this.resilience = null;
+    }
+
+    AiQuestionClient(RestClient.Builder builder, ObjectMapper objectMapper,
+            String baseUrl, String serviceToken) {
+        this(builder.baseUrl(baseUrl).build(), objectMapper, serviceToken);
     }
 
     public GenerationResponse generate(GenerationRequest request) {
-        return client.post()
+        var call = (java.util.function.Supplier<GenerationResponse>) () -> client.post()
                 .uri("/internal/v1/questions:generate")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("X-Service-Token", serviceToken)
@@ -55,6 +66,7 @@ public class AiQuestionClient {
                 .body(jsonBody(request))
                 .retrieve()
                 .body(GenerationResponse.class);
+        return resilience == null ? call.get() : resilience.execute("ai-question-service", call);
     }
 
     private byte[] jsonBody(GenerationRequest request) {

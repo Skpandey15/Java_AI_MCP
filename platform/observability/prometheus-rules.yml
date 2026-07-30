@@ -1,0 +1,90 @@
+groups:
+  - name: online-interview-slo
+    interval: 30s
+    rules:
+      - record: service:http_requests:rate5m
+        expr: sum by (application) (rate(http_server_requests_seconds_count[5m]))
+      - record: service:http_errors:ratio5m
+        expr: sum by (application) (rate(http_server_requests_seconds_count{status=~"5.."}[5m])) / clamp_min(sum by (application) (rate(http_server_requests_seconds_count[5m])), 0.001)
+      - record: service:http_latency:p95_5m
+        expr: histogram_quantile(0.95, sum by (application, le) (rate(http_server_requests_seconds_bucket[5m])))
+      - alert: OrchestratorUnavailable
+        expr: up{job="interview-orchestrator"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Interview orchestrator is unavailable
+          runbook_url: docs/runbooks/phase-6a-observability.md#orchestrator-unavailable
+      - alert: ApiErrorBudgetBurn
+        expr: service:http_errors:ratio5m > 0.01
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: API 5xx ratio exceeds the 99.9% availability SLO budget
+          runbook_url: docs/runbooks/phase-6a-observability.md#api-error-budget-burn
+      - alert: ApiLatencySloViolation
+        expr: service:http_latency:p95_5m > 0.75
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: API p95 latency exceeds 750 ms
+          runbook_url: docs/runbooks/phase-6a-observability.md#api-latency
+      - alert: McpFailureRatioHigh
+        expr: sum(rate(mcp_tool_failures_total[10m])) / clamp_min(sum(rate(mcp_tool_calls_total[10m])), 0.001) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: MCP failure ratio exceeds 5%
+          runbook_url: docs/runbooks/phase-6a-observability.md#mcp-failures
+      - alert: RagGenerationFailures
+        expr: sum(rate(rag_generation_total{outcome!="success"}[15m])) > 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: RAG generation is producing failures
+          runbook_url: docs/runbooks/phase-6a-observability.md#rag-generation
+      - alert: DatabasePoolSaturation
+        expr: hikaricp_connections_active / clamp_min(hikaricp_connections_max, 1) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Database connection pool exceeds 85% utilization
+          runbook_url: docs/runbooks/phase-6b-resilience.md#database-pool-saturation
+      - alert: DownstreamCircuitOpen
+        expr: increase(resilience_calls_total{outcome="short_circuited"}[5m]) > 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: Downstream AI circuit breaker is rejecting calls
+          runbook_url: docs/runbooks/phase-6b-resilience.md#downstream-circuit-open
+      - alert: OutboxDeadLettered
+        expr: increase(outbox_events_total{outcome="dead_letter"}[10m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Transactional outbox events exhausted Kafka retries
+          runbook_url: docs/runbooks/phase-6b-resilience.md#outbox-dead-letter
+      - alert: AiGenerationLatencyBudgetExceeded
+        expr: histogram_quantile(0.95, sum by (le) (rate(ai_question_generation_latency_seconds_bucket[15m]))) > 8
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: AI question-generation p95 latency exceeds eight seconds
+          runbook_url: docs/runbooks/phase-6d-ai-quality.md#latency-or-cost-budget
+      - alert: AiGenerationFailureRatioHigh
+        expr: sum(rate(ai_question_generations_total{outcome="failure"}[15m])) / clamp_min(sum(rate(ai_question_generations_total[15m])), 0.001) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: AI question-generation failures exceed five percent
+          runbook_url: docs/runbooks/phase-6d-ai-quality.md#generation-quality-regression

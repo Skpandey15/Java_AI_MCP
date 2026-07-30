@@ -8,6 +8,7 @@ import com.onlineinterview.review.api.ReviewQuestionResponse;
 import com.onlineinterview.session.api.QuestionCitationResponse;
 import com.onlineinterview.review.api.SubmissionDetailResponse;
 import com.onlineinterview.review.api.SubmissionSummaryResponse;
+import com.onlineinterview.messaging.application.OutboxService;
 import com.onlineinterview.review.domain.ReviewAuditEvent;
 import com.onlineinterview.review.infrastructure.ReviewAuditEventRepository;
 import com.onlineinterview.session.domain.InterviewAnswer;
@@ -40,15 +41,17 @@ public class ReviewService {
     private final ManualQuestionRepository questions;
     private final UserProfileRepository profiles;
     private final ReviewAuditEventRepository auditEvents;
+    private final OutboxService outbox;
 
     public ReviewService(InterviewSessionRepository sessions, InterviewAnswerRepository answers,
             ManualQuestionRepository questions, UserProfileRepository profiles,
-            ReviewAuditEventRepository auditEvents) {
+            ReviewAuditEventRepository auditEvents, OutboxService outbox) {
         this.sessions = sessions;
         this.answers = answers;
         this.questions = questions;
         this.profiles = profiles;
         this.auditEvents = auditEvents;
+        this.outbox = outbox;
     }
 
     @Transactional(readOnly = true)
@@ -137,6 +140,10 @@ public class ReviewService {
         }
         auditEvents.save(ReviewAuditEvent.reviewFinalized(
                 sessionId, ownerSubject, total, feedback, now));
+        outbox.record("SESSION", sessionId, "review.finalized", Map.of(
+                "sessionId", sessionId.toString(),
+                "totalScore", total,
+                "outcome", session.getResultOutcome().name()));
         log.atInfo().addKeyValue("event", "review.finalized")
                 .addKeyValue("sessionId", sessionId)
                 .addKeyValue("outcome", session.getResultOutcome())

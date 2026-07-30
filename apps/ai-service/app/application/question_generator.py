@@ -3,6 +3,7 @@ from app.domain.question_models import (
     GeneratedQuestion,
     GenerateQuestionsRequest,
     GenerateQuestionsResponse,
+    GenerationUsage,
 )
 from app.llm.litellm_client import LiteLLMClient
 
@@ -39,7 +40,9 @@ class QuestionGenerator:
             )
         else:
             prompt += " Return an empty citation_ids array for every question."
-        raw_questions, model = self.client.generate(prompt, request.question_count)
+        generation = self.client.generate(prompt, request.question_count)
+        raw_questions, model = generation[0], generation[1]
+        usage = GenerationUsage.model_validate(generation[2]) if len(generation) > 2 else None
         questions = [GeneratedQuestion.model_validate(question) for question in raw_questions]
         if len(questions) != request.question_count:
             raise ValueError("Model returned an unexpected question count")
@@ -66,4 +69,5 @@ class QuestionGenerator:
             model_policy=model,
             prompt_version=settings.prompt_version,
             questions=questions,
+            usage=usage,
         )

@@ -1,6 +1,8 @@
 from datetime import UTC, datetime
 
 from fastapi import FastAPI
+from fastapi.responses import Response
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel
 
 from app.api.embedding_routes import router as embedding_router
@@ -33,3 +35,8 @@ def health() -> HealthResponse:
         status="UP",
         timestamp=datetime.now(UTC),
     )
+
+
+@app.get("/metrics", include_in_schema=False)
+def metrics() -> Response:
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)

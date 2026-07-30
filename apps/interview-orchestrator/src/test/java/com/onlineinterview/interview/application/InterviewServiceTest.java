@@ -11,6 +11,7 @@ import com.onlineinterview.interview.domain.QuestionMode;
 import com.onlineinterview.interview.infrastructure.InterviewAssignmentRepository;
 import com.onlineinterview.interview.infrastructure.InterviewDefinitionRepository;
 import com.onlineinterview.profile.infrastructure.UserProfileRepository;
+import com.onlineinterview.profile.domain.UserProfile;
 import com.onlineinterview.session.infrastructure.InterviewSessionRepository;
 import com.onlineinterview.session.infrastructure.ManualQuestionRepository;
 import java.util.List;
@@ -44,6 +45,28 @@ class InterviewServiceTest {
         when(definitions.findById(id)).thenReturn(Optional.of(definition));
 
         assertThatThrownBy(() -> service.publish("owner-1", id))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("404");
+    }
+
+    @Test
+    void hidesCandidateFromAnotherTenantDuringAssignment() {
+        UUID interviewId = UUID.randomUUID();
+        var definition = InterviewDefinition.draft(
+                "owner-1", "Java", "Java interview", List.of("Java"),
+                InterviewDifficulty.MEDIUM, QuestionMode.MANUAL, 30, 1);
+        var owner = UserProfile.registerCandidate(
+                "tenant-a", "owner-1", "owner@example.com", "Owner");
+        var candidate = UserProfile.registerCandidate(
+                "tenant-b", "candidate-1", "candidate@example.com", "Candidate");
+        when(definitions.findById(interviewId)).thenReturn(Optional.of(definition));
+        when(profiles.findById(candidate.getId())).thenReturn(Optional.of(candidate));
+        when(profiles.findByIdentitySubject("owner-1")).thenReturn(Optional.of(owner));
+
+        assertThatThrownBy(() -> service.assign(
+                "owner-1", interviewId, candidate.getId(),
+                java.time.Instant.now().plusSeconds(60),
+                java.time.Instant.now().plusSeconds(3600), 1))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("404");
     }

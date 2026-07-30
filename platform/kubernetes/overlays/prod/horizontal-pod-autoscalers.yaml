@@ -1,0 +1,85 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: interview-orchestrator
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: interview-orchestrator
+  minReplicas: 3
+  maxReplicas: 12
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+        - {type: Percent, value: 100, periodSeconds: 60}
+        - {type: Pods, value: 4, periodSeconds: 60}
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - {type: Percent, value: 25, periodSeconds: 60}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: 65}
+    - type: Resource
+      resource:
+        name: memory
+        target: {type: Utilization, averageUtilization: 75}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ai-service
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ai-service
+  minReplicas: 3
+  maxReplicas: 15
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 15
+      policies:
+        - {type: Percent, value: 100, periodSeconds: 60}
+        - {type: Pods, value: 4, periodSeconds: 60}
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - {type: Percent, value: 20, periodSeconds: 60}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: 60}
+    - type: Resource
+      resource:
+        name: memory
+        target: {type: Utilization, averageUtilization: 75}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: web-ui
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: web-ui
+  minReplicas: 3
+  maxReplicas: 10
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - {type: Percent, value: 25, periodSeconds: 60}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: 65}

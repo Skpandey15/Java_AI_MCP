@@ -8,6 +8,7 @@ import com.onlineinterview.interview.domain.QuestionComposition;
 import com.onlineinterview.interview.infrastructure.InterviewAssignmentRepository;
 import com.onlineinterview.interview.infrastructure.InterviewDefinitionRepository;
 import com.onlineinterview.knowledge.infrastructure.KnowledgeCollectionRepository;
+import com.onlineinterview.messaging.application.OutboxService;
 import com.onlineinterview.profile.domain.UserRole;
 import com.onlineinterview.profile.domain.UserStatus;
 import com.onlineinterview.profile.infrastructure.UserProfileRepository;
@@ -26,6 +27,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Service
 public class InterviewService {
@@ -36,17 +38,27 @@ public class InterviewService {
     private final ManualQuestionRepository questions;
     private final InterviewSessionRepository sessions;
     private final KnowledgeCollectionRepository knowledgeCollections;
+    private final OutboxService outbox;
 
+    @Autowired
     public InterviewService(InterviewDefinitionRepository definitions,
             InterviewAssignmentRepository assignments, UserProfileRepository profiles,
             ManualQuestionRepository questions, InterviewSessionRepository sessions,
-            KnowledgeCollectionRepository knowledgeCollections) {
+            KnowledgeCollectionRepository knowledgeCollections, OutboxService outbox) {
         this.definitions = definitions;
         this.assignments = assignments;
         this.profiles = profiles;
         this.questions = questions;
         this.sessions = sessions;
         this.knowledgeCollections = knowledgeCollections;
+        this.outbox = outbox;
+    }
+
+    InterviewService(InterviewDefinitionRepository definitions,
+            InterviewAssignmentRepository assignments, UserProfileRepository profiles,
+            ManualQuestionRepository questions, InterviewSessionRepository sessions,
+            KnowledgeCollectionRepository knowledgeCollections) {
+        this(definitions, assignments, profiles, questions, sessions, knowledgeCollections, null);
     }
 
     @Transactional
@@ -120,6 +132,10 @@ public class InterviewService {
         }
         try {
             definition.publish();
+            if (outbox != null) {
+                outbox.record("INTERVIEW", definition.getId(), "interview.published",
+                        java.util.Map.of("interviewId", definition.getId().toString()));
+            }
             log.atInfo().addKeyValue("event", "interview.published")
                     .addKeyValue("interviewId", definition.getId())
                     .log("Interview published");
@@ -135,6 +151,12 @@ public class InterviewService {
         var definition = ownedDefinition(ownerSubject, interviewId);
         var candidate = profiles.findById(candidateId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidate profile not found"));
+        var owner = profiles.findByIdentitySubject(ownerSubject)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.FORBIDDEN, "Interviewer profile registration is incomplete"));
+        if (!candidate.getTenantId().equals(owner.getTenantId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidate profile not found");
+        }
         if (candidate.getRole() != UserRole.CANDIDATE || candidate.getStatus() != UserStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Profile is not an active candidate");
         }
