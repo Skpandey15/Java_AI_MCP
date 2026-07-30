@@ -66,10 +66,12 @@ public class AiQuestionClient {
     }
 
     public record GenerationRequest(UUID requestId, UUID interviewId, List<String> skills,
-            String difficulty, int questionCount, QuestionComposition questionComposition) {}
+            String difficulty, int questionCount, QuestionComposition questionComposition,
+            List<GroundingChunk> groundingContext) {}
+    public record GroundingChunk(UUID citationId, String sourceName, String content) {}
     public record GeneratedQuestion(
             int order, String prompt, int maxScore, QuestionType type,
-            List<String> options, List<String> correctAnswers) {}
+            List<String> options, List<String> correctAnswers, List<UUID> citationIds) {}
     public record GenerationResponse(UUID requestId, UUID interviewId, String modelPolicy,
             String promptVersion, List<GeneratedQuestion> questions) {}
 }

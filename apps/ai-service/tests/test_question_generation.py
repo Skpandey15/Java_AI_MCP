@@ -9,6 +9,7 @@ from app.domain.question_models import (
     GeneratedQuestion,
     GenerateQuestionsRequest,
     GenerateQuestionsResponse,
+    GroundingChunk,
     QuestionComposition,
 )
 from app.main import app
@@ -121,3 +122,75 @@ def test_generator_enforces_mixed_question_composition() -> None:
     response = QuestionGenerator(client=FakeClient()).generate(request)
 
     assert [question.type for question in response.questions] == ["MCQ_SINGLE", "SHORT_TEXT"]
+
+
+def test_generator_requires_supplied_citation_ids_for_grounded_questions() -> None:
+    citation_id = uuid4()
+
+    class FakeClient:
+        def generate(self, prompt: str, question_count: int):
+            assert str(citation_id) in prompt
+            assert "<reference_material>" in prompt
+            return [{
+                "order": 1,
+                "prompt": "What is the stated Java record property?",
+                "max_score": 10,
+                "type": "LONG_TEXT",
+                "options": [],
+                "correct_answers": [],
+                "citation_ids": [str(citation_id)],
+            }], "model"
+
+    request = GenerateQuestionsRequest(
+        request_id=uuid4(),
+        interview_id=uuid4(),
+        skills=["Java"],
+        difficulty="MEDIUM",
+        question_count=1,
+        question_composition=QuestionComposition(
+            mcq_single=0, mcq_multiple=0, short_text=0, long_text=1
+        ),
+        grounding_context=[GroundingChunk(
+            citation_id=citation_id,
+            source_name="java.md",
+            content="A record is an immutable data carrier.",
+        )],
+    )
+
+    response = QuestionGenerator(client=FakeClient()).generate(request)
+
+    assert response.questions[0].citation_ids == [citation_id]
+
+
+def test_generator_rejects_unknown_grounding_citation() -> None:
+    class FakeClient:
+        def generate(self, prompt: str, question_count: int):
+            return [{
+                "order": 1,
+                "prompt": "What does this Java reference explain?",
+                "max_score": 10,
+                "type": "LONG_TEXT",
+                "options": [],
+                "correct_answers": [],
+                "citation_ids": [str(uuid4())],
+            }], "model"
+
+    request = GenerateQuestionsRequest(
+        request_id=uuid4(),
+        interview_id=uuid4(),
+        skills=["Java"],
+        difficulty="MEDIUM",
+        question_count=1,
+        question_composition=QuestionComposition(
+            mcq_single=0, mcq_multiple=0, short_text=0, long_text=1
+        ),
+        grounding_context=[GroundingChunk(
+            citation_id=uuid4(), source_name="java.md", content="Java reference."
+        )],
+    )
+
+    try:
+        QuestionGenerator(client=FakeClient()).generate(request)
+        raise AssertionError("Expected unknown citation rejection")
+    except ValueError as exc:
+        assert "unknown citation" in str(exc)

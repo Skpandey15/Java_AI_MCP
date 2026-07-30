@@ -47,6 +47,11 @@ public class ManualQuestion {
     @Column(name = "model_policy") private String modelPolicy;
     @Column(name = "prompt_version") private String promptVersion;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "question_citation", joinColumns = @JoinColumn(name = "question_id"))
+    @OrderColumn(name = "citation_order")
+    private List<QuestionCitation> citations = new ArrayList<>();
+
     protected ManualQuestion() {}
 
     public static ManualQuestion create(InterviewDefinition definition, int order, String prompt,
@@ -74,6 +79,20 @@ public class ManualQuestion {
         question.generationRequestId = generationRequestId;
         question.modelPolicy = modelPolicy;
         question.promptVersion = promptVersion;
+        return question;
+    }
+
+    public static ManualQuestion generatedRag(InterviewDefinition definition, int order,
+            String prompt, int maxScore, QuestionType type,
+            List<String> options, List<String> correctAnswers, UUID generationRequestId,
+            String modelPolicy, String promptVersion, List<QuestionCitation> citations) {
+        var question = generated(definition, order, prompt, maxScore, type, options,
+                correctAnswers, generationRequestId, modelPolicy, promptVersion);
+        question.source = QuestionSource.AI_RAG;
+        question.citations = new ArrayList<>(citations);
+        if (question.citations.isEmpty()) {
+            throw new IllegalArgumentException("RAG questions require at least one citation");
+        }
         return question;
     }
 
@@ -131,4 +150,5 @@ public class ManualQuestion {
     public UUID getGenerationRequestId() { return generationRequestId; }
     public String getModelPolicy() { return modelPolicy; }
     public String getPromptVersion() { return promptVersion; }
+    public List<QuestionCitation> getCitations() { return List.copyOf(citations); }
 }

@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     litellm_base_url: str = "http://localhost:4000"
     litellm_master_key: str = "local-development-key"
     interview_question_model: str = "interview-question-model"
+    knowledge_embedding_model: str = "knowledge-embedding-model"
     ai_service_token: str = "local-ai-service-token"
     prompt_version: str = "direct-question-v1"
 

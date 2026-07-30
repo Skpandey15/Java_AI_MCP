@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  interviewApi, type AdminQuestion, type Interview, type Profile, type QuestionType,
+  interviewApi, type AdminQuestion, type Interview, type KnowledgeCollection,
+  type Profile, type QuestionType,
 } from '../api/interviewApi'
 import { useAuth } from '../auth/AuthProvider'
 
@@ -125,7 +126,8 @@ const technologyDescriptions: Record<string, string> = {
 const initialForm = {
   title: '', description: '', ecosystem: 'JAVA' as Ecosystem, technologies: ['Java'] as string[],
   difficulty: 'MEDIUM',
-  questionMode: 'MANUAL', durationMinutes: 60, questionCount: 0, passingPercentage: 70,
+  questionMode: 'MANUAL', knowledgeCollectionId: '',
+  durationMinutes: 60, questionCount: 0, passingPercentage: 70,
   mcqSingle: 0, mcqMultiple: 0, shortText: 0, longText: 0,
 }
 
@@ -293,6 +295,12 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
           <div className="question-preview" key={question.id}>
             <div><strong>{question.order}. {question.type.replaceAll('_', ' ')}</strong><p>{question.prompt}</p></div>
             {question.options.length > 0 && <ol type="A">{question.options.map((option) => <li key={option}>{option}</li>)}</ol>}
+            {question.citations?.length > 0 && <div className="citation-list">
+              <strong>Sources</strong>
+              {question.citations.map((citation) => <p key={citation.chunkId}>
+                {citation.fileName} · section {citation.chunkIndex + 1}: {citation.excerpt}
+              </p>)}
+            </div>}
             {interview.status === 'DRAFT' && <div className="compact-actions">
               <button type="button" className="secondary-button" onClick={() => edit(question)}>Edit</button>
               <button type="button" className="danger-button" onClick={() => void remove(question.id)}>Delete</button>
@@ -302,7 +310,7 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
       </div>}
 
       {interview.status === 'DRAFT' && <>
-        {interview.questionMode === 'DIRECT_LLM' && !draft.id &&
+        {(interview.questionMode === 'DIRECT_LLM' || interview.questionMode === 'RAG') && !draft.id &&
           <>
             <button type="button" disabled={generating} onClick={() => void generate()}>
               {generating ? 'Generating questions…' : 'Generate AI questions'}
@@ -362,17 +370,19 @@ export function InterviewerDashboard() {
   const [activeView, setActiveView] = useState<'create' | 'drafts' | 'assign' | 'history'>('create')
   const [interviews, setInterviews] = useState<Interview[]>([])
   const [candidates, setCandidates] = useState<Profile[]>([])
+  const [collections, setCollections] = useState<KnowledgeCollection[]>([])
   const [form, setForm] = useState(initialForm)
   const [message, setMessage] = useState('')
   const [hasError, setHasError] = useState(false)
 
   const notify = (text: string, error = false) => { setMessage(text); setHasError(error) }
   const load = async () => {
-    const [owned, availableCandidates] = await Promise.all([
-      interviewApi.listOwned(), interviewApi.candidates(),
+    const [owned, availableCandidates, availableCollections] = await Promise.all([
+      interviewApi.listOwned(), interviewApi.candidates(), interviewApi.listKnowledgeCollections(),
     ])
     setInterviews(owned)
     setCandidates(availableCandidates)
+    setCollections(availableCollections)
   }
 
   useEffect(() => { void load().catch((error) => notify(messageOf(error), true)) }, [])
@@ -386,6 +396,7 @@ export function InterviewerDashboard() {
         skills: form.technologies,
         difficulty: form.difficulty,
         questionMode: form.questionMode,
+        knowledgeCollectionId: form.questionMode === 'RAG' ? form.knowledgeCollectionId : null,
         durationMinutes: form.durationMinutes,
         questionCount: form.questionCount,
         passingPercentage: form.passingPercentage,
@@ -512,11 +523,22 @@ export function InterviewerDashboard() {
               {form.questionCount > 100 && <span className="field-error"> Maximum 100 questions.</span>}
             </fieldset>
             <label>Difficulty<select value={form.difficulty} onChange={(e) => setForm({...form, difficulty: e.target.value})}><option>EASY</option><option>MEDIUM</option><option>HARD</option><option>MIXED</option></select></label>
-            <label>Question mode<select value={form.questionMode} onChange={(e) => setForm({...form, questionMode: e.target.value})}><option>MANUAL</option><option>DIRECT_LLM</option></select></label>
+            <label>Question mode<select value={form.questionMode}
+              onChange={(e) => setForm({...form, questionMode: e.target.value, knowledgeCollectionId: ''})}>
+              <option>MANUAL</option><option>DIRECT_LLM</option><option>RAG</option>
+            </select></label>
+            {form.questionMode === 'RAG' && <label>Knowledge collection<select required
+              value={form.knowledgeCollectionId}
+              onChange={(e) => setForm({...form, knowledgeCollectionId: e.target.value})}>
+              <option value="">Select an ingested collection</option>
+              {collections.map((collection) =>
+                <option key={collection.id} value={collection.id}>{collection.name}</option>)}
+            </select></label>}
             <label>Duration (minutes)<input type="number" min="5" max="480" value={form.durationMinutes} onChange={(e) => setForm({...form, durationMinutes: Number(e.target.value)})} /></label>
             <label>Passing percentage<input type="number" min="1" max="100" value={form.passingPercentage} onChange={(e) => setForm({...form, passingPercentage: Number(e.target.value)})} /></label>
             <button type="submit" disabled={form.technologies.length === 0
-              || form.questionCount < 1 || form.questionCount > 100}>Create draft</button>
+              || form.questionCount < 1 || form.questionCount > 100
+              || (form.questionMode === 'RAG' && !form.knowledgeCollectionId)}>Create draft</button>
           </form>}
 
           {activeView === 'drafts' && <>

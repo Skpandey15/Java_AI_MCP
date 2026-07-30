@@ -26,7 +26,9 @@ class InterviewServiceTest {
     private final ManualQuestionRepository questions = mock(ManualQuestionRepository.class);
     private final InterviewSessionRepository sessions = mock(InterviewSessionRepository.class);
     private final InterviewService service =
-            new InterviewService(definitions, assignments, profiles, questions, sessions);
+            new InterviewService(definitions, assignments, profiles, questions, sessions,
+                    org.mockito.Mockito.mock(
+                            com.onlineinterview.knowledge.infrastructure.KnowledgeCollectionRepository.class));
 
     @Test
     void listsOnlyInterviewsOwnedByAuthenticatedSubject() {

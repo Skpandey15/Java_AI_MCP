@@ -24,8 +24,16 @@ export type Interview = {
     mcqSingle: number; mcqMultiple: number; shortText: number; longText: number
   }
   passingPercentage: number
+  knowledgeCollectionId?: string
   status: string
   createdAt: string
+}
+export type KnowledgeCollection = {
+  id: string; name: string; description: string; createdAt: string
+}
+export type QuestionCitation = {
+  chunkId: string; documentId: string; fileName: string; chunkIndex: number
+  excerpt: string; score: number
 }
 
 export type QuestionType = 'MCQ_SINGLE' | 'MCQ_MULTIPLE' | 'SHORT_TEXT' | 'LONG_TEXT'
@@ -33,7 +41,9 @@ export type Question = {
   id: string; order: number; prompt: string; maxScore: number
   type: QuestionType; options: string[]
 }
-export type AdminQuestion = Question & { correctAnswers: string[]; source: string }
+export type AdminQuestion = Question & {
+  correctAnswers: string[]; source: string; citations: QuestionCitation[]
+}
 export type SavedAnswer = { id: string; questionId: string; content: string; updatedAt: string; version: number }
 export type InterviewSession = {
   id: string
@@ -57,7 +67,7 @@ export type PageResponse<T> = {
 export type ReviewQuestion = {
   questionId: string; answerId?: string; order: number; type: QuestionType; prompt: string
   options: string[]; correctAnswers: string[]; content: string; maxScore: number
-  awardedScore?: number; feedback?: string; autoScored: boolean
+  awardedScore?: number; feedback?: string; autoScored: boolean; citations: QuestionCitation[]
 }
 export type SubmissionDetail = {
   sessionId: string; interviewTitle: string; candidateName: string; candidateEmail: string
@@ -125,6 +135,8 @@ export const interviewApi = {
     })
   },
   listOwned: () => request<Interview[]>('/api/v1/interviews'),
+  listKnowledgeCollections: () =>
+    request<KnowledgeCollection[]>('/api/v1/knowledge/collections'),
   candidates: () => request<Profile[]>('/api/v1/candidates'),
   create: (body: object) => request<Interview>('/api/v1/interviews', {
     method: 'POST', body: JSON.stringify(body),

@@ -53,7 +53,8 @@ class AiQuestionClientHttpTest {
             client.generate(new AiQuestionClient.GenerationRequest(
                     UUID.fromString("00000000-0000-0000-0000-000000000001"),
                     UUID.fromString("00000000-0000-0000-0000-000000000002"),
-                    List.of("Java"), "MEDIUM", 1, QuestionComposition.allLongText(1)));
+                    List.of("Java"), "MEDIUM", 1, QuestionComposition.allLongText(1),
+                    List.of()));
 
             assertThat(protocol.get()).isEqualTo("HTTP/1.1");
             assertThat(receivedBody.get().get("questionCount").asInt()).isEqualTo(1);

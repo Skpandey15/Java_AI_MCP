@@ -107,6 +107,12 @@ export function SubmissionReviewPage() {
       <div className="question-meta"><span>{question.type.replaceAll('_', ' ')}</span><span>{question.maxScore} points</span></div>
       <h2>{question.order}. {question.prompt}</h2>
       {question.options.length > 0 && <p><strong>Correct:</strong> {question.correctAnswers.join(', ')}</p>}
+      {question.citations?.length > 0 && <div className="citation-list">
+        <strong>Sources</strong>
+        {question.citations.map((citation) => <p key={citation.chunkId}>
+          {citation.fileName} · section {citation.chunkIndex + 1}: {citation.excerpt}
+        </p>)}
+      </div>}
       <div className="answer-panel"><strong>Candidate answer</strong><pre>{question.content || 'No answer submitted'}</pre></div>
       {question.autoScored
         ? <p><strong>Automatic score:</strong> {question.awardedScore ?? 0} / {question.maxScore}</p>

@@ -40,6 +40,7 @@ public class InterviewDefinition {
     @Column(name = "short_text_count", nullable = false) private int shortTextCount;
     @Column(name = "long_text_count", nullable = false) private int longTextCount;
     @Column(name = "passing_percentage", nullable = false) private int passingPercentage;
+    @Column(name = "knowledge_collection_id") private UUID knowledgeCollectionId;
     @Enumerated(EnumType.STRING) @Column(nullable = false) private InterviewStatus status;
     @Column(name = "created_at", nullable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
@@ -66,12 +67,24 @@ public class InterviewDefinition {
             List<String> skills, InterviewDifficulty difficulty, QuestionMode questionMode,
             int durationMinutes, int questionCount, int passingPercentage,
             QuestionComposition composition) {
+        return draft(ownerSubject, title, description, skills, difficulty, questionMode,
+                durationMinutes, questionCount, passingPercentage, composition, null);
+    }
+
+    public static InterviewDefinition draft(String ownerSubject, String title, String description,
+            List<String> skills, InterviewDifficulty difficulty, QuestionMode questionMode,
+            int durationMinutes, int questionCount, int passingPercentage,
+            QuestionComposition composition, UUID knowledgeCollectionId) {
         if (passingPercentage < 1 || passingPercentage > 100) {
             throw new IllegalArgumentException("Passing percentage must be between 1 and 100");
         }
         if (composition.total() != questionCount) {
             throw new IllegalArgumentException(
                     "Question composition total must equal question count");
+        }
+        if ((questionMode == QuestionMode.RAG) != (knowledgeCollectionId != null)) {
+            throw new IllegalArgumentException(
+                    "RAG mode requires one knowledge collection; other modes cannot select one");
         }
         var definition = new InterviewDefinition();
         definition.id = UUID.randomUUID();
@@ -88,6 +101,7 @@ public class InterviewDefinition {
         definition.shortTextCount = composition.shortText();
         definition.longTextCount = composition.longText();
         definition.passingPercentage = passingPercentage;
+        definition.knowledgeCollectionId = knowledgeCollectionId;
         definition.status = InterviewStatus.DRAFT;
         definition.createdAt = Instant.now();
         definition.updatedAt = definition.createdAt;
@@ -116,6 +130,7 @@ public class InterviewDefinition {
                 mcqSingleCount, mcqMultipleCount, shortTextCount, longTextCount);
     }
     public int getPassingPercentage() { return passingPercentage; }
+    public UUID getKnowledgeCollectionId() { return knowledgeCollectionId; }
     public InterviewStatus getStatus() { return status; }
     public Instant getCreatedAt() { return createdAt; }
 }

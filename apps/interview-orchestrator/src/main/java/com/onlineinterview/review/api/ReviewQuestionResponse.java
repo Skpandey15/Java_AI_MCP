@@ -2,9 +2,11 @@ package com.onlineinterview.review.api;
 
 import java.util.List;
 import java.util.UUID;
+import com.onlineinterview.session.api.QuestionCitationResponse;
 
 public record ReviewQuestionResponse(
         UUID questionId, UUID answerId, int order, String type, String prompt,
         List<String> options, List<String> correctAnswers, String content,
-        int maxScore, Integer awardedScore, String feedback, boolean autoScored) {
+        int maxScore, Integer awardedScore, String feedback, boolean autoScored,
+        List<QuestionCitationResponse> citations) {
 }
