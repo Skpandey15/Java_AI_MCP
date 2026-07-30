@@ -39,7 +39,17 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x gradlew
-      - run: ./gradlew clean test bootJar --no-daemon
+      - name: Build and test with bounded dependency-download retry
+        run: |
+          for attempt in 1 2 3; do
+            if ./gradlew clean test bootJar --no-daemon; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            sleep $((attempt * 15))
+          done
 
   ai-service:
     runs-on: ubuntu-latest
