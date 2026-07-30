@@ -48,7 +48,10 @@ tasks.named('test') {
 
 def phase5Classes = {
     files(sourceSets.main.output.classesDirs.collect {
-        fileTree(dir: it, include: 'com/onlineinterview/knowledge/**')
+        fileTree(dir: it, includes: [
+            'com/onlineinterview/knowledge/**',
+            'com/onlineinterview/mcp/**'
+        ])
     })
 }
 
@@ -83,9 +86,16 @@ pitest {
     targetClasses = [
         'com.onlineinterview.knowledge.application.*',
         'com.onlineinterview.knowledge.domain.*',
+        'com.onlineinterview.mcp.application.*',
+        'com.onlineinterview.mcp.domain.*',
+        'com.onlineinterview.mcp.transport.*',
         'com.onlineinterview.ai.AiQuestionService'
     ]
-    targetTests = ['com.onlineinterview.knowledge.*', 'com.onlineinterview.ai.AiQuestionServiceTest']
+    targetTests = [
+        'com.onlineinterview.knowledge.*',
+        'com.onlineinterview.mcp.*',
+        'com.onlineinterview.ai.AiQuestionServiceTest'
+    ]
     mutationThreshold = 65
     coverageThreshold = 95
     threads = 4
