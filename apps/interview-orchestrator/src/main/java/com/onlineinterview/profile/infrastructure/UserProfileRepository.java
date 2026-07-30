@@ -10,5 +10,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UserProfileRepository extends JpaRepository<UserProfile, UUID> {
     Optional<UserProfile> findByIdentitySubject(String identitySubject);
-    List<UserProfile> findByRoleAndStatusOrderByDisplayNameAsc(UserRole role, UserStatus status);
+    List<UserProfile> findByTenantIdAndRoleAndStatusOrderByDisplayNameAsc(
+            String tenantId, UserRole role, UserStatus status);
 }

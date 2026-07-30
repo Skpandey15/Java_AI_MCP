@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     knowledge_embedding_model: str = "knowledge-embedding-model"
     ai_service_token: str = "local-ai-service-token"
     prompt_version: str = "direct-question-v1"
+    input_cost_per_million_tokens_usd: float = 0.15
+    output_cost_per_million_tokens_usd: float = 0.60
 
     @model_validator(mode="after")
     def reject_local_credentials_outside_local(self) -> "Settings":

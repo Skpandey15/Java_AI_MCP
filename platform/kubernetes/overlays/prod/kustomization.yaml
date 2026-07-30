@@ -5,6 +5,7 @@ resources:
   - ../../base
   - external-secret.yaml
   - pod-disruption-budgets.yaml
+  - horizontal-pod-autoscalers.yaml
 images:
   - {name: ghcr.io/skpandey15/java-ai-mcp-web-ui, digest: sha256:c4fc6193393548d3db984cf963d7355b581436a8157fffcd4aad02815c26ec29}
   - {name: ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator, digest: sha256:6c0eddd035ac76fd8261188394ea0c41bfd55e5c57d6bbbd5d12999ac64fbe94}
@@ -18,6 +19,7 @@ configMapGenerator:
       - LOG_LEVEL=INFO
       - CORS_ALLOWED_ORIGINS=https://interview.example.com
       - KEYCLOAK_ISSUER_URI=https://auth.example.com/realms/online-interview
+      - MESSAGING_ENABLED=true
   - name: web-ui-runtime-config
     behavior: replace
     files:

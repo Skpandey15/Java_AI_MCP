@@ -9,6 +9,8 @@
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
             <customFields>{"service":"interview-orchestrator"}</customFields>
             <includeMdcKeyName>requestId</includeMdcKeyName>
+            <includeMdcKeyName>traceId</includeMdcKeyName>
+            <includeMdcKeyName>spanId</includeMdcKeyName>
             <includeKeyValuePairs>true</includeKeyValuePairs>
             <includeContext>false</includeContext>
             <includeCallerData>false</includeCallerData>

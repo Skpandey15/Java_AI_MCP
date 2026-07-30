@@ -1,4 +1,5 @@
 import json
+import time
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -11,7 +12,7 @@ class ModelGatewayError(RuntimeError):
 
 
 class LiteLLMClient:
-    def generate(self, prompt: str, question_count: int) -> tuple[list[dict], str]:
+    def generate(self, prompt: str, question_count: int) -> tuple[list[dict], str, dict]:
         schema = {
             "type": "object",
             "properties": {
@@ -75,6 +76,7 @@ class LiteLLMClient:
             },
             method="POST",
         )
+        started = time.monotonic()
         try:
             with urlopen(request, timeout=65) as response:
                 payload = json.loads(response.read())
@@ -83,4 +85,19 @@ class LiteLLMClient:
         content = payload["choices"][0]["message"]["content"]
         parsed = json.loads(content)
         model = payload.get("model", settings.interview_question_model)
-        return parsed["questions"], model
+        usage = payload.get("usage", {})
+        prompt_tokens = int(usage.get("prompt_tokens", 0))
+        completion_tokens = int(usage.get("completion_tokens", 0))
+        estimated_cost = (
+            prompt_tokens * settings.input_cost_per_million_tokens_usd
+            + completion_tokens * settings.output_cost_per_million_tokens_usd
+        ) / 1_000_000
+        return parsed["questions"], model, {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": int(usage.get(
+                "total_tokens", prompt_tokens + completion_tokens
+            )),
+            "estimated_cost_usd": estimated_cost,
+            "latency_ms": round((time.monotonic() - started) * 1000),
+        }

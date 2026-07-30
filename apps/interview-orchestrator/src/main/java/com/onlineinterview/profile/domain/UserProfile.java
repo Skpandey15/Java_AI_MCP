@@ -19,6 +19,9 @@ public class UserProfile {
     @Column(name = "identity_subject", nullable = false, unique = true)
     private String identitySubject;
 
+    @Column(name = "tenant_id", nullable = false)
+    private String tenantId;
+
     @Column(nullable = false, unique = true)
     private String email;
 
@@ -46,9 +49,15 @@ public class UserProfile {
     }
 
     public static UserProfile registerCandidate(String subject, String email, String displayName) {
+        return registerCandidate("default", subject, email, displayName);
+    }
+
+    public static UserProfile registerCandidate(
+            String tenantId, String subject, String email, String displayName) {
         Instant now = Instant.now();
         UserProfile profile = new UserProfile();
         profile.id = UUID.randomUUID();
+        profile.tenantId = tenantId;
         profile.identitySubject = subject;
         profile.email = email;
         profile.displayName = displayName;
@@ -60,6 +69,7 @@ public class UserProfile {
     }
 
     public UUID getId() { return id; }
+    public String getTenantId() { return tenantId; }
     public String getIdentitySubject() { return identitySubject; }
     public String getEmail() { return email; }
     public String getDisplayName() { return displayName; }

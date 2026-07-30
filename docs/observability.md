@@ -1,4 +1,4 @@
-# Phase 3A.4 observability operations
+# Phase 6A observability operations
 
 ## Scope
 
@@ -10,7 +10,9 @@ Phase 3A.4 establishes local structured logging, request correlation, metrics co
 - Spring Boot publishes Micrometer Prometheus metrics at `/actuator/prometheus`.
 - The optional Docker Compose observability profile runs Prometheus, Loki, Promtail, Grafana and an OTLP collector receiver.
 
-The OpenTelemetry Collector is ready to receive OTLP traffic; full distributed trace instrumentation is intentionally a later step.
+Spring Boot exports sampled OTLP traces through the collector to Tempo. Grafana
+is provisioned with Prometheus, Loki and Tempo data sources plus the platform
+overview dashboard. Request logs include trace identifiers supplied by Micrometer.
 
 ## Environment profiles
 
@@ -61,6 +63,7 @@ Endpoints:
 | Grafana | http://localhost:3001 |
 | Loki | http://localhost:3100 |
 | OTLP gRPC/HTTP | localhost:4317 / localhost:4318 |
+| Tempo | http://localhost:3200 |
 
 Grafana local credentials default to `admin/admin`. Override `GRAFANA_ADMIN_USER` and `GRAFANA_ADMIN_PASSWORD` outside local development.
 
@@ -94,3 +97,18 @@ The orchestrator exposes these low-cardinality Prometheus series:
 - `rag_evaluation_precision`, `rag_evaluation_recall`, `rag_evaluation_mrr`
 
 No owner, collection, document, prompt or chunk content is used as a metric tag.
+
+## SLOs, alerts and dashboards
+
+Prometheus loads `platform/observability/prometheus-rules.yml`, which records API
+request rate, 5xx ratio and p95 latency. It alerts on orchestrator unavailability,
+error-budget burn, latency, MCP failures and RAG generation failures.
+
+Grafana provisions `Online Interview Platform Overview` automatically. Each
+alert links to [the Phase 6A runbook](runbooks/phase-6a-observability.md).
+Database saturation, downstream circuit and outbox dead-letter alerts link to
+[the Phase 6B resilience runbook](runbooks/phase-6b-resilience.md).
+
+Local tracing samples every request. Set `TRACING_SAMPLING_PROBABILITY` to the
+approved production value; `0.1` is the recommended starting point. Never add
+payloads, prompts, answers, credentials or user identity to span attributes.

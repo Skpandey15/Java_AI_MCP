@@ -29,7 +29,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    implementation 'org.springframework.kafka:spring-kafka'
     implementation 'io.micrometer:micrometer-registry-prometheus'
+    implementation 'io.micrometer:micrometer-tracing-bridge-otel'
+    implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
     implementation 'net.logstash.logback:logstash-logback-encoder:8.0'
     implementation 'org.flywaydb:flyway-core'
     implementation 'org.flywaydb:flyway-database-postgresql'
@@ -46,18 +49,23 @@ tasks.named('test') {
     finalizedBy tasks.named('jacocoTestReport')
 }
 
-def phase5Classes = {
+def phaseQualityClasses = {
     files(sourceSets.main.output.classesDirs.collect {
         fileTree(dir: it, includes: [
             'com/onlineinterview/knowledge/**',
-            'com/onlineinterview/mcp/**'
+            'com/onlineinterview/mcp/**',
+            'com/onlineinterview/common/resilience/**',
+            'com/onlineinterview/messaging/**',
+            'com/onlineinterview/profile/application/ProfileService*',
+            'com/onlineinterview/profile/domain/UserProfile*',
+            'com/onlineinterview/shared/security/TenantClaim*'
         ])
     })
 }
 
 jacocoTestReport {
     dependsOn test
-    classDirectories.setFrom(phase5Classes())
+    classDirectories.setFrom(phaseQualityClasses())
     reports {
         xml.required = true
         html.required = true
@@ -67,7 +75,7 @@ jacocoTestReport {
 
 jacocoTestCoverageVerification {
     dependsOn test
-    classDirectories.setFrom(phase5Classes())
+    classDirectories.setFrom(phaseQualityClasses())
     violationRules {
         rule {
             limit {
@@ -89,11 +97,21 @@ pitest {
         'com.onlineinterview.mcp.application.*',
         'com.onlineinterview.mcp.domain.*',
         'com.onlineinterview.mcp.transport.*',
+        'com.onlineinterview.common.resilience.*',
+        'com.onlineinterview.messaging.application.*',
+        'com.onlineinterview.messaging.domain.*',
+        'com.onlineinterview.profile.application.ProfileService',
+        'com.onlineinterview.profile.domain.UserProfile',
+        'com.onlineinterview.shared.security.TenantClaim',
         'com.onlineinterview.ai.AiQuestionService'
     ]
     targetTests = [
         'com.onlineinterview.knowledge.*',
         'com.onlineinterview.mcp.*',
+        'com.onlineinterview.common.resilience.*',
+        'com.onlineinterview.messaging.*',
+        'com.onlineinterview.profile.*',
+        'com.onlineinterview.shared.security.TenantClaimTest',
         'com.onlineinterview.ai.AiQuestionServiceTest'
     ]
     mutationThreshold = 65

@@ -135,3 +135,17 @@ tests. AI scores are persisted only as pending human-review recommendations.
 - Observability, autoscaling, backup and recovery
 - Tenant isolation and security testing
 - AI quality, groundedness, cost and latency evaluations
+
+Phase 6A implemented measurable service objectives, Prometheus recording and
+alert rules, a provisioned Grafana platform dashboard, OTLP trace export to
+Tempo, trace-to-log navigation and incident response runbooks.
+Phase 6B adds bounded downstream retry/circuit breaking, explicit Hikari and
+PostgreSQL capacity controls, production HPA behavior, a transactional Kafka
+outbox, idempotent producer settings, consumer DLT policy and resilience alerts.
+Phase 6C adds Keycloak-propagated tenant identity, tenant-scoped candidate
+registration/discovery/assignment, stateless API security headers, Kubernetes
+Pod Security posture, default-deny network policies and automated dependency,
+IaC and secret scanning.
+Phase 6D completes Phase 6 with deterministic groundedness, relevance, citation
+and safety release gates; model token/cost/latency telemetry; Prometheus alerts;
+and Grafana operational views.

@@ -23,15 +23,29 @@ public class ProfileService {
     }
 
     @Transactional(readOnly = true)
-    public List<UserProfile> activeCandidates() {
-        return repository.findByRoleAndStatusOrderByDisplayNameAsc(
-                UserRole.CANDIDATE, UserStatus.ACTIVE);
+    public List<UserProfile> activeCandidates(String tenantId) {
+        return repository.findByTenantIdAndRoleAndStatusOrderByDisplayNameAsc(
+                tenantId, UserRole.CANDIDATE, UserStatus.ACTIVE);
     }
 
     @Transactional
     public UserProfile registerCandidate(String subject, String email, String displayName) {
+        return registerCandidate("default", subject, email, displayName);
+    }
+
+    @Transactional
+    public UserProfile registerCandidate(
+            String tenantId, String subject, String email, String displayName) {
         return repository.findByIdentitySubject(subject)
+                .map(existing -> {
+                    if (!existing.getTenantId().equals(tenantId)) {
+                        throw new org.springframework.web.server.ResponseStatusException(
+                                org.springframework.http.HttpStatus.CONFLICT,
+                                "Identity is already registered to another tenant");
+                    }
+                    return existing;
+                })
                 .orElseGet(() -> repository.save(
-                        UserProfile.registerCandidate(subject, email, displayName)));
+                        UserProfile.registerCandidate(tenantId, subject, email, displayName)));
     }
 }

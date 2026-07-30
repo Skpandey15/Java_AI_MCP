@@ -38,12 +38,14 @@ class ProfileControllerTest {
     @Test
     void candidateRegistrationAlwaysCreatesCandidateProfile() throws Exception {
         var candidate = UserProfile.registerCandidate("subject-1", "candidate@example.com", "Candidate");
-        when(profileService.registerCandidate(anyString(), anyString(), anyString()))
+        when(profileService.registerCandidate(
+                anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(candidate);
 
         mockMvc.perform(post("/api/v1/profiles/registration-complete")
                         .with(jwt().jwt(token -> token
                                 .subject("subject-1")
+                                .claim("tenant_id", "demo")
                                 .claim("email", "candidate@example.com")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"displayName\":\"Candidate\"}"))

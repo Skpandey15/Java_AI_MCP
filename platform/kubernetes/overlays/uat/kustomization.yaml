@@ -16,6 +16,7 @@ configMapGenerator:
       - APP_ENVIRONMENT=uat
       - CORS_ALLOWED_ORIGINS=https://interview.uat.example.com
       - KEYCLOAK_ISSUER_URI=https://auth.uat.example.com/realms/online-interview
+      - MESSAGING_ENABLED=true
   - name: web-ui-runtime-config
     behavior: replace
     files:
