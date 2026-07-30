@@ -37,4 +37,14 @@ foreach ($environment in @('uat', 'prod')) {
     }
 }
 
+foreach ($environment in @('dev', 'uat', 'prod')) {
+    $manifest = Get-Content -LiteralPath (Join-Path $RenderedDirectory "$environment.yaml") -Raw
+    if ($manifest -notmatch '(?m)^apiVersion: external-secrets\.io/v1\s*$') {
+        throw "$environment does not use the supported external-secrets.io/v1 API"
+    }
+    if ($manifest -match '(?m)^apiVersion: external-secrets\.io/v1beta1\s*$') {
+        throw "$environment uses the unsupported external-secrets.io/v1beta1 API"
+    }
+}
+
 Write-Output 'Phase 4B manifest policy checks passed.'
