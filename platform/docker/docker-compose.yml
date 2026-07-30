@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:17-alpine
+    image: pgvector/pgvector:0.8.5-pg17-bookworm
     environment:
       POSTGRES_DB: online_interview
       POSTGRES_USER: interview
@@ -95,6 +95,7 @@ services:
       LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-local-litellm-key}
       AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-local-ai-service-token}
       INTERVIEW_QUESTION_MODEL: interview-question-model
+      KNOWLEDGE_EMBEDDING_MODEL: knowledge-embedding-model
     ports:
       - "8000:8000"
     depends_on:

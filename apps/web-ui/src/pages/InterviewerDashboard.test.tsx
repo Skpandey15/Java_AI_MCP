@@ -17,6 +17,7 @@ vi.mock('../api/interviewApi', async (importOriginal) => {
       listQuestions: vi.fn(),
       listOwned: vi.fn(),
       candidates: vi.fn(),
+      listKnowledgeCollections: vi.fn(),
       create: vi.fn(),
     },
   }
@@ -46,6 +47,7 @@ const question: AdminQuestion = {
   options: [],
   correctAnswers: [],
   source: 'AI',
+  citations: [],
 }
 
 describe('InterviewerDashboard question editing', () => {
@@ -54,6 +56,7 @@ describe('InterviewerDashboard question editing', () => {
     vi.mocked(interviewApi.listQuestions).mockResolvedValue([question])
     vi.mocked(interviewApi.listOwned).mockResolvedValue([])
     vi.mocked(interviewApi.candidates).mockResolvedValue([])
+    vi.mocked(interviewApi.listKnowledgeCollections).mockResolvedValue([])
     Element.prototype.scrollIntoView = vi.fn()
   })
 

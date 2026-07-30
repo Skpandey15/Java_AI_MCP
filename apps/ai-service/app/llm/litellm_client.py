@@ -31,9 +31,14 @@ class LiteLLMClient:
                             },
                             "options": {"type": "array", "items": {"type": "string"}},
                             "correct_answers": {"type": "array", "items": {"type": "string"}},
+                            "citation_ids": {
+                                "type": "array",
+                                "items": {"type": "string", "format": "uuid"},
+                            },
                         },
                         "required": [
-                            "order", "prompt", "max_score", "type", "options", "correct_answers"
+                            "order", "prompt", "max_score", "type", "options",
+                            "correct_answers", "citation_ids"
                         ],
                         "additionalProperties": False,
                     },

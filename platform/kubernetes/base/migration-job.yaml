@@ -22,7 +22,7 @@ spec:
         - name: ghcr-pull
       initContainers:
         - name: wait-for-postgres
-          image: postgres:17.10-alpine3.24@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193
+          image: pgvector/pgvector:0.8.5-pg17-bookworm@sha256:d2ef61f42ef767baa5a1475393303cc235bcd92febd9d7014eddb48b41f3bad0
           command: [sh, -c, until pg_isready -h postgres -U interview; do sleep 2; done]
       containers:
         - name: migrate

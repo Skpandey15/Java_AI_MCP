@@ -7,6 +7,7 @@ import com.onlineinterview.interview.domain.QuestionMode;
 import com.onlineinterview.interview.domain.QuestionComposition;
 import com.onlineinterview.interview.infrastructure.InterviewAssignmentRepository;
 import com.onlineinterview.interview.infrastructure.InterviewDefinitionRepository;
+import com.onlineinterview.knowledge.infrastructure.KnowledgeCollectionRepository;
 import com.onlineinterview.profile.domain.UserRole;
 import com.onlineinterview.profile.domain.UserStatus;
 import com.onlineinterview.profile.infrastructure.UserProfileRepository;
@@ -34,15 +35,18 @@ public class InterviewService {
     private final UserProfileRepository profiles;
     private final ManualQuestionRepository questions;
     private final InterviewSessionRepository sessions;
+    private final KnowledgeCollectionRepository knowledgeCollections;
 
     public InterviewService(InterviewDefinitionRepository definitions,
             InterviewAssignmentRepository assignments, UserProfileRepository profiles,
-            ManualQuestionRepository questions, InterviewSessionRepository sessions) {
+            ManualQuestionRepository questions, InterviewSessionRepository sessions,
+            KnowledgeCollectionRepository knowledgeCollections) {
         this.definitions = definitions;
         this.assignments = assignments;
         this.profiles = profiles;
         this.questions = questions;
         this.sessions = sessions;
+        this.knowledgeCollections = knowledgeCollections;
     }
 
     @Transactional
@@ -59,13 +63,28 @@ public class InterviewService {
             List<String> skills, InterviewDifficulty difficulty, QuestionMode questionMode,
             int durationMinutes, int questionCount, int passingPercentage,
             QuestionComposition composition) {
+        return create(ownerSubject, title, description, skills, difficulty, questionMode,
+                durationMinutes, questionCount, passingPercentage, composition, null);
+    }
+
+    @Transactional
+    public InterviewDefinition create(String ownerSubject, String title, String description,
+            List<String> skills, InterviewDifficulty difficulty, QuestionMode questionMode,
+            int durationMinutes, int questionCount, int passingPercentage,
+            QuestionComposition composition, UUID knowledgeCollectionId) {
         if (composition.total() != questionCount) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Question composition total must equal question count");
         }
+        if (knowledgeCollectionId != null && knowledgeCollections.findById(knowledgeCollectionId)
+                .filter(collection -> collection.getOwnerSubject().equals(ownerSubject)).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Knowledge collection not found");
+        }
         var definition = definitions.save(InterviewDefinition.draft(
                 ownerSubject, title, description, skills, difficulty, questionMode,
-                durationMinutes, questionCount, passingPercentage, composition));
+                durationMinutes, questionCount, passingPercentage, composition,
+                knowledgeCollectionId));
         log.atInfo().addKeyValue("event", "interview.created")
                 .addKeyValue("interviewId", definition.getId())
                 .addKeyValue("questionMode", questionMode)

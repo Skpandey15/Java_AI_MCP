@@ -22,6 +22,7 @@ configMapGenerator:
       - AI_SERVICE_BASE_URL=http://ai-service:8000
       - LITELLM_BASE_URL=http://litellm:4000
       - INTERVIEW_QUESTION_MODEL=interview-question-model
+      - KNOWLEDGE_EMBEDDING_MODEL=knowledge-embedding-model
       - CORS_ALLOWED_ORIGINS=http://interview.localhost:8081,http://localhost:30080
   - name: postgres-init
     files:

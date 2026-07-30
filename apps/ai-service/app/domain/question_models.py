@@ -25,6 +25,12 @@ class QuestionComposition(ApiModel):
         return self.mcq_single + self.mcq_multiple + self.short_text + self.long_text
 
 
+class GroundingChunk(ApiModel):
+    citation_id: UUID
+    source_name: str = Field(min_length=1, max_length=255)
+    content: str = Field(min_length=1, max_length=8000)
+
+
 class GenerateQuestionsRequest(ApiModel):
     request_id: UUID
     interview_id: UUID
@@ -32,6 +38,7 @@ class GenerateQuestionsRequest(ApiModel):
     difficulty: str
     question_count: int = Field(ge=1, le=100)
     question_composition: QuestionComposition
+    grounding_context: list[GroundingChunk] = Field(default_factory=list, max_length=20)
 
     @model_validator(mode="after")
     def composition_matches_total(self) -> "GenerateQuestionsRequest":
@@ -47,6 +54,7 @@ class GeneratedQuestion(ApiModel):
     type: Literal["MCQ_SINGLE", "MCQ_MULTIPLE", "SHORT_TEXT", "LONG_TEXT"]
     options: list[str] = Field(default_factory=list)
     correct_answers: list[str] = Field(default_factory=list)
+    citation_ids: list[UUID] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def validate_type_details(self) -> "GeneratedQuestion":

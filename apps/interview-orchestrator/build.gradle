@@ -1,5 +1,7 @@
 plugins {
     id 'java'
+    id 'jacoco'
+    id 'info.solidsoft.pitest' version '1.19.0'
     id 'org.springframework.boot' version '3.5.14'
     id 'io.spring.dependency-management' version '1.1.7'
 }
@@ -41,4 +43,52 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+    finalizedBy tasks.named('jacocoTestReport')
+}
+
+def phase5Classes = {
+    files(sourceSets.main.output.classesDirs.collect {
+        fileTree(dir: it, include: 'com/onlineinterview/knowledge/**')
+    })
+}
+
+jacocoTestReport {
+    dependsOn test
+    classDirectories.setFrom(phase5Classes())
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = true
+    }
+}
+
+jacocoTestCoverageVerification {
+    dependsOn test
+    classDirectories.setFrom(phase5Classes())
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.95
+            }
+        }
+    }
+}
+
+check.dependsOn jacocoTestCoverageVerification
+
+pitest {
+    junit5PluginVersion = '1.2.3'
+    targetClasses = [
+        'com.onlineinterview.knowledge.application.*',
+        'com.onlineinterview.knowledge.domain.*',
+        'com.onlineinterview.ai.AiQuestionService'
+    ]
+    targetTests = ['com.onlineinterview.knowledge.*', 'com.onlineinterview.ai.AiQuestionServiceTest']
+    mutationThreshold = 65
+    coverageThreshold = 95
+    threads = 4
+    outputFormats = ['XML', 'HTML']
+    timestampedReports = false
 }

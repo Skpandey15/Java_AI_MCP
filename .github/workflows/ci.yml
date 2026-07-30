@@ -69,7 +69,7 @@ jobs:
       - name: Start orchestrator with PostgreSQL and verify health
         run: |
           docker network create orchestrator-smoke
-          docker run --detach --name orchestrator-postgres --network orchestrator-smoke             --env POSTGRES_DB=online_interview             --env POSTGRES_USER=interview             --env POSTGRES_PASSWORD=interview             postgres:17-alpine
+          docker run --detach --name orchestrator-postgres --network orchestrator-smoke             --env POSTGRES_DB=online_interview             --env POSTGRES_USER=interview             --env POSTGRES_PASSWORD=interview             pgvector/pgvector:0.8.5-pg17-bookworm
           for attempt in $(seq 1 30); do
             if docker exec orchestrator-postgres pg_isready -U interview -d online_interview; then
               break

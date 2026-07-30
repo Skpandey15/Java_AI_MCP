@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from fastapi import FastAPI
 from pydantic import BaseModel
 
+from app.api.embedding_routes import router as embedding_router
 from app.api.question_routes import router as question_router
 from app.observability import configure_logging, request_context
 
@@ -22,6 +23,7 @@ app = FastAPI(
 )
 app.middleware("http")(request_context)
 app.include_router(question_router)
+app.include_router(embedding_router)
 
 
 @app.get("/api/v1/health", response_model=HealthResponse, tags=["platform"])

@@ -5,6 +5,7 @@ import com.onlineinterview.profile.domain.UserProfile;
 import com.onlineinterview.profile.infrastructure.UserProfileRepository;
 import com.onlineinterview.review.api.CandidateResultResponse;
 import com.onlineinterview.review.api.ReviewQuestionResponse;
+import com.onlineinterview.session.api.QuestionCitationResponse;
 import com.onlineinterview.review.api.SubmissionDetailResponse;
 import com.onlineinterview.review.api.SubmissionSummaryResponse;
 import com.onlineinterview.review.domain.ReviewAuditEvent;
@@ -203,7 +204,8 @@ public class ReviewService {
                     answer == null ? "" : answer.getContent(), question.getMaxScore(),
                     answer == null ? null : answer.getAwardedScore(),
                     answer == null ? null : answer.getReviewerFeedback(),
-                    answer != null && answer.isAutoScored());
+                    answer != null && answer.isAutoScored(),
+                    question.getCitations().stream().map(QuestionCitationResponse::from).toList());
         }).toList();
         int maxScore = questionList.stream().mapToInt(q -> q.getMaxScore()).sum();
         return new SubmissionDetailResponse(session.getId(), definition.getTitle(),

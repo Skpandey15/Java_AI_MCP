@@ -65,7 +65,7 @@ class AiQuestionClientTest {
 
         var response = client.generate(new AiQuestionClient.GenerationRequest(
                 requestId, interviewId, List.of("Java"), "MEDIUM", 1,
-                QuestionComposition.allLongText(1)));
+                QuestionComposition.allLongText(1), List.of()));
 
         assertThat(response.questions()).hasSize(1);
         server.verify();
