@@ -13,4 +13,10 @@ public interface InterviewAssignmentRepository extends JpaRepository<InterviewAs
 
     @EntityGraph(attributePaths = "interviewDefinition")
     Optional<InterviewAssignment> findByIdAndCandidateId(UUID id, UUID candidateId);
+
+    @EntityGraph(attributePaths = "interviewDefinition")
+    List<InterviewAssignment> findByInterviewDefinition_IdOrderByStartsAtDesc(UUID interviewDefinitionId);
+
+    @EntityGraph(attributePaths = "interviewDefinition")
+    Optional<InterviewAssignment> findByIdAndInterviewDefinition_Id(UUID id, UUID interviewDefinitionId);
 }

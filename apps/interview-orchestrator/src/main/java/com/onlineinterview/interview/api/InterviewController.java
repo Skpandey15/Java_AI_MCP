@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -59,6 +60,30 @@ public class InterviewController {
                 request.startsAt(), request.endsAt(), request.maxAttempts());
         return ResponseEntity.created(URI.create("/api/v1/assignments/" + assignment.getId()))
                 .body(AssignmentResponse.from(assignment));
+    }
+
+    @GetMapping("/interviews/{interviewId}/assignments")
+    @PreAuthorize("hasRole('INTERVIEWER')")
+    public List<AssignmentResponse> assignments(
+            @AuthenticationPrincipal Jwt jwt, @PathVariable UUID interviewId) {
+        return service.assignmentsFor(jwt.getSubject(), interviewId).stream()
+                .map(AssignmentResponse::from).toList();
+    }
+
+    @DeleteMapping("/interviews/{interviewId}/assignments/{assignmentId}")
+    @PreAuthorize("hasRole('INTERVIEWER')")
+    public ResponseEntity<Void> unassign(@AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID interviewId, @PathVariable UUID assignmentId) {
+        service.unassign(jwt.getSubject(), interviewId, assignmentId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/interviews/{interviewId}")
+    @PreAuthorize("hasRole('INTERVIEWER')")
+    public ResponseEntity<Void> archive(
+            @AuthenticationPrincipal Jwt jwt, @PathVariable UUID interviewId) {
+        service.archive(jwt.getSubject(), interviewId);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/candidate/interviews")

@@ -108,6 +108,10 @@ public class InterviewDefinition {
         return definition;
     }
 
+    public void archive() {
+        status = InterviewStatus.ARCHIVED;
+    }
+
     public void publish() {
         if (status != InterviewStatus.DRAFT) {
             throw new IllegalStateException("Only a draft interview can be published");

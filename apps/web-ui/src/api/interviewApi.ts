@@ -148,6 +148,15 @@ export const interviewApi = {
     `/api/v1/interviews/${id}/assignments`,
     { method: 'POST', body: JSON.stringify(body) },
   ),
+  listAssignments: (id: string) => request<Assignment[]>(
+    `/api/v1/interviews/${id}/assignments`,
+  ),
+  unassign: (id: string, assignmentId: string) => request<void>(
+    `/api/v1/interviews/${id}/assignments/${assignmentId}`, { method: 'DELETE' },
+  ),
+  archiveInterview: (id: string) => request<void>(
+    `/api/v1/interviews/${id}`, { method: 'DELETE' },
+  ),
   candidateAssignments: () => request<Assignment[]>('/api/v1/candidate/interviews'),
   addQuestion: (interviewId: string, body: object) => request<AdminQuestion>(
     `/api/v1/interviews/${interviewId}/questions`,

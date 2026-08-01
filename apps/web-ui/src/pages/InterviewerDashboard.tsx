@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  interviewApi, type AdminQuestion, type Interview, type KnowledgeCollection,
+  interviewApi, type AdminQuestion, type Assignment, type Interview, type KnowledgeCollection,
   type Profile, type QuestionType,
 } from '../api/interviewApi'
 import { useAuth } from '../auth/AuthProvider'
@@ -160,8 +160,7 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
   const [questions, setQuestions] = useState<AdminQuestion[]>([])
   const [draft, setDraft] = useState<QuestionDraft>(emptyQuestion())
   const [candidateId, setCandidateId] = useState('')
-  const [startsAt, setStartsAt] = useState('')
-  const [endsAt, setEndsAt] = useState('')
+  const [assignments, setAssignments] = useState<Assignment[]>([])
   const [generating, setGenerating] = useState(false)
   const questionFormRef = useRef<HTMLFormElement>(null)
   const isMcq = draft.type === 'MCQ_SINGLE' || draft.type === 'MCQ_MULTIPLE'
@@ -187,6 +186,37 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
   }
 
   useEffect(() => { void loadQuestions() }, [interview.id])
+
+  async function loadAssignments() {
+    if (!showAssignment || interview.status !== 'PUBLISHED') return
+    try {
+      setAssignments(await interviewApi.listAssignments(interview.id))
+    } catch (error) {
+      notify(messageOf(error), true)
+    }
+  }
+  useEffect(() => { void loadAssignments() }, [interview.id, interview.status])
+
+  async function archive() {
+    if (!window.confirm(`Delete interview "${interview.title}"? It will be removed from your lists.`)) return
+    try {
+      await interviewApi.archiveInterview(interview.id)
+      notify('Interview deleted.')
+      await reload()
+    } catch (error) {
+      notify(messageOf(error), true)
+    }
+  }
+
+  async function removeAssignment(assignmentId: string) {
+    try {
+      await interviewApi.unassign(interview.id, assignmentId)
+      notify('Candidate unassigned.')
+      await loadAssignments()
+    } catch (error) {
+      notify(messageOf(error), true)
+    }
+  }
   useEffect(() => {
     if (draft.id) questionFormRef.current?.scrollIntoView({behavior: 'smooth', block: 'start'})
   }, [draft.id])
@@ -266,13 +296,17 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
   async function assign(event: FormEvent) {
     event.preventDefault()
     try {
+      const now = new Date()
+      const ends = new Date(now.getTime() + interview.durationMinutes * 60_000)
       await interviewApi.assign(interview.id, {
         candidateId,
-        startsAt: new Date(startsAt).toISOString(),
-        endsAt: new Date(endsAt).toISOString(),
+        startsAt: now.toISOString(),
+        endsAt: ends.toISOString(),
         maxAttempts: 1,
       })
-      notify('Candidate assignment scheduled.')
+      notify('Candidate assignment scheduled — starts now.')
+      setCandidateId('')
+      await loadAssignments()
     } catch (error) {
       notify(messageOf(error), true)
     }
@@ -282,7 +316,10 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
     <article className="card interview-card">
       <div className="card-heading">
         <div><h2>{interview.title}</h2><p>{interview.skills.join(', ')} · {interview.difficulty} · {interview.durationMinutes} min</p></div>
-        <span className="badge">{interview.status}</span>
+        <div className="card-heading-actions">
+          <span className="badge">{interview.status}</span>
+          <button type="button" className="danger-button" onClick={() => void archive()}>Delete</button>
+        </div>
       </div>
       <p><strong>Questions:</strong> {questions.length} / {interview.questionCount}</p>
       <p><strong>Question mix:</strong> {expectedComposition.mcqSingle} single-answer MCQ,{' '}
@@ -356,10 +393,19 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
           <option value="">Select a candidate</option>
           {candidates.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.displayName} — {candidate.email}</option>)}
         </select></label>
-        <label>Starts<input required type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} /></label>
-        <label>Ends<input required type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} /></label>
+        <p className="assignment-window-note">Starts immediately and runs for {interview.durationMinutes} minutes (the interview duration).</p>
         <button type="submit">Assign candidate</button>
       </form>}
+      {showAssignment && interview.status === 'PUBLISHED' && assignments.length > 0 && <div className="assignment-list">
+        <strong>Assigned candidates</strong>
+        {assignments.map((assignment) => {
+          const person = candidates.find((candidate) => candidate.id === assignment.candidateId)
+          return <div className="assignment-row" key={assignment.id}>
+            <span>{person ? `${person.displayName} — ${person.email}` : assignment.candidateId} · {assignment.status}</span>
+            <button type="button" className="secondary-button" onClick={() => void removeAssignment(assignment.id)}>Unassign</button>
+          </div>
+        })}
+      </div>}
     </article>
   )
 }
