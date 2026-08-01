@@ -105,6 +105,16 @@ if [ -n "$AT" ]; then
     -d "$(printf '%s' "$C" | python -c "import sys,json;c=json.load(sys.stdin);o='$ORIGIN';c['redirectUris']=list({*c.get('redirectUris',[]),o+'/*'});c['webOrigins']=list({*c.get('webOrigins',[]),o});c['rootUrl']=o;c['baseUrl']=o;print(json.dumps(c))")" >/dev/null
 fi
 
+echo "== 10. limit candidates to one active session (deny second login) =="
+# Opt-in: this rebinds the Keycloak browser flow to a candidate-session-limit copy,
+# which has previously broken login. Off by default. Enable with ENABLE_SINGLE_SESSION=1.
+if [ "${ENABLE_SINGLE_SESSION:-0}" = "1" ]; then
+  python "$ROOT/scripts/keycloak-single-session.py" "https://auth.$D:8443" \
+    || echo "  (skipped — run scripts/keycloak-single-session.py manually once Keycloak is up)"
+else
+  echo "  (skipped — set ENABLE_SINGLE_SESSION=1 to enable the one-active-session limit)"
+fi
+
 echo ""
 echo "Done. Open:  https://interview.$D:8443"
 echo "First time on each machine: trust scripts/.lan-certs/tls.crt (Trusted Root) and allow inbound TCP 8443/8081 in the firewall."

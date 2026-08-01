@@ -41,8 +41,6 @@ public class InterviewSession {
     protected InterviewSession() {}
 
     public static InterviewSession start(InterviewAssignment assignment, UUID candidateId, Instant now) {
-        var durationExpiry = now.plus(
-                assignment.getInterviewDefinition().getDurationMinutes(), ChronoUnit.MINUTES);
         var session = new InterviewSession();
         session.id = UUID.randomUUID();
         session.assignment = assignment;
@@ -50,8 +48,11 @@ public class InterviewSession {
         session.state = SessionState.IN_PROGRESS;
         session.startedAt = now;
         session.reviewStatus = ReviewStatus.NOT_SUBMITTED;
-        session.expiresAt = durationExpiry.isBefore(assignment.getEndsAt())
-                ? durationExpiry : assignment.getEndsAt();
+        // The exam clock is the full interview duration from the moment the candidate starts —
+        // it is NOT truncated by the assignment window's end. The [startsAt, endsAt] window only
+        // gates WHEN a candidate may start (enforced in SessionService.start).
+        session.expiresAt = now.plus(
+                assignment.getInterviewDefinition().getDurationMinutes(), ChronoUnit.MINUTES);
         return session;
     }
 

@@ -41,6 +41,13 @@ const ecosystemTechnologies = {
     'Rate Limiting', 'Idempotency', 'Distributed Transactions', 'Data Partitioning',
     'Fault Tolerance', 'Observability', 'Capacity Estimation', 'Design Trade-offs',
   ],
+  CI_CD: [
+    'CI/CD Fundamentals', 'Jenkins', 'GitHub Actions', 'GitLab CI/CD', 'CircleCI',
+    'Azure DevOps Pipelines', 'Argo CD', 'Flux CD', 'Tekton', 'Spinnaker',
+    'Docker', 'Kubernetes', 'Helm', 'Kustomize', 'Terraform', 'Ansible',
+    'SonarQube', 'Trivy', 'JFrog Artifactory', 'GitOps',
+    'Blue-Green Deployment', 'Canary Deployment', 'Pipeline as Code',
+  ],
 } as const
 
 type Ecosystem = keyof typeof ecosystemTechnologies
@@ -149,10 +156,34 @@ const technologyDescriptions: Record<string, string> = {
   Observability: 'Understanding system state through metrics, logs, and distributed traces.',
   'Capacity Estimation': 'Sizing traffic, storage, and bandwidth to plan infrastructure and bottlenecks.',
   'Design Trade-offs': 'Reasoning about competing goals such as latency, consistency, cost, and complexity.',
+  'CI/CD Fundamentals': 'Core practices of continuous integration and delivery: automated build, test, and release on every change.',
+  Jenkins: 'An extensible open-source automation server for building, testing, and deploying software pipelines.',
+  'GitHub Actions': 'GitHub-native CI/CD that runs YAML-defined workflows triggered by repository events.',
+  'GitLab CI/CD': 'GitLab’s built-in pipeline engine configured via .gitlab-ci.yml with runners, stages, and environments.',
+  CircleCI: 'A cloud CI/CD platform running fast, parallelized pipelines defined in config.yml.',
+  'Azure DevOps Pipelines': 'Microsoft’s CI/CD service for multi-stage YAML pipelines across build, test, and release.',
+  'Argo CD': 'A declarative GitOps continuous-delivery tool that syncs Kubernetes state from a Git repository.',
+  'Flux CD': 'A GitOps operator that keeps Kubernetes clusters reconciled with configuration stored in Git.',
+  Tekton: 'A Kubernetes-native framework for defining CI/CD pipelines as custom resources.',
+  Spinnaker: 'A multi-cloud continuous-delivery platform for advanced deployment strategies and pipeline management.',
+  Docker: 'A container platform for packaging applications and dependencies into portable, reproducible images.',
+  Kubernetes: 'A container orchestration system that automates deployment, scaling, and management of workloads.',
+  Helm: 'A Kubernetes package manager that templates and versions application deployments as charts.',
+  Kustomize: 'A template-free way to customize Kubernetes manifests through declarative overlays.',
+  Terraform: 'An infrastructure-as-code tool that provisions cloud resources from declarative configuration.',
+  Ansible: 'An agentless automation tool for configuration management, provisioning, and deployment.',
+  SonarQube: 'A static-analysis platform that gates pipelines on code quality, coverage, and security findings.',
+  Trivy: 'A scanner that detects vulnerabilities and misconfigurations in containers, code, and IaC.',
+  'JFrog Artifactory': 'A universal artifact repository manager for binaries, packages, and container images.',
+  GitOps: 'An operating model that uses Git as the single source of truth for declarative infrastructure and apps.',
+  'Blue-Green Deployment': 'A release strategy that switches traffic between two identical environments to minimize downtime.',
+  'Canary Deployment': 'A progressive rollout that shifts a small traffic share to a new version before full release.',
+  'Pipeline as Code': 'Defining build and deployment pipelines in version-controlled files alongside application code.',
 }
 
 const initialForm = {
   title: '', description: '', ecosystem: 'JAVA' as Ecosystem, technologies: ['Java'] as string[],
+  topics: [] as string[],
   difficulty: 'MEDIUM',
   questionMode: 'MANUAL', knowledgeCollectionId: '',
   durationMinutes: 60, questionCount: 0, passingPercentage: 70,
@@ -177,19 +208,24 @@ function messageOf(error: unknown) {
   return error instanceof Error ? error.message : 'Unexpected request failure'
 }
 
-export function InterviewCard({ interview, candidates, notify, reload, showQuestions = true, showAssignment = true }: {
+export function InterviewCard({ interview, candidates, notify, reload, showQuestions = true, showAssignment = true, collapseQuestions = false }: {
   interview: Interview
   candidates: Profile[]
   notify: (message: string, error?: boolean) => void
   reload: () => Promise<void>
   showQuestions?: boolean
   showAssignment?: boolean
+  collapseQuestions?: boolean
 }) {
+  const [questionsOpen, setQuestionsOpen] = useState(!collapseQuestions)
   const [questions, setQuestions] = useState<AdminQuestion[]>([])
   const [draft, setDraft] = useState<QuestionDraft>(emptyQuestion())
   const [candidateId, setCandidateId] = useState('')
+  const [startsAt, setStartsAt] = useState(() => toLocalInput(new Date()))
+  const [endsAt, setEndsAt] = useState(() => toLocalInput(new Date(Date.now() + interview.durationMinutes * 60_000)))
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [generating, setGenerating] = useState(false)
+  const [composeReport, setComposeReport] = useState<{ rounds: number; trace: string[] }>()
   const questionFormRef = useRef<HTMLFormElement>(null)
   const isMcq = draft.type === 'MCQ_SINGLE' || draft.type === 'MCQ_MULTIPLE'
   const actualComposition = questions.reduce((counts, question) => ({
@@ -312,10 +348,12 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
   }
   async function compose() {
     setGenerating(true)
+    setComposeReport(undefined)
     notify('Composition agent is planning, generating, critiquing and de-duplicating…')
     try {
-      await interviewApi.composeQuestions(interview.id)
-      notify('Interview composed by the agent (long-text questions).')
+      const result = await interviewApi.composeQuestions(interview.id)
+      setComposeReport({ rounds: result.rounds, trace: result.trace })
+      notify(`Agent composed ${result.questions.length} question(s) over ${result.rounds} round(s).`)
       await loadQuestions()
     } catch (error) {
       notify(messageOf(error), true)
@@ -337,15 +375,13 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
   async function assign(event: FormEvent) {
     event.preventDefault()
     try {
-      const now = new Date()
-      const ends = new Date(now.getTime() + interview.durationMinutes * 60_000)
       await interviewApi.assign(interview.id, {
         candidateId,
-        startsAt: now.toISOString(),
-        endsAt: ends.toISOString(),
+        startsAt: new Date(startsAt).toISOString(),
+        endsAt: new Date(endsAt).toISOString(),
         maxAttempts: 1,
       })
-      notify('Candidate assignment scheduled — starts now.')
+      notify('Candidate assignment scheduled.')
       setCandidateId('')
       await loadAssignments()
     } catch (error) {
@@ -368,7 +404,13 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
         {expectedComposition.longText} long</p>
       <p><strong>Passing score:</strong> {interview.passingPercentage}%</p>
 
-      {showQuestions && questions.length > 0 && <div className="question-list">
+      {showQuestions && questions.length > 0 && collapseQuestions && <button type="button"
+        className="secondary-button" aria-expanded={questionsOpen}
+        onClick={() => setQuestionsOpen((open) => !open)}>
+        {questionsOpen ? 'Hide questions' : `Show ${questions.length} questions`}
+      </button>}
+
+      {showQuestions && questions.length > 0 && questionsOpen && <div className="question-list">
         {questions.map((question) => (
           <div className="question-preview" key={question.id}>
             <div><strong>{question.order}. {question.type.replaceAll('_', ' ')}</strong><p>{question.prompt}</p></div>
@@ -391,17 +433,26 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
         {(interview.questionMode === 'DIRECT_LLM' || interview.questionMode === 'RAG') && !draft.id &&
           <>
             <div className="compact-actions">
-              <button type="button" disabled={generating} onClick={() => void generate()}>
+              <button type="button" disabled={generating} onClick={() => void generate()}
+                title="One AI call. Produces your full question mix (MCQ + text) fast, without self-review.">
                 {generating ? 'Generating questions…' : 'Generate AI questions'}
               </button>
-              <button type="button" className="secondary-button" disabled={generating} onClick={() => void compose()}>
+              <button type="button" className="secondary-button" disabled={generating} onClick={() => void compose()}
+                title="An agent loop: generate → self-critique (LLM judge) → de-duplicate, repeating rounds until the question mix is met. Slower, higher quality.">
                 🤖 Compose (agentic)
               </button>
             </div>
+            <p className="field-hint"><strong>Generate</strong> is a single AI call — fast, no self-review.{' '}
+              <strong>Compose (agentic)</strong> runs a loop that generates, has a second AI critique
+              each question, and drops duplicates, repeating rounds until your question mix is met.</p>
             {generating && <div className="generation-progress" role="progressbar"
               aria-label="Generating AI questions" aria-valuetext="Generation in progress">
               <div className="generation-progress-bar" />
               <span>AI Gateway is creating and validating the question set…</span>
+            </div>}
+            {composeReport && !generating && <div className="agent-trace">
+              <strong>🤖 Agent run · {composeReport.rounds} round(s)</strong>
+              <ol>{composeReport.trace.map((line, i) => <li key={i}>{line}</li>)}</ol>
             </div>}
           </>}
         {(interview.questionMode === 'MANUAL' || draft.id) &&
@@ -439,7 +490,9 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
           <option value="">Select a candidate</option>
           {candidates.map((candidate) => <option key={candidate.id} value={candidate.id}>{candidate.displayName} — {candidate.email}</option>)}
         </select></label>
-        <p className="assignment-window-note">Starts immediately and runs for {interview.durationMinutes} minutes (the interview duration).</p>
+        <p className="assignment-window-note">Prefilled to start now for {interview.durationMinutes} minutes — edit if you want a different window.</p>
+        <label>Starts<input required type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} /></label>
+        <label>Ends<input required type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} /></label>
         <button type="submit">Assign candidate</button>
       </form>}
       {showAssignment && interview.status === 'PUBLISHED' && assignments.length > 0 && <div className="assignment-list">
@@ -464,10 +517,21 @@ export function InterviewerDashboard() {
   const [candidates, setCandidates] = useState<Profile[]>([])
   const [collections, setCollections] = useState<KnowledgeCollection[]>([])
   const [form, setForm] = useState(initialForm)
+  const [techQuery, setTechQuery] = useState('')
+  const [suggestedTopics, setSuggestedTopics] = useState<string[]>([])
+  const [topicsBusy, setTopicsBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [hasError, setHasError] = useState(false)
+  const [messageId, setMessageId] = useState(0)
 
-  const notify = (text: string, error = false) => { setMessage(text); setHasError(error) }
+  const notify = (text: string, error = false) => {
+    setMessage(text); setHasError(error); setMessageId((id) => id + 1)
+  }
+  useEffect(() => {
+    if (!message) return
+    const timer = window.setTimeout(() => setMessage(''), 6000)
+    return () => window.clearTimeout(timer)
+  }, [message, messageId])
   const load = async () => {
     const [owned, availableCandidates, availableCollections] = await Promise.all([
       interviewApi.listOwned(), interviewApi.candidates(), interviewApi.listKnowledgeCollections(),
@@ -485,7 +549,7 @@ export function InterviewerDashboard() {
       await interviewApi.create({
         title: form.title,
         description: form.description,
-        skills: form.technologies,
+        skills: [...form.technologies, ...form.topics],
         difficulty: form.difficulty,
         questionMode: form.questionMode,
         knowledgeCollectionId: form.questionMode === 'RAG' ? form.knowledgeCollectionId : null,
@@ -500,6 +564,7 @@ export function InterviewerDashboard() {
         },
       })
       setForm(initialForm)
+      setSuggestedTopics([])
       notify('Draft interview created.')
       await load()
       setActiveView('drafts')
@@ -519,7 +584,9 @@ export function InterviewerDashboard() {
 
   function setEcosystem(ecosystem: Ecosystem) {
     const firstTechnology = ecosystemTechnologies[ecosystem][0]
-    setForm({...form, ecosystem, technologies: [firstTechnology]})
+    setTechQuery('')
+    setSuggestedTopics([])
+    setForm({...form, ecosystem, technologies: [firstTechnology], topics: []})
   }
 
   function toggleTechnology(technology: string) {
@@ -529,13 +596,40 @@ export function InterviewerDashboard() {
     setForm({...form, technologies: selected})
   }
 
+  function toggleTopic(topic: string) {
+    const selected = form.topics.includes(topic)
+      ? form.topics.filter((item) => item !== topic)
+      : [...form.topics, topic]
+    setForm({...form, topics: selected})
+  }
+
+  async function suggestTopics() {
+    if (form.technologies.length === 0) return
+    setTopicsBusy(true)
+    try {
+      const { topics } = await interviewApi.suggestTopics(form.technologies, form.difficulty)
+      setSuggestedTopics(topics)
+      // keep only still-valid selections
+      setForm((current) => ({ ...current, topics: current.topics.filter((t) => topics.includes(t)) }))
+      if (topics.length === 0) notify('No topics were suggested for the selected technologies.', true)
+    } catch (error) {
+      notify(messageOf(error), true)
+    } finally {
+      setTopicsBusy(false)
+    }
+  }
+
   return (
     <main className="dashboard">
       <div className="dashboard-header">
         <div><p className="eyebrow">Interviewer workspace</p><h1>Interview management</h1></div>
         <button className="secondary-button" onClick={auth.logout}>Sign out</button>
       </div>
-      {message && <p className={hasError ? 'error-message' : 'status-message'}>{message}</p>}
+      {message && <div className={`toast ${hasError ? 'toast-error' : 'toast-success'}`}
+        role={hasError ? 'alert' : 'status'} aria-live={hasError ? 'assertive' : 'polite'}>
+        <span>{message}</span>
+        <button type="button" className="toast-close" aria-label="Dismiss" onClick={() => setMessage('')}>×</button>
+      </div>}
       <div className="workspace-layout">
         <nav className="workspace-nav" aria-label="Interviewer workspace">
           <button className={activeView === 'create' ? 'active' : ''} onClick={() => setActiveView('create')}>
@@ -572,6 +666,7 @@ export function InterviewerDashboard() {
                 <option value="DATABASE">Database ecosystem</option>
                 <option value="AI">AI ecosystem</option>
                 <option value="SYSTEM_DESIGN">System Design</option>
+                <option value="CI_CD">CI/CD ecosystem</option>
               </select></label>
               <div className="technology-field">
                 <span>Technologies</span>
@@ -580,12 +675,20 @@ export function InterviewerDashboard() {
                     ? `${form.technologies.length} selected`
                     : 'Select technologies'}</summary>
                   <div className="technology-options">
-                    {ecosystemTechnologies[form.ecosystem].map((technology) =>
-                      <label key={technology}>
-                        <input type="checkbox" checked={form.technologies.includes(technology)}
-                          onChange={() => toggleTechnology(technology)} />
-                        {technology}
-                      </label>)}
+                    <input className="technology-search" type="text" value={techQuery}
+                      placeholder="Search technologies…" aria-label="Search technologies"
+                      onChange={(e) => setTechQuery(e.target.value)} />
+                    {ecosystemTechnologies[form.ecosystem]
+                      .filter((technology) => technology.toLowerCase().includes(techQuery.trim().toLowerCase()))
+                      .map((technology) =>
+                        <label key={technology}>
+                          <input type="checkbox" checked={form.technologies.includes(technology)}
+                            onChange={() => toggleTechnology(technology)} />
+                          {technology}
+                        </label>)}
+                    {ecosystemTechnologies[form.ecosystem]
+                      .filter((technology) => technology.toLowerCase().includes(techQuery.trim().toLowerCase()))
+                      .length === 0 && <p className="technology-empty">No technologies match “{techQuery}”.</p>}
                   </div>
                 </details>
                 <small>Select one or more technologies.</small>
@@ -600,6 +703,27 @@ export function InterviewerDashboard() {
                       </div>)}
                 </div>
               </div>
+            </div>
+            <div className="technology-field">
+              <span>Topics <small>(optional — narrow the generated questions)</small></span>
+              <div className="compact-actions">
+                <button type="button" className="secondary-button"
+                  disabled={topicsBusy || form.technologies.length === 0}
+                  onClick={() => void suggestTopics()}>
+                  {topicsBusy ? 'Suggesting…' : '🤖 Suggest topics'}</button>
+                {form.topics.length > 0 && <span className="badge">{form.topics.length} selected</span>}
+              </div>
+              {suggestedTopics.length > 0 && <div className="topic-options">
+                {suggestedTopics.map((topic) =>
+                  <label key={topic}>
+                    <input type="checkbox" checked={form.topics.includes(topic)}
+                      onChange={() => toggleTopic(topic)} />
+                    {topic}
+                  </label>)}
+              </div>}
+              <small>{suggestedTopics.length === 0
+                ? 'Pick technologies above, then suggest topics to focus on specific areas.'
+                : 'Select topics to focus generation; leave all unchecked to cover the technologies broadly.'}</small>
             </div>
             <fieldset className="question-composition">
               <legend>Types of questions</legend>
@@ -650,10 +774,10 @@ export function InterviewerDashboard() {
 
           {activeView === 'history' && <>
             <div className="section-heading"><h2>Interview history</h2><p>Read-only record of published interviews.</p></div>
-            <div className="card-grid">
+            <div className="history-list">
               {interviews.filter((interview) => interview.status !== 'DRAFT').map((interview) =>
                 <InterviewCard key={interview.id} interview={interview} candidates={candidates}
-                  notify={notify} reload={load} showAssignment={false} />)}
+                  notify={notify} reload={load} showAssignment={false} collapseQuestions />)}
               {!interviews.some((interview) => interview.status !== 'DRAFT') &&
                 <p className="empty-state">No published interviews yet.</p>}
             </div>
@@ -824,4 +948,9 @@ async function fetchGithubText(repoUrl: string): Promise<{ name: string; text: s
     if (text.length > 420000) break
   }
   return { name: `${owner}-${repo}.md`, text: text.slice(0, 450000).trim() }
+}
+
+function toLocalInput(date: Date): string {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000)
+  return local.toISOString().slice(0, 16)
 }

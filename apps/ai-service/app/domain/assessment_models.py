@@ -64,3 +64,25 @@ class DraftFeedbackResponse(ApiModel):
     growth_areas: list[str] = Field(default_factory=list)
     leakage: LeakageVerdict
     usage: GenerationUsage | None = None
+
+
+# ---- Answer-key agent (model answer with details + example) ----
+
+class ModelAnswerItem(ApiModel):
+    question_prompt: str = Field(min_length=1, max_length=4000)
+    type: str = Field(default="LONG_TEXT", max_length=20)
+    options: list[str] = Field(default_factory=list, max_length=20)
+    correct_answers: list[str] = Field(default_factory=list, max_length=20)
+
+
+class ModelAnswersRequest(ApiModel):
+    items: list[ModelAnswerItem] = Field(min_length=1, max_length=50)
+
+
+class ModelAnswer(ApiModel):
+    content: str
+
+
+class ModelAnswersResponse(ApiModel):
+    answers: list[ModelAnswer]
+    usage: GenerationUsage | None = None

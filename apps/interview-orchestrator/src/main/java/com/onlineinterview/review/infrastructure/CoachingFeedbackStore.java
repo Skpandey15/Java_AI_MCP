@@ -1,6 +1,7 @@
 package com.onlineinterview.review.infrastructure;
 
-import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -26,13 +27,13 @@ public class CoachingFeedbackStore {
                     content = EXCLUDED.content, status = 'DRAFT',
                     leakage_safe = EXCLUDED.leakage_safe, leakage_flags = EXCLUDED.leakage_flags,
                     created_at = EXCLUDED.created_at, approved_at = NULL
-                """, sessionId, content, leakageSafe, String.join("\n", flags), Instant.now());
+                """, sessionId, content, leakageSafe, String.join("\n", flags), OffsetDateTime.now(ZoneOffset.UTC));
     }
 
     public int approve(UUID sessionId) {
         return jdbc.update(
                 "UPDATE coaching_feedback SET status = 'APPROVED', approved_at = ? WHERE session_id = ?",
-                Instant.now(), sessionId);
+                OffsetDateTime.now(ZoneOffset.UTC), sessionId);
     }
 
     public Optional<Coaching> find(UUID sessionId) {

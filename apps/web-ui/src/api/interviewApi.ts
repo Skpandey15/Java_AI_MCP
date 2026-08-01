@@ -45,6 +45,7 @@ export type Question = {
 export type AdminQuestion = Question & {
   correctAnswers: string[]; source: string; citations: QuestionCitation[]
 }
+export type ComposeResult = { questions: Question[]; rounds: number; trace: string[] }
 export type SavedAnswer = { id: string; questionId: string; content: string; updatedAt: string; version: number }
 export type InterviewSession = {
   id: string
@@ -69,6 +70,7 @@ export type ReviewQuestion = {
   questionId: string; answerId?: string; order: number; type: QuestionType; prompt: string
   options: string[]; correctAnswers: string[]; content: string; maxScore: number
   awardedScore?: number; feedback?: string; autoScored: boolean; citations: QuestionCitation[]
+  modelAnswer?: string
 }
 export type SubmissionDetail = {
   sessionId: string; interviewTitle: string; candidateName: string; candidateEmail: string
@@ -81,7 +83,7 @@ export type CandidateResult = {
   totalScore?: number; maxScore: number; passingPercentage: number; percentage?: number
   outcome?: 'PASSED' | 'NOT_SELECTED'; feedback?: string
   answers: Array<{ order: number; type: QuestionType; prompt: string; content: string
-    maxScore: number; awardedScore?: number; feedback?: string }>
+    maxScore: number; awardedScore?: number; feedback?: string; modelAnswer?: string }>
   coachingFeedback?: string
 }
 export type AnswerSuggestion = { answerId: string; suggestedScore: number; confidence: number; justification: string }
@@ -105,9 +107,20 @@ export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message) }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  await keycloak.updateToken(30)
+async function ensureToken(): Promise<void> {
+  try {
+    await keycloak.updateToken(30)
+  } catch {
+    // Refresh token expired or the SSO session is gone — send the user to re-authenticate
+    // instead of surfacing a cryptic non-Error rejection.
+    void keycloak.login()
+    throw new Error('Your session has expired. Redirecting you to sign in again…')
+  }
   if (!keycloak.token) throw new Error('Authentication token is unavailable')
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  await ensureToken()
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
     headers: {
@@ -152,7 +165,7 @@ export const interviewApi = {
   ingestDocument: (documentId: string) =>
     request<KnowledgeDocument>(`/api/v1/knowledge/documents/${documentId}:ingest`, { method: 'POST' }),
   uploadDocument: async (collectionId: string, file: File): Promise<KnowledgeDocument> => {
-    await keycloak.updateToken(30)
+    await ensureToken()
     const form = new FormData()
     form.append('file', file)
     const res = await fetch(`${apiBaseUrl}/api/v1/knowledge/collections/${collectionId}/documents:upload`, {
@@ -189,11 +202,15 @@ export const interviewApi = {
     `/api/v1/interviews/${interviewId}/questions`,
     { method: 'POST', body: JSON.stringify(body) },
   ),
+  suggestTopics: (technologies: string[], difficulty: string) => request<{ topics: string[] }>(
+    '/api/v1/topics:suggest',
+    { method: 'POST', body: JSON.stringify({ technologies, difficulty }) },
+  ),
   generateQuestions: (interviewId: string) => request<Question[]>(
     `/api/v1/interviews/${interviewId}/questions:generate`,
     { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() } },
   ),
-  composeQuestions: (interviewId: string) => request<Question[]>(
+  composeQuestions: (interviewId: string) => request<ComposeResult>(
     `/api/v1/interviews/${interviewId}/questions:compose`,
     { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() } },
   ),
@@ -234,6 +251,10 @@ export const interviewApi = {
     }),
   aiSuggest: (sessionId: string) => request<AnswerSuggestion[]>(
     `/api/v1/interviewer/submissions/${sessionId}/ai-suggest`, { method: 'POST' }),
+  generateAnswerKey: (sessionId: string) => request<SubmissionDetail>(
+    `/api/v1/interviewer/submissions/${sessionId}/answer-key`, { method: 'POST' }),
+  emailResult: (sessionId: string) => request<{ sentTo: string }>(
+    `/api/v1/interviewer/submissions/${sessionId}/email-result`, { method: 'POST' }),
   draftCoaching: (sessionId: string) => request<CoachingResponse>(
     `/api/v1/interviewer/submissions/${sessionId}/coaching`, { method: 'POST' }),
   approveCoaching: (sessionId: string) => request<CoachingResponse>(

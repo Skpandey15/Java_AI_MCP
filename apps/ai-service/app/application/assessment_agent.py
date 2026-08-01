@@ -21,6 +21,9 @@ from app.domain.assessment_models import (
     EvaluateAnswersResponse,
     GenerationUsage,
     LeakageVerdict,
+    ModelAnswer,
+    ModelAnswersRequest,
+    ModelAnswersResponse,
 )
 from app.llm.chat_client import ChatClient
 
@@ -72,6 +75,23 @@ _GUARD_SCHEMA = {
         "sanitized_feedback": {"type": "string"},
     },
     "required": ["safe", "flags", "sanitized_feedback"],
+    "additionalProperties": False,
+}
+
+_MODEL_ANSWER_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "answers": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {"content": {"type": "string"}},
+                "required": ["content"],
+                "additionalProperties": False,
+            },
+        }
+    },
+    "required": ["answers"],
     "additionalProperties": False,
 }
 
@@ -147,12 +167,18 @@ class AssessmentAgent:
             )
         # Step 1 — draft from privileged context.
         draft_system = (
-            "You are a supportive technical interview coach writing feedback the candidate "
-            "will read. Use the internal scores and reviewer notes to identify real strengths "
-            "and the most important growth areas, and give a concrete, encouraging development "
-            "plan (topics to study and how to practise). Do NOT reveal numeric scores, the "
-            "pass/fail threshold, how close they were to passing, verbatim expected answers, or "
-            "any other candidate. Be specific and actionable, not generic."
+            "You are a supportive technical interview coach writing a development plan the "
+            "candidate will read. Use the internal scores and reviewer notes to identify real "
+            "strengths and the most important growth areas. Return `feedback` as well-structured "
+            "GitHub-flavored Markdown with these sections, in order and each as a `## ` heading: "
+            "Summary (one short paragraph), Strengths (bullet list), Focus areas (bullet list), "
+            "Study plan (bullet list of concrete topics), Practice tasks (numbered list of small "
+            "exercises), and Recommended resources (bullet list of Markdown links). Use `**bold**` "
+            "for key terms. For resources, link ONLY to canonical official documentation (the "
+            "language/framework's own docs site, or MDN) — never invent URLs or link to blogs or "
+            "tutorials you are unsure exist. Be specific and actionable, not generic. Do NOT "
+            "reveal numeric scores, the pass/fail threshold, how close they were to passing, "
+            "verbatim expected answers, or any other candidate."
         )
         outcome_line = f"outcome: {request.outcome} (passed={request.passed})\n\n"
         draft, draft_usage = self.client.complete_json(
@@ -166,7 +192,8 @@ class AssessmentAgent:
             "reference to other candidates; or protected-characteristic language (race, gender, "
             "age, religion, disability, nationality, etc.). Return safe=true only if the text is "
             "already clean. Always return sanitized_feedback: the feedback with every violation "
-            "removed while keeping it constructive. List each violation in flags."
+            "removed while keeping it constructive and preserving the original Markdown structure "
+            "and headings. List each violation in flags."
         )
         guard, guard_usage = self.client.complete_json(
             guard_system, str(draft.get("feedback", "")), _GUARD_SCHEMA)
@@ -183,3 +210,29 @@ class AssessmentAgent:
             leakage=LeakageVerdict(safe=safe, flags=flags),
             usage=_sum_usage(draft_usage, guard_usage),
         )
+
+    def model_answers(self, request: ModelAnswersRequest) -> ModelAnswersResponse:
+        """Produce an answer key: the correct/model answer per question, with a short
+        explanation and a concrete example. One batched call keyed by list order."""
+        lines = []
+        for i, item in enumerate(request.items):
+            block = f"{i + 1}. [{item.type}] {item.question_prompt}"
+            if item.options:
+                block += f"\n   options: {item.options}"
+            if item.correct_answers:
+                block += f"\n   correct option(s): {item.correct_answers}"
+            lines.append(block)
+        system = (
+            "You are a senior technical interviewer writing an answer key that both the "
+            "interviewer and the candidate will read after the interview. For EACH question, "
+            "return a `content` string in GitHub-flavored Markdown with exactly these parts: a "
+            "`**Correct answer:**` one-liner, a `**Why:**` short explanation of the key details, "
+            "and an `**Example:**` with a concrete example (code snippet or scenario). For "
+            "multiple-choice questions, state which option is correct and briefly why the other "
+            "options are wrong; use the provided correct option(s) as ground truth. Return one "
+            "answer per question, in the same order as the input."
+        )
+        parsed, usage = self.client.complete_json(system, "\n".join(lines), _MODEL_ANSWER_SCHEMA)
+        answers = [ModelAnswer(content=str(a.get("content", "")))
+                   for a in parsed.get("answers", [])]
+        return ModelAnswersResponse(answers=answers, usage=_sum_usage(usage))

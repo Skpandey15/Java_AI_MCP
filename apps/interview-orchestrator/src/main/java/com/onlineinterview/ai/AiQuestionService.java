@@ -89,10 +89,22 @@ public class AiQuestionService {
         return saved;
     }
 
+    /** Result of an agentic composition run: the saved questions plus the agent's own
+     *  round count and per-question critique trace, so the UI can show its reasoning. */
+    public record ComposeOutcome(List<ManualQuestion> questions, int rounds, List<String> trace) {}
+
+    public List<String> suggestTopics(List<String> technologies, String difficulty) {
+        if (technologies == null || technologies.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Select at least one technology");
+        }
+        return client.suggestTopics(technologies, difficulty == null ? "MEDIUM" : difficulty);
+    }
+
     @Transactional
-    public List<ManualQuestion> compose(String ownerSubject, UUID interviewId, UUID requestId) {
+    public ComposeOutcome compose(String ownerSubject, UUID interviewId, UUID requestId) {
         var existing = questions.findByGenerationRequestIdOrderByOrderAsc(requestId);
-        if (!existing.isEmpty()) return existing;
+        if (!existing.isEmpty()) return new ComposeOutcome(existing, 0, List.of());
         var definition = definitions.findById(interviewId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Interview not found"));
         if (!definition.getOwnerSubject().equals(ownerSubject)) {
@@ -113,14 +125,18 @@ public class AiQuestionService {
         }
         var response = client.compose(new AiQuestionClient.ComposeRequest(
                 definition.getSkills(), definition.getDifficulty().name(),
-                definition.getQuestionCount(), existingPrompts, grounding, 3));
+                definition.getQuestionCount(), definition.getQuestionComposition(),
+                existingPrompts, grounding, 3));
         var generated = new java.util.ArrayList<ManualQuestion>();
         int order = current.size();
         for (var q : response.questions()) {
             order++;
+            var type = q.type() == null
+                    ? com.onlineinterview.session.domain.QuestionType.LONG_TEXT : q.type();
+            var options = q.options() == null ? List.<String>of() : q.options();
+            var correct = q.correctAnswers() == null ? List.<String>of() : q.correctAnswers();
             generated.add(ManualQuestion.generated(definition, order, q.prompt(), 10,
-                    com.onlineinterview.session.domain.QuestionType.LONG_TEXT,
-                    List.of(), List.of(), requestId, "composition-agent", "compose-v1"));
+                    type, options, correct, requestId, "composition-agent", "compose-v1"));
         }
         var saved = questions.saveAll(generated);
         log.atInfo().addKeyValue("event", "ai.interview_composed")
@@ -129,7 +145,7 @@ public class AiQuestionService {
                 .addKeyValue("rounds", response.rounds())
                 .addKeyValue("questionCount", saved.size())
                 .log("Interview composed by agent");
-        return saved;
+        return new ComposeOutcome(saved, response.rounds(), response.trace());
     }
 
     private List<KnowledgeVectorStore.SearchHit> retrieve(

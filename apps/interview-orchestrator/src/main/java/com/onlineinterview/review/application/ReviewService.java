@@ -44,12 +44,14 @@ public class ReviewService {
     private final OutboxService outbox;
     private final com.onlineinterview.review.infrastructure.AiAssessmentClient assessment;
     private final com.onlineinterview.review.infrastructure.CoachingFeedbackStore coaching;
+    private final com.onlineinterview.review.infrastructure.ModelAnswerStore modelAnswers;
 
     public ReviewService(InterviewSessionRepository sessions, InterviewAnswerRepository answers,
             ManualQuestionRepository questions, UserProfileRepository profiles,
             ReviewAuditEventRepository auditEvents, OutboxService outbox,
             com.onlineinterview.review.infrastructure.AiAssessmentClient assessment,
-            com.onlineinterview.review.infrastructure.CoachingFeedbackStore coaching) {
+            com.onlineinterview.review.infrastructure.CoachingFeedbackStore coaching,
+            com.onlineinterview.review.infrastructure.ModelAnswerStore modelAnswers) {
         this.sessions = sessions;
         this.answers = answers;
         this.questions = questions;
@@ -58,6 +60,39 @@ public class ReviewService {
         this.outbox = outbox;
         this.assessment = assessment;
         this.coaching = coaching;
+        this.modelAnswers = modelAnswers;
+    }
+
+    /** Generate (or reuse) the AI answer key — the correct answer with details and an example —
+     *  for every question in this submission's interview. Cached per question. */
+    @Transactional
+    public SubmissionDetailResponse generateAnswerKey(String ownerSubject, UUID sessionId) {
+        var session = ownedSubmission(ownerSubject, sessionId);
+        var definition = session.getAssignment().getInterviewDefinition();
+        var questionList = questions.findByInterviewDefinitionIdOrderByOrderAsc(definition.getId());
+        var have = modelAnswers.findByQuestionIds(
+                questionList.stream().map(q -> q.getId()).toList());
+        var missing = questionList.stream()
+                .filter(q -> !have.containsKey(q.getId())).toList();
+        if (!missing.isEmpty()) {
+            var items = missing.stream()
+                    .map(q -> new com.onlineinterview.review.infrastructure.AiAssessmentClient
+                            .ModelItem(q.getPrompt(), q.getType().name(),
+                            q.getOptions(), q.getCorrectAnswers()))
+                    .toList();
+            var generated = assessment.modelAnswers(items);
+            for (int i = 0; i < missing.size() && i < generated.size(); i++) {
+                var content = generated.get(i).content();
+                if (content != null && !content.isBlank()) {
+                    modelAnswers.upsert(missing.get(i).getId(), content);
+                }
+            }
+            log.atInfo().addKeyValue("event", "review.answer_key_generated")
+                    .addKeyValue("sessionId", sessionId)
+                    .addKeyValue("questionCount", missing.size())
+                    .log("AI answer key generated");
+        }
+        return detail(session);
     }
 
     @Transactional(readOnly = true)
@@ -237,13 +272,16 @@ public class ReviewService {
         }
         Map<UUID, InterviewAnswer> byQuestion = answers.findBySession_Id(sessionId).stream()
                 .collect(Collectors.toMap(InterviewAnswer::getQuestionId, Function.identity()));
+        var keys = modelAnswers.findByQuestionIds(
+                questionList.stream().map(q -> q.getId()).toList());
         var results = questionList.stream().map(question -> {
             var answer = byQuestion.get(question.getId());
             return new CandidateResultResponse.CandidateAnswerResult(
                     question.getOrder(), question.getType().name(), question.getPrompt(),
                     answer == null ? "" : answer.getContent(), question.getMaxScore(),
                     answer == null ? 0 : answer.getAwardedScore(),
-                    answer == null ? null : answer.getReviewerFeedback());
+                    answer == null ? null : answer.getReviewerFeedback(),
+                    keys.get(question.getId()));
         }).toList();
         String coachingContent = coaching.find(sessionId)
                 .filter(com.onlineinterview.review.infrastructure.CoachingFeedbackStore.Coaching::approved)
@@ -273,6 +311,8 @@ public class ReviewService {
         var questionList = questions.findByInterviewDefinitionIdOrderByOrderAsc(definition.getId());
         Map<UUID, InterviewAnswer> byQuestion = answers.findBySession_Id(session.getId()).stream()
                 .collect(Collectors.toMap(InterviewAnswer::getQuestionId, Function.identity()));
+        var keys = modelAnswers.findByQuestionIds(
+                questionList.stream().map(q -> q.getId()).toList());
         var reviewQuestions = questionList.stream().map(question -> {
             var answer = byQuestion.get(question.getId());
             return new ReviewQuestionResponse(question.getId(), answer == null ? null : answer.getId(),
@@ -282,7 +322,8 @@ public class ReviewService {
                     answer == null ? null : answer.getAwardedScore(),
                     answer == null ? null : answer.getReviewerFeedback(),
                     answer != null && answer.isAutoScored(),
-                    question.getCitations().stream().map(QuestionCitationResponse::from).toList());
+                    question.getCitations().stream().map(QuestionCitationResponse::from).toList(),
+                    keys.get(question.getId()));
         }).toList();
         int maxScore = questionList.stream().mapToInt(q -> q.getMaxScore()).sum();
         return new SubmissionDetailResponse(session.getId(), definition.getTitle(),

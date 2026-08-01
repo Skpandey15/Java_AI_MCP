@@ -10,6 +10,8 @@ from app.domain.assessment_models import (
     DraftFeedbackResponse,
     EvaluateAnswersRequest,
     EvaluateAnswersResponse,
+    ModelAnswersRequest,
+    ModelAnswersResponse,
 )
 from app.llm.litellm_client import ModelGatewayError
 
@@ -67,3 +69,22 @@ def draft_feedback(
                                 "sessionId": str(request.session_id)})
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY,
                             detail="Coaching feedback failed") from exc
+
+
+@router.post("/answers:model", response_model=ModelAnswersResponse)
+def model_answers(
+    request: ModelAnswersRequest,
+    x_service_token: str = Header(default=""),
+) -> ModelAnswersResponse:
+    _authorize(x_service_token)
+    try:
+        response = agent.model_answers(request)
+        logger.info("Model answers generated",
+                    extra={"event": "ai.model_answers_generated",
+                           "answerCount": len(response.answers)})
+        return response
+    except (ModelGatewayError, ValueError) as exc:
+        logger.exception("Model answer generation failed",
+                         extra={"event": "ai.model_answers_failed"})
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY,
+                            detail="Model answer generation failed") from exc

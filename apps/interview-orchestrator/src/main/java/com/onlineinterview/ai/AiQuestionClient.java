@@ -80,9 +80,27 @@ public class AiQuestionClient {
         return resilience == null ? call.get() : resilience.execute("ai-composition-service", call);
     }
 
+    public List<String> suggestTopics(List<String> technologies, String difficulty) {
+        var call = (java.util.function.Supplier<TopicResponse>) () -> client.post()
+                .uri("/internal/v1/topics:suggest")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Service-Token", serviceToken)
+                .body(new TopicRequest(technologies, difficulty))
+                .retrieve()
+                .body(TopicResponse.class);
+        var response = resilience == null ? call.get()
+                : resilience.execute("ai-topic-service", call);
+        return response == null || response.topics() == null ? List.of() : response.topics();
+    }
+
+    public record TopicRequest(List<String> technologies, String difficulty) {}
+    public record TopicResponse(List<String> topics) {}
+
     public record ComposeRequest(List<String> skills, String difficulty, int questionCount,
-            List<String> existingPrompts, List<String> grounding, int maxRounds) {}
-    public record ComposedQuestion(String prompt, String topic) {}
+            QuestionComposition composition, List<String> existingPrompts, List<String> grounding,
+            int maxRounds) {}
+    public record ComposedQuestion(String prompt, String topic, QuestionType type,
+            List<String> options, List<String> correctAnswers) {}
     public record ComposeResponse(List<ComposedQuestion> questions, int rounds, List<String> trace) {}
 
     private byte[] jsonBody(GenerationRequest request) {
