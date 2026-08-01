@@ -193,6 +193,10 @@ export const interviewApi = {
     `/api/v1/interviews/${interviewId}/questions:generate`,
     { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() } },
   ),
+  composeQuestions: (interviewId: string) => request<Question[]>(
+    `/api/v1/interviews/${interviewId}/questions:compose`,
+    { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() } },
+  ),
   listQuestions: (interviewId: string) => request<AdminQuestion[]>(
     `/api/v1/interviews/${interviewId}/questions`,
   ),

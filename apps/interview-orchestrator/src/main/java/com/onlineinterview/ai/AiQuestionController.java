@@ -29,4 +29,13 @@ public class AiQuestionController {
         return service.generate(jwt.getSubject(), interviewId, requestId).stream()
                 .map(QuestionResponse::from).toList();
     }
+
+    @PostMapping("/interviews/{interviewId}/questions:compose")
+    @PreAuthorize("hasRole('INTERVIEWER')")
+    public List<QuestionResponse> compose(@AuthenticationPrincipal Jwt jwt,
+            @org.springframework.web.bind.annotation.PathVariable UUID interviewId,
+            @RequestHeader("Idempotency-Key") UUID requestId) {
+        return service.compose(jwt.getSubject(), interviewId, requestId).stream()
+                .map(QuestionResponse::from).toList();
+    }
 }

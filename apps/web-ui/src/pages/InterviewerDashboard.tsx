@@ -310,6 +310,19 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
       setGenerating(false)
     }
   }
+  async function compose() {
+    setGenerating(true)
+    notify('Composition agent is planning, generating, critiquing and de-duplicating…')
+    try {
+      await interviewApi.composeQuestions(interview.id)
+      notify('Interview composed by the agent (long-text questions).')
+      await loadQuestions()
+    } catch (error) {
+      notify(messageOf(error), true)
+    } finally {
+      setGenerating(false)
+    }
+  }
 
   async function publish() {
     try {
@@ -377,9 +390,14 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
       {interview.status === 'DRAFT' && <>
         {(interview.questionMode === 'DIRECT_LLM' || interview.questionMode === 'RAG') && !draft.id &&
           <>
-            <button type="button" disabled={generating} onClick={() => void generate()}>
-              {generating ? 'Generating questions…' : 'Generate AI questions'}
-            </button>
+            <div className="compact-actions">
+              <button type="button" disabled={generating} onClick={() => void generate()}>
+                {generating ? 'Generating questions…' : 'Generate AI questions'}
+              </button>
+              <button type="button" className="secondary-button" disabled={generating} onClick={() => void compose()}>
+                🤖 Compose (agentic)
+              </button>
+            </div>
             {generating && <div className="generation-progress" role="progressbar"
               aria-label="Generating AI questions" aria-valuetext="Generation in progress">
               <div className="generation-progress-bar" />
