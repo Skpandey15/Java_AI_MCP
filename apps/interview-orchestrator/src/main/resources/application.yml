@@ -78,6 +78,12 @@ management:
     web:
       exposure:
         include: health,info,prometheus,metrics
+  health:
+    # The mail sender is only used on demand to email results; don't let Spring Boot's
+    # auto-configured MailHealthIndicator probe SMTP on /actuator/health (it fails when no
+    # credentials are set, which would wrongly mark the service DOWN).
+    mail:
+      enabled: false
   endpoint:
     health:
       probes:
