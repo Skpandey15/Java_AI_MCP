@@ -3,6 +3,7 @@ package com.onlineinterview.interview.application;
 import com.onlineinterview.interview.domain.InterviewAssignment;
 import com.onlineinterview.interview.domain.InterviewDefinition;
 import com.onlineinterview.interview.domain.InterviewDifficulty;
+import com.onlineinterview.interview.domain.InterviewStatus;
 import com.onlineinterview.interview.domain.QuestionMode;
 import com.onlineinterview.interview.domain.QuestionComposition;
 import com.onlineinterview.interview.infrastructure.InterviewAssignmentRepository;
@@ -106,7 +107,38 @@ public class InterviewService {
 
     @Transactional(readOnly = true)
     public List<InterviewDefinition> listOwned(String ownerSubject) {
-        return definitions.findByOwnerSubjectOrderByCreatedAtDesc(ownerSubject);
+        return definitions.findByOwnerSubjectAndStatusNotOrderByCreatedAtDesc(
+                ownerSubject, InterviewStatus.ARCHIVED);
+    }
+
+    @Transactional
+    public void archive(String ownerSubject, UUID interviewId) {
+        var definition = ownedDefinition(ownerSubject, interviewId);
+        definition.archive();
+        log.atInfo().addKeyValue("event", "interview.archived")
+                .addKeyValue("interviewId", interviewId).log("Interview archived");
+    }
+
+    @Transactional(readOnly = true)
+    public List<InterviewAssignment> assignmentsFor(String ownerSubject, UUID interviewId) {
+        ownedDefinition(ownerSubject, interviewId);
+        return assignments.findByInterviewDefinition_IdOrderByStartsAtDesc(interviewId);
+    }
+
+    @Transactional
+    public void unassign(String ownerSubject, UUID interviewId, UUID assignmentId) {
+        ownedDefinition(ownerSubject, interviewId);
+        var assignment = assignments.findByIdAndInterviewDefinition_Id(assignmentId, interviewId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Assignment not found"));
+        if (sessions.countByAssignmentId(assignmentId) > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Candidate has already started this interview; it cannot be unassigned");
+        }
+        assignments.delete(assignment);
+        log.atInfo().addKeyValue("event", "interview.unassigned")
+                .addKeyValue("interviewId", interviewId)
+                .addKeyValue("assignmentId", assignmentId).log("Candidate unassigned");
     }
 
     @Transactional

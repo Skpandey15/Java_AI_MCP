@@ -31,11 +31,13 @@ spec:
     matchExpressions:
       - key: app.kubernetes.io/name
         operator: In
-        values: [web-ui, keycloak]
+        values: [web-ui, keycloak, interview-orchestrator]
   policyTypes: [Ingress]
   ingress:
+    # web-ui/keycloak serve on 8080; the orchestrator API is also browser-facing on 8080.
     - ports:
         - {protocol: TCP, port: 8080}
+        - {protocol: TCP, port: 80}
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -54,7 +56,7 @@ spec:
             matchExpressions:
               - key: app.kubernetes.io/name
                 operator: In
-                values: [web-ui, keycloak, interview-orchestrator, ai-service, litellm, kafka]
+                values: [web-ui, keycloak, interview-orchestrator, ai-service, litellm, kafka, database-migration]
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -65,7 +67,7 @@ spec:
     matchExpressions:
       - key: app.kubernetes.io/name
         operator: In
-        values: [web-ui, keycloak, interview-orchestrator, ai-service]
+        values: [web-ui, keycloak, interview-orchestrator, ai-service, database-migration]
   policyTypes: [Egress]
   egress:
     - to:

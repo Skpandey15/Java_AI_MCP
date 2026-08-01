@@ -34,7 +34,7 @@ spec:
     spec:
       containers:
         - name: web-ui
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -45,10 +45,22 @@ spec:
     spec:
       initContainers:
         - name: validate-migrated-schema
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
+          # Schema validation boots the context and must EXIT. Kafka listeners and the
+          # @Scheduled outbox poller (gated by app.messaging.enabled) are non-daemon and
+          # would keep the JVM alive forever, so run this throwaway check with messaging
+          # off. The main container below keeps messaging enabled.
+          command: ["/bin/sh", "-c"]
+          args:
+            - >-
+              until java -jar /app/app.jar
+              --spring.main.web-application-type=none
+              --spring.flyway.enabled=false
+              --app.messaging.enabled=false;
+              do echo "Schema is not ready; retrying in 5 seconds"; sleep 5; done
       containers:
         - name: interview-orchestrator
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -59,4 +71,4 @@ spec:
     spec:
       containers:
         - name: ai-service
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent

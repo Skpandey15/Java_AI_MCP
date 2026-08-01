@@ -699,7 +699,11 @@ Interviewer routes:
 - Enforce roles and ownership in Spring Boot using method-level authorization and domain policies.
 - Treat gateway token checks as the first layer; Spring Boot must also validate the token and authorization.
 - Keep browser sessions in Secure, HttpOnly, SameSite cookies when using a BFF.
-- Apply tenant filters at every repository boundary.
+- Apply tenant filters at every repository boundary. **Current status:** the MVP runs
+  single-tenant. `tenant_id` exists on `user_profile`, and per-user isolation is enforced
+  by ownership scoping (`owner_subject`, `candidate_id`) on every interview/session/knowledge
+  query. Full tenant columns and repository-level tenant filters on the interview, session
+  and knowledge aggregates are tracked as multi-tenancy work and are not yet implemented.
 - Encrypt data in transit and at rest; use a secrets manager for credentials and keys.
 - Never place personally identifiable information in prompts unless explicitly required and approved.
 - Redact sensitive data from logs and traces.

@@ -20,12 +20,32 @@ public class KnowledgeController {
     private final KnowledgeService service;
     private final RetrievalEvaluationService evaluationService;
     private final RagProperties ragProperties;
+    private final com.onlineinterview.knowledge.infrastructure.TikaTextExtractor extractor;
 
     public KnowledgeController(KnowledgeService service,
-            RetrievalEvaluationService evaluationService, RagProperties ragProperties) {
+            RetrievalEvaluationService evaluationService, RagProperties ragProperties,
+            com.onlineinterview.knowledge.infrastructure.TikaTextExtractor extractor) {
         this.service = service;
         this.evaluationService = evaluationService;
         this.ragProperties = ragProperties;
+        this.extractor = extractor;
+    }
+
+    @PostMapping("/collections/{collectionId}/documents:upload")
+    public ResponseEntity<DocumentResponse> upload(@AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID collectionId,
+            @org.springframework.web.bind.annotation.RequestParam("file")
+            org.springframework.web.multipart.MultipartFile file) throws java.io.IOException {
+        String text = extractor.extract(file.getBytes());
+        if (text == null || text.isBlank()) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.UNPROCESSABLE_ENTITY,
+                    "No extractable text found in the uploaded file");
+        }
+        var fileName = file.getOriginalFilename() == null ? "upload" : file.getOriginalFilename();
+        var value = service.addDocument(jwt.getSubject(), collectionId, fileName, "text/plain", text);
+        return ResponseEntity.accepted().location(URI.create(
+                "/api/v1/knowledge/documents/" + value.getId())).body(DocumentResponse.from(value));
     }
 
     @PostMapping("/collections")

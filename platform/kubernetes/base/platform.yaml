@@ -275,7 +275,8 @@ spec:
           envFrom:
             - configMapRef: {name: platform-config}
           env:
-            - {name: LITELLM_MASTER_KEY, valueFrom: {secretKeyRef: {name: platform-secrets, key: LITELLM_MASTER_KEY}}}
+            # Scoped gateway key for the AI workload, never the LiteLLM master key.
+            - {name: LITELLM_API_KEY, valueFrom: {secretKeyRef: {name: platform-secrets, key: LITELLM_API_KEY}}}
             - {name: AI_SERVICE_TOKEN, valueFrom: {secretKeyRef: {name: platform-secrets, key: AI_SERVICE_TOKEN}}}
           startupProbe:
             httpGet: {path: /api/v1/health, port: http}

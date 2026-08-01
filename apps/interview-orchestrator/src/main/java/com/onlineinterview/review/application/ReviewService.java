@@ -42,16 +42,82 @@ public class ReviewService {
     private final UserProfileRepository profiles;
     private final ReviewAuditEventRepository auditEvents;
     private final OutboxService outbox;
+    private final com.onlineinterview.review.infrastructure.AiAssessmentClient assessment;
+    private final com.onlineinterview.review.infrastructure.CoachingFeedbackStore coaching;
 
     public ReviewService(InterviewSessionRepository sessions, InterviewAnswerRepository answers,
             ManualQuestionRepository questions, UserProfileRepository profiles,
-            ReviewAuditEventRepository auditEvents, OutboxService outbox) {
+            ReviewAuditEventRepository auditEvents, OutboxService outbox,
+            com.onlineinterview.review.infrastructure.AiAssessmentClient assessment,
+            com.onlineinterview.review.infrastructure.CoachingFeedbackStore coaching) {
         this.sessions = sessions;
         this.answers = answers;
         this.questions = questions;
         this.profiles = profiles;
         this.auditEvents = auditEvents;
         this.outbox = outbox;
+        this.assessment = assessment;
+        this.coaching = coaching;
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.List<com.onlineinterview.review.api.AssessmentResponses.AnswerSuggestion>
+            suggestScores(String ownerSubject, UUID sessionId) {
+        var session = ownedSubmission(ownerSubject, sessionId);
+        var items = answers.findBySession_Id(session.getId()).stream()
+                .filter(a -> !a.isAutoScored())
+                .map(a -> new com.onlineinterview.review.infrastructure.AiAssessmentClient.EvalItem(
+                        a.getId(), a.getQuestion().getPrompt(), a.getQuestion().getMaxScore(),
+                        a.getContent(), a.getQuestion().getType().name()))
+                .toList();
+        if (items.isEmpty()) {
+            return java.util.List.of();
+        }
+        return assessment.evaluate(sessionId, items).stream()
+                .map(s -> new com.onlineinterview.review.api.AssessmentResponses.AnswerSuggestion(
+                        s.answerId(), s.suggestedScore(), s.confidence(), s.justification()))
+                .toList();
+    }
+
+    @Transactional
+    public com.onlineinterview.review.api.AssessmentResponses.CoachingResponse draftCoaching(
+            String ownerSubject, UUID sessionId) {
+        var session = ownedSubmission(ownerSubject, sessionId);
+        if (session.getReviewStatus() != ReviewStatus.REVIEWED) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Coaching feedback is available only after the review is finalized");
+        }
+        var definition = session.getAssignment().getInterviewDefinition();
+        Map<UUID, InterviewAnswer> byQuestion = answers.findBySession_Id(sessionId).stream()
+                .collect(Collectors.toMap(InterviewAnswer::getQuestionId, Function.identity()));
+        var items = questions.findByInterviewDefinitionIdOrderByOrderAsc(definition.getId()).stream()
+                .map(q -> {
+                    var a = byQuestion.get(q.getId());
+                    return new com.onlineinterview.review.infrastructure.AiAssessmentClient.FbItem(
+                            q.getPrompt(), q.getType().name(), q.getMaxScore(),
+                            a == null || a.getAwardedScore() == null ? 0 : a.getAwardedScore(),
+                            a == null ? "" : a.getContent(),
+                            a == null || a.getReviewerFeedback() == null ? "" : a.getReviewerFeedback());
+                }).toList();
+        boolean passed = session.getResultOutcome() == com.onlineinterview.session.domain.ResultOutcome.PASSED;
+        var draft = assessment.draftFeedback(sessionId, outcome(session), passed, items);
+        boolean safe = draft.leakage() != null && draft.leakage().safe();
+        var flags = draft.leakage() == null || draft.leakage().flags() == null
+                ? java.util.List.<String>of() : draft.leakage().flags();
+        coaching.upsertDraft(sessionId, draft.feedback(), safe, flags);
+        return new com.onlineinterview.review.api.AssessmentResponses.CoachingResponse(
+                "DRAFT", safe, flags, draft.feedback());
+    }
+
+    @Transactional
+    public com.onlineinterview.review.api.AssessmentResponses.CoachingResponse approveCoaching(
+            String ownerSubject, UUID sessionId) {
+        ownedSubmission(ownerSubject, sessionId);
+        var current = coaching.find(sessionId).orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "No coaching feedback to approve"));
+        coaching.approve(sessionId);
+        return new com.onlineinterview.review.api.AssessmentResponses.CoachingResponse(
+                "APPROVED", current.leakageSafe(), current.flags(), current.content());
     }
 
     @Transactional(readOnly = true)
@@ -167,7 +233,7 @@ public class ReviewService {
             return new CandidateResultResponse(session.getId(), definition.getTitle(),
                     session.getSubmittedAt(), session.getReviewStatus().name(), null,
                     maxScore, definition.getPassingPercentage(), null,
-                    null, null, List.of());
+                    null, null, List.of(), null);
         }
         Map<UUID, InterviewAnswer> byQuestion = answers.findBySession_Id(sessionId).stream()
                 .collect(Collectors.toMap(InterviewAnswer::getQuestionId, Function.identity()));
@@ -179,11 +245,15 @@ public class ReviewService {
                     answer == null ? 0 : answer.getAwardedScore(),
                     answer == null ? null : answer.getReviewerFeedback());
         }).toList();
+        String coachingContent = coaching.find(sessionId)
+                .filter(com.onlineinterview.review.infrastructure.CoachingFeedbackStore.Coaching::approved)
+                .map(com.onlineinterview.review.infrastructure.CoachingFeedbackStore.Coaching::content)
+                .orElse(null);
         return new CandidateResultResponse(session.getId(), definition.getTitle(),
                 session.getSubmittedAt(), session.getReviewStatus().name(),
                 session.getTotalScore(), maxScore, definition.getPassingPercentage(),
                 percentage(session.getTotalScore(), maxScore), outcome(session),
-                session.getReviewFeedback(), results);
+                session.getReviewFeedback(), results, coachingContent);
     }
 
     private SubmissionSummaryResponse summary(

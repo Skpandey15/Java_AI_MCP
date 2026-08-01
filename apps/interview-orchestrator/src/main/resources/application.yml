@@ -57,6 +57,10 @@ server:
   port: ${SERVER_PORT:8080}
   shutdown: graceful
 
+spring.servlet.multipart:
+  max-file-size: 20MB
+  max-request-size: 20MB
+
 management:
   endpoints:
     web:
@@ -109,6 +113,13 @@ app:
     secret-key: ${MINIO_SECRET_KEY:interview-secret}
     bucket: ${MINIO_KNOWLEDGE_BUCKET:knowledge-documents}
     maximum-object-bytes: ${KNOWLEDGE_MAXIMUM_OBJECT_BYTES:10485760}
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    session-start-per-minute: ${RATE_LIMIT_SESSION_START_PER_MINUTE:30}
+    answer-autosave-per-minute: ${RATE_LIMIT_ANSWER_AUTOSAVE_PER_MINUTE:240}
+    session-submit-per-minute: ${RATE_LIMIT_SESSION_SUBMIT_PER_MINUTE:30}
+    ai-generation-per-minute: ${RATE_LIMIT_AI_GENERATION_PER_MINUTE:20}
+    knowledge-mutation-per-minute: ${RATE_LIMIT_KNOWLEDGE_MUTATION_PER_MINUTE:20}
   mcp:
     authorization-secret: ${MCP_AUTHORIZATION_SECRET:local-mcp-authorization-secret-change-me}
     execution:

@@ -5,6 +5,8 @@ from fastapi.responses import Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel
 
+from app.api.assessment_routes import router as assessment_router
+from app.api.composition_routes import router as composition_router
 from app.api.embedding_routes import router as embedding_router
 from app.api.question_routes import router as question_router
 from app.observability import configure_logging, request_context
@@ -26,6 +28,8 @@ app = FastAPI(
 app.middleware("http")(request_context)
 app.include_router(question_router)
 app.include_router(embedding_router)
+app.include_router(assessment_router)
+app.include_router(composition_router)
 
 
 @app.get("/api/v1/health", response_model=HealthResponse, tags=["platform"])

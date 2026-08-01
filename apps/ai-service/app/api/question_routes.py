@@ -1,4 +1,5 @@
 import logging
+import secrets
 
 from fastapi import APIRouter, Header, HTTPException, status
 
@@ -18,7 +19,7 @@ def generate_questions(
     request: GenerateQuestionsRequest,
     x_service_token: str = Header(default=""),
 ) -> GenerateQuestionsResponse:
-    if x_service_token != settings.ai_service_token:
+    if not secrets.compare_digest(x_service_token, settings.ai_service_token):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid service token",

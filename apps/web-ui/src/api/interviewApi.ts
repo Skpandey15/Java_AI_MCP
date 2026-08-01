@@ -31,6 +31,7 @@ export type Interview = {
 export type KnowledgeCollection = {
   id: string; name: string; description: string; createdAt: string
 }
+export type KnowledgeDocument = { id: string; fileName: string; status: string }
 export type QuestionCitation = {
   chunkId: string; documentId: string; fileName: string; chunkIndex: number
   excerpt: string; score: number
@@ -81,7 +82,10 @@ export type CandidateResult = {
   outcome?: 'PASSED' | 'NOT_SELECTED'; feedback?: string
   answers: Array<{ order: number; type: QuestionType; prompt: string; content: string
     maxScore: number; awardedScore?: number; feedback?: string }>
+  coachingFeedback?: string
 }
+export type AnswerSuggestion = { answerId: string; suggestedScore: number; confidence: number; justification: string }
+export type CoachingResponse = { status: string; leakageSafe: boolean; leakageFlags: string[]; content: string }
 
 export type Assignment = {
   id: string
@@ -137,6 +141,29 @@ export const interviewApi = {
   listOwned: () => request<Interview[]>('/api/v1/interviews'),
   listKnowledgeCollections: () =>
     request<KnowledgeCollection[]>('/api/v1/knowledge/collections'),
+  createCollection: (name: string, description: string) =>
+    request<KnowledgeCollection>('/api/v1/knowledge/collections', {
+      method: 'POST', body: JSON.stringify({ name, description }) }),
+  listCollectionDocuments: (collectionId: string) =>
+    request<KnowledgeDocument[]>(`/api/v1/knowledge/collections/${collectionId}/documents`),
+  addDocument: (collectionId: string, fileName: string, content: string) =>
+    request<KnowledgeDocument>(`/api/v1/knowledge/collections/${collectionId}/documents`, {
+      method: 'POST', body: JSON.stringify({ fileName, mediaType: 'text/markdown', content }) }),
+  ingestDocument: (documentId: string) =>
+    request<KnowledgeDocument>(`/api/v1/knowledge/documents/${documentId}:ingest`, { method: 'POST' }),
+  uploadDocument: async (collectionId: string, file: File): Promise<KnowledgeDocument> => {
+    await keycloak.updateToken(30)
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch(`${apiBaseUrl}/api/v1/knowledge/collections/${collectionId}/documents:upload`, {
+      method: 'POST', headers: { Authorization: `Bearer ${keycloak.token}` }, body: form,
+    })
+    if (!res.ok) {
+      const p = await res.json().catch(() => ({})) as { detail?: string; message?: string }
+      throw new ApiError(res.status, p.detail ?? p.message ?? `Upload failed (${res.status})`)
+    }
+    return res.json() as Promise<KnowledgeDocument>
+  },
   candidates: () => request<Profile[]>('/api/v1/candidates'),
   create: (body: object) => request<Interview>('/api/v1/interviews', {
     method: 'POST', body: JSON.stringify(body),
@@ -147,6 +174,15 @@ export const interviewApi = {
   assign: (id: string, body: object) => request<Assignment>(
     `/api/v1/interviews/${id}/assignments`,
     { method: 'POST', body: JSON.stringify(body) },
+  ),
+  listAssignments: (id: string) => request<Assignment[]>(
+    `/api/v1/interviews/${id}/assignments`,
+  ),
+  unassign: (id: string, assignmentId: string) => request<void>(
+    `/api/v1/interviews/${id}/assignments/${assignmentId}`, { method: 'DELETE' },
+  ),
+  archiveInterview: (id: string) => request<void>(
+    `/api/v1/interviews/${id}`, { method: 'DELETE' },
   ),
   candidateAssignments: () => request<Assignment[]>('/api/v1/candidate/interviews'),
   addQuestion: (interviewId: string, body: object) => request<AdminQuestion>(
@@ -192,6 +228,12 @@ export const interviewApi = {
     request<SubmissionDetail>(`/api/v1/interviewer/submissions/${sessionId}/finalize`, {
       method: 'POST', body: JSON.stringify({ feedback }),
     }),
+  aiSuggest: (sessionId: string) => request<AnswerSuggestion[]>(
+    `/api/v1/interviewer/submissions/${sessionId}/ai-suggest`, { method: 'POST' }),
+  draftCoaching: (sessionId: string) => request<CoachingResponse>(
+    `/api/v1/interviewer/submissions/${sessionId}/coaching`, { method: 'POST' }),
+  approveCoaching: (sessionId: string) => request<CoachingResponse>(
+    `/api/v1/interviewer/submissions/${sessionId}/coaching:approve`, { method: 'POST' }),
   candidateResult: (sessionId: string) => request<CandidateResult>(
     `/api/v1/candidate/sessions/${sessionId}/result`,
   ),

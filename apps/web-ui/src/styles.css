@@ -88,6 +88,12 @@ button:disabled, textarea:disabled { cursor: not-allowed; opacity: .55; }
 .field-error { color: #b42318; }
 .compact-actions { justify-content: flex-start; }
 .danger-button { background: #fff; border: 1px solid #c93636; color: #a32121; }
+.card-heading-actions { display: flex; gap: .5rem; align-items: center; }
+.assignment-list { display: grid; gap: .5rem; margin-top: .9rem; }
+.assignment-row { display: flex; gap: .75rem; align-items: center; justify-content: space-between; padding: .5rem .75rem; border: 1px solid #e2e6ee; border-radius: 8px; background: #fff; }
+.ai-suggestion { background: #eef4ff; border: 1px solid #cfe0ff; border-radius: 8px; padding: .5rem .75rem; color: #1c3d6e; }
+.coaching-panel { margin-top: 1rem; padding: 1rem; border: 1px solid #d7e2ef; border-radius: 10px; background: #fbfdff; display: grid; gap: .75rem; }
+.coaching-content { white-space: pre-wrap; background: #fff; border: 1px solid #e2e6ee; border-radius: 8px; padding: .75rem; font-family: inherit; }
 .error-message { padding: .8rem 1rem; border-radius: 8px; color: #a32121; background: #fff0f0; }
 .choice-list { display: grid; gap: .65rem; padding: 1rem; border: 1px solid #d7e2ef; border-radius: 10px; }
 .choice-list label { display: flex; gap: .6rem; align-items: center; padding: .65rem; border-radius: 8px; background: white; }

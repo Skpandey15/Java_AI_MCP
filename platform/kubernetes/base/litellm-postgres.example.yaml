@@ -1,0 +1,61 @@
+# EXAMPLE — not wired into any kustomization. Enables LiteLLM's persistent key/budget
+# store (Postgres) and mints a scoped virtual key for the AI service, so LITELLM_API_KEY
+# stops being the master key and real budgets/rate-limits take effect.
+#
+# To activate in an overlay:
+#   1. Add a `online_interview_litellm` database (or a separate Postgres) and put its
+#      JDBC-less URL in platform-secrets as LITELLM_DATABASE_URL, e.g.
+#      postgresql://litellm:<pw>@postgres:5432/litellm
+#   2. Reference this file from the overlay's kustomization `resources:` (or fold the
+#      patch into platform.yaml) and add the ConfigMap/Secret keys below.
+#   3. Run the key-bootstrap Job once; copy the returned key into platform-secrets as
+#      LITELLM_API_KEY (replacing the interim master-key value), then restart ai-service.
+---
+# Patch: give the LiteLLM deployment a database so virtual keys/budgets persist.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: litellm
+spec:
+  template:
+    spec:
+      containers:
+        - name: litellm
+          env:
+            # LiteLLM reads DATABASE_URL to enable the key-management + budget tables.
+            - name: DATABASE_URL
+              valueFrom: {secretKeyRef: {name: platform-secrets, key: LITELLM_DATABASE_URL}}
+---
+# One-shot Job: mint a scoped virtual key for the AI workload with a monthly budget and
+# an RPM cap, restricted to the two aliases the service actually uses. Run once, capture
+# the "key" field from the response, and store it as platform-secrets/LITELLM_API_KEY.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: litellm-key-bootstrap
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: litellm-key-bootstrap}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: platform-runtime
+      containers:
+        - name: mint-key
+          image: curlimages/curl:8.11.1
+          env:
+            - name: LITELLM_MASTER_KEY
+              valueFrom: {secretKeyRef: {name: platform-secrets, key: LITELLM_MASTER_KEY}}
+          command: ["/bin/sh", "-c"]
+          args:
+            - >-
+              curl -sS -X POST http://litellm:4000/key/generate
+              -H "Authorization: Bearer ${LITELLM_MASTER_KEY}"
+              -H "Content-Type: application/json"
+              -d '{"key_alias":"ai-service",
+                   "models":["interview-question-model","knowledge-embedding-model"],
+                   "max_budget":50,"budget_duration":"30d","rpm_limit":60,"tpm_limit":200000}';
+              echo;
+              echo "Copy the .key value above into platform-secrets/LITELLM_API_KEY, then: kubectl rollout restart deploy/ai-service"

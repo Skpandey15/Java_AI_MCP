@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -65,7 +66,15 @@ public class SessionService {
         if (sessions.countByAssignmentId(assignmentId) >= assignment.getMaxAttempts()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Maximum attempts reached");
         }
-        var session = sessions.save(InterviewSession.start(assignment, candidateId, now));
+        InterviewSession session;
+        try {
+            session = sessions.saveAndFlush(InterviewSession.start(assignment, candidateId, now));
+        } catch (DataIntegrityViolationException race) {
+            // A concurrent start won the uq_active_assignment_session index. Return a clean
+            // 409 so the client retries and resumes the already-active session, rather than a 500.
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "A session for this assignment is already starting; please retry", race);
+        }
         log.atInfo().addKeyValue("event", "session.started")
                 .addKeyValue("sessionId", session.getId())
                 .addKeyValue("assignmentId", assignmentId)

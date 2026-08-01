@@ -1,5 +1,6 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+namespace: online-interview
 resources:
   - ../../base
   - ingress.yaml
@@ -21,6 +22,7 @@ secretGenerator:
       - KEYCLOAK_ADMIN_USERNAME=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin
       - LITELLM_MASTER_KEY=local-litellm-key
+      - LITELLM_API_KEY=local-litellm-key
       - AI_SERVICE_TOKEN=local-ai-service-token
       - MCP_AUTHORIZATION_SECRET=local-mcp-authorization-secret-change-me
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092

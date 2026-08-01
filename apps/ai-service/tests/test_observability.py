@@ -42,7 +42,7 @@ def test_prod_profile_rejects_local_credentials() -> None:
     try:
         Settings(
             app_environment="prod",
-            litellm_master_key="local-development-key",
+            litellm_api_key="local-development-key",
             ai_service_token="local-ai-service-token",
         )
     except ValueError as exc:
