@@ -3,7 +3,7 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api import assessment_routes, composition_routes
+from app.api import assessment_routes, composition_routes, topic_routes
 from app.application.assessment_agent import AssessmentAgent
 from app.application.composition_agent import CompositionAgent
 from app.config import settings
@@ -218,6 +218,33 @@ def test_model_answers_route_gateway_error(monkeypatch):
                         type("A", (), {"model_answers": staticmethod(raiser)})())
     body = {"items": [{"questionPrompt": "Q", "type": "LONG_TEXT"}]}
     assert _post("/internal/v1/answers:model", body) == 502
+
+
+def test_topic_agent_dedupes():
+    from app.application.topic_agent import TopicAgent
+    from app.domain.topic_models import SuggestTopicsRequest
+    agent = TopicAgent(FakeChat([{"topics": ["Streams", "streams", "Collections", " Generics "]}]))
+    resp = agent.suggest(SuggestTopicsRequest.model_validate(
+        {"technologies": ["Java"], "difficulty": "HARD"}))
+    assert resp.topics == ["Streams", "Collections", "Generics"]
+
+
+def test_topics_route(monkeypatch):
+    from app.domain.topic_models import SuggestTopicsResponse
+    resp = SuggestTopicsResponse(topics=["Streams"], usage=None)
+    monkeypatch.setattr(topic_routes, "agent",
+                        type("A", (), {"suggest": staticmethod(lambda r: resp)})())
+    body = {"technologies": ["Java"], "difficulty": "HARD"}
+    assert _post("/internal/v1/topics:suggest", body) == 200
+    assert _post("/internal/v1/topics:suggest", body, "no") == 401
+
+
+def test_topics_route_gateway_error(monkeypatch):
+    def raiser(r):
+        raise ModelGatewayError("x")
+    monkeypatch.setattr(topic_routes, "agent",
+                        type("A", (), {"suggest": staticmethod(raiser)})())
+    assert _post("/internal/v1/topics:suggest", {"technologies": ["Java"]}) == 502
 
 
 def test_compose_route(monkeypatch):

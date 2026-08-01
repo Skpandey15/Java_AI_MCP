@@ -43,4 +43,15 @@ public class AiQuestionController {
 
     /** Composed questions plus the agent's round count and critique trace. */
     public record ComposeResult(List<QuestionResponse> questions, int rounds, List<String> trace) {}
+
+    @PostMapping("/topics:suggest")
+    @PreAuthorize("hasRole('INTERVIEWER')")
+    public TopicsResponse suggestTopics(@org.springframework.web.bind.annotation.RequestBody
+            SuggestTopicsRequest request) {
+        return new TopicsResponse(
+                service.suggestTopics(request.technologies(), request.difficulty()));
+    }
+
+    public record SuggestTopicsRequest(List<String> technologies, String difficulty) {}
+    public record TopicsResponse(List<String> topics) {}
 }

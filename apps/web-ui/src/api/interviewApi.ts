@@ -202,6 +202,10 @@ export const interviewApi = {
     `/api/v1/interviews/${interviewId}/questions`,
     { method: 'POST', body: JSON.stringify(body) },
   ),
+  suggestTopics: (technologies: string[], difficulty: string) => request<{ topics: string[] }>(
+    '/api/v1/topics:suggest',
+    { method: 'POST', body: JSON.stringify({ technologies, difficulty }) },
+  ),
   generateQuestions: (interviewId: string) => request<Question[]>(
     `/api/v1/interviews/${interviewId}/questions:generate`,
     { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() } },

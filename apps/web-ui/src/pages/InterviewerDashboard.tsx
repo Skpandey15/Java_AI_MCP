@@ -183,6 +183,7 @@ const technologyDescriptions: Record<string, string> = {
 
 const initialForm = {
   title: '', description: '', ecosystem: 'JAVA' as Ecosystem, technologies: ['Java'] as string[],
+  topics: [] as string[],
   difficulty: 'MEDIUM',
   questionMode: 'MANUAL', knowledgeCollectionId: '',
   durationMinutes: 60, questionCount: 0, passingPercentage: 70,
@@ -517,6 +518,8 @@ export function InterviewerDashboard() {
   const [collections, setCollections] = useState<KnowledgeCollection[]>([])
   const [form, setForm] = useState(initialForm)
   const [techQuery, setTechQuery] = useState('')
+  const [suggestedTopics, setSuggestedTopics] = useState<string[]>([])
+  const [topicsBusy, setTopicsBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [hasError, setHasError] = useState(false)
   const [messageId, setMessageId] = useState(0)
@@ -546,7 +549,7 @@ export function InterviewerDashboard() {
       await interviewApi.create({
         title: form.title,
         description: form.description,
-        skills: form.technologies,
+        skills: [...form.technologies, ...form.topics],
         difficulty: form.difficulty,
         questionMode: form.questionMode,
         knowledgeCollectionId: form.questionMode === 'RAG' ? form.knowledgeCollectionId : null,
@@ -561,6 +564,7 @@ export function InterviewerDashboard() {
         },
       })
       setForm(initialForm)
+      setSuggestedTopics([])
       notify('Draft interview created.')
       await load()
       setActiveView('drafts')
@@ -581,7 +585,8 @@ export function InterviewerDashboard() {
   function setEcosystem(ecosystem: Ecosystem) {
     const firstTechnology = ecosystemTechnologies[ecosystem][0]
     setTechQuery('')
-    setForm({...form, ecosystem, technologies: [firstTechnology]})
+    setSuggestedTopics([])
+    setForm({...form, ecosystem, technologies: [firstTechnology], topics: []})
   }
 
   function toggleTechnology(technology: string) {
@@ -589,6 +594,29 @@ export function InterviewerDashboard() {
       ? form.technologies.filter((item) => item !== technology)
       : [...form.technologies, technology]
     setForm({...form, technologies: selected})
+  }
+
+  function toggleTopic(topic: string) {
+    const selected = form.topics.includes(topic)
+      ? form.topics.filter((item) => item !== topic)
+      : [...form.topics, topic]
+    setForm({...form, topics: selected})
+  }
+
+  async function suggestTopics() {
+    if (form.technologies.length === 0) return
+    setTopicsBusy(true)
+    try {
+      const { topics } = await interviewApi.suggestTopics(form.technologies, form.difficulty)
+      setSuggestedTopics(topics)
+      // keep only still-valid selections
+      setForm((current) => ({ ...current, topics: current.topics.filter((t) => topics.includes(t)) }))
+      if (topics.length === 0) notify('No topics were suggested for the selected technologies.', true)
+    } catch (error) {
+      notify(messageOf(error), true)
+    } finally {
+      setTopicsBusy(false)
+    }
   }
 
   return (
@@ -675,6 +703,27 @@ export function InterviewerDashboard() {
                       </div>)}
                 </div>
               </div>
+            </div>
+            <div className="technology-field">
+              <span>Topics <small>(optional — narrow the generated questions)</small></span>
+              <div className="compact-actions">
+                <button type="button" className="secondary-button"
+                  disabled={topicsBusy || form.technologies.length === 0}
+                  onClick={() => void suggestTopics()}>
+                  {topicsBusy ? 'Suggesting…' : '🤖 Suggest topics'}</button>
+                {form.topics.length > 0 && <span className="badge">{form.topics.length} selected</span>}
+              </div>
+              {suggestedTopics.length > 0 && <div className="topic-options">
+                {suggestedTopics.map((topic) =>
+                  <label key={topic}>
+                    <input type="checkbox" checked={form.topics.includes(topic)}
+                      onChange={() => toggleTopic(topic)} />
+                    {topic}
+                  </label>)}
+              </div>}
+              <small>{suggestedTopics.length === 0
+                ? 'Pick technologies above, then suggest topics to focus on specific areas.'
+                : 'Select topics to focus generation; leave all unchecked to cover the technologies broadly.'}</small>
             </div>
             <fieldset className="question-composition">
               <legend>Types of questions</legend>

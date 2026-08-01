@@ -93,6 +93,14 @@ public class AiQuestionService {
      *  round count and per-question critique trace, so the UI can show its reasoning. */
     public record ComposeOutcome(List<ManualQuestion> questions, int rounds, List<String> trace) {}
 
+    public List<String> suggestTopics(List<String> technologies, String difficulty) {
+        if (technologies == null || technologies.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Select at least one technology");
+        }
+        return client.suggestTopics(technologies, difficulty == null ? "MEDIUM" : difficulty);
+    }
+
     @Transactional
     public ComposeOutcome compose(String ownerSubject, UUID interviewId, UUID requestId) {
         var existing = questions.findByGenerationRequestIdOrderByOrderAsc(requestId);
