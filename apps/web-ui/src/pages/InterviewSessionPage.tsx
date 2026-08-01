@@ -15,6 +15,17 @@ export function InterviewSessionPage() {
   const [versions, setVersions] = useState<Record<string, number>>({})
   const [now, setNow] = useState(Date.now())
   const [status, setStatus] = useState('')
+  const [statusError, setStatusError] = useState(false)
+  const [statusNonce, setStatusNonce] = useState(0)
+
+  const note = (text: string, error = false) => {
+    setStatus(text); setStatusError(error); setStatusNonce((n) => n + 1)
+  }
+  useEffect(() => {
+    if (!status || !session) return
+    const timer = window.setTimeout(() => setStatus(''), 6000)
+    return () => window.clearTimeout(timer)
+  }, [status, statusNonce, session])
 
   useEffect(() => {
     interviewApi.loadSession(sessionId).then((loaded) => {
@@ -36,14 +47,14 @@ export function InterviewSessionPage() {
 
   async function save(questionId: string, content = drafts[questionId] ?? '') {
     if (!session || session.state !== 'IN_PROGRESS') return
-    setStatus('Saving…')
+    note('Saving…')
     try {
       const answer = await interviewApi.saveAnswer(
         session.id, questionId, content, versions[questionId] ?? 0)
       setVersions((current) => ({ ...current, [questionId]: answer.version }))
-      setStatus('All answers saved.')
+      note('All answers saved.')
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Save failed. Reload before continuing.')
+      note(error instanceof Error ? error.message : 'Save failed. Reload before continuing.', true)
     }
   }
 
@@ -66,9 +77,9 @@ export function InterviewSessionPage() {
     try {
       const submitted = await interviewApi.submitSession(session.id)
       setSession(submitted)
-      setStatus('Interview submitted successfully.')
+      note('Interview submitted successfully.')
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Unable to submit interview.')
+      note(error instanceof Error ? error.message : 'Unable to submit interview.', true)
     }
   }
 
@@ -110,15 +121,20 @@ export function InterviewSessionPage() {
     <main className="dashboard">
       <div className="dashboard-header">
         <div><p className="eyebrow">{session.state === 'IN_PROGRESS' ? 'Active interview' : 'Interview complete'}</p><h1>Interview session</h1></div>
-        <div className="timer" aria-live="polite">
+        <div className={session.state === 'IN_PROGRESS' ? 'timer timer-floating' : 'timer'} aria-live="polite">
           {session.state === 'IN_PROGRESS'
-            ? `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`
+            ? `⏱ ${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, '0')}`
             : 'Submitted'}
         </div>
       </div>
       <p><strong>State:</strong> {session.state}</p>
-      <p className="status-message">{status || (session.state === 'IN_PROGRESS'
-        ? 'Answers save automatically.' : 'Your responses are locked.')}</p>
+      <p className="status-message">{session.state === 'IN_PROGRESS'
+        ? 'Answers save automatically.' : 'Your responses are locked.'}</p>
+      {status && <div className={`toast ${statusError ? 'toast-error' : 'toast-success'}`}
+        role={statusError ? 'alert' : 'status'} aria-live="polite">
+        <span>{status}</span>
+        <button type="button" className="toast-close" aria-label="Dismiss" onClick={() => setStatus('')}>×</button>
+      </div>}
       {session.questions.map((question) => (
         <section className="question-card" key={question.id}>
           <div className="question-meta"><span>{question.type.replaceAll('_', ' ')}</span><span>{question.maxScore} points</span></div>

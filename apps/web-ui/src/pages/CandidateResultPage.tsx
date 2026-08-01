@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { interviewApi, type CandidateResult } from '../api/interviewApi'
+import { Markdown } from '../components/Markdown'
 
 export function CandidateResultPage() {
   const { sessionId = '' } = useParams()
@@ -30,11 +31,15 @@ export function CandidateResultPage() {
         <section className="score-hero"><span>Total score</span><strong>{result.totalScore} / {result.maxScore}</strong>{result.feedback && <p>{result.feedback}</p>}</section>
         {result.coachingFeedback && <section className="card coaching-content-card">
           <h2>Your development plan</h2>
-          <pre className="coaching-content">{result.coachingFeedback}</pre></section>}
+          <Markdown className="coaching-content" content={result.coachingFeedback} /></section>}
         {result.answers.map((answer) => <section className="question-card" key={answer.order}>
           <div className="question-meta"><span>{answer.type.replaceAll('_', ' ')}</span><span>{answer.awardedScore ?? 0} / {answer.maxScore}</span></div>
           <h2>{answer.order}. {answer.prompt}</h2>
           <div className="answer-panel"><strong>Your answer</strong><pre>{answer.content || 'No answer submitted'}</pre></div>
+          {answer.modelAnswer && <div className="model-answer">
+            <strong>✓ Correct answer</strong>
+            <Markdown className="model-answer-content" content={answer.modelAnswer} />
+          </div>}
           {answer.feedback && <p><strong>Reviewer feedback:</strong> {answer.feedback}</p>}
         </section>)}
       </>}

@@ -24,9 +24,12 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 public class ReviewController {
     private final ReviewService service;
+    private final com.onlineinterview.notification.CandidateResultMailService resultMail;
 
-    public ReviewController(ReviewService service) {
+    public ReviewController(ReviewService service,
+            com.onlineinterview.notification.CandidateResultMailService resultMail) {
         this.service = service;
+        this.resultMail = resultMail;
     }
 
     @GetMapping("/interviewer/submissions")
@@ -68,6 +71,13 @@ public class ReviewController {
         return service.suggestScores(jwt.getSubject(), sessionId);
     }
 
+    @PostMapping("/interviewer/submissions/{sessionId}/answer-key")
+    @PreAuthorize("hasRole('INTERVIEWER')")
+    public SubmissionDetailResponse generateAnswerKey(
+            @AuthenticationPrincipal Jwt jwt, @PathVariable UUID sessionId) {
+        return service.generateAnswerKey(jwt.getSubject(), sessionId);
+    }
+
     @PostMapping("/interviewer/submissions/{sessionId}/coaching")
     @PreAuthorize("hasRole('INTERVIEWER')")
     public AssessmentResponses.CoachingResponse draftCoaching(
@@ -81,6 +91,16 @@ public class ReviewController {
             @AuthenticationPrincipal Jwt jwt, @PathVariable UUID sessionId) {
         return service.approveCoaching(jwt.getSubject(), sessionId);
     }
+
+    @PostMapping("/interviewer/submissions/{sessionId}/email-result")
+    @PreAuthorize("hasRole('INTERVIEWER')")
+    public EmailResultResponse emailResult(
+            @AuthenticationPrincipal Jwt jwt, @PathVariable UUID sessionId) {
+        return new EmailResultResponse(resultMail.sendResult(jwt.getSubject(), sessionId));
+    }
+
+    /** Confirms the recipient the result email was sent to. */
+    public record EmailResultResponse(String sentTo) {}
 
     @GetMapping("/candidate/sessions/{sessionId}/result")
     @PreAuthorize("hasRole('CANDIDATE')")

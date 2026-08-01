@@ -32,10 +32,15 @@ public class AiQuestionController {
 
     @PostMapping("/interviews/{interviewId}/questions:compose")
     @PreAuthorize("hasRole('INTERVIEWER')")
-    public List<QuestionResponse> compose(@AuthenticationPrincipal Jwt jwt,
+    public ComposeResult compose(@AuthenticationPrincipal Jwt jwt,
             @org.springframework.web.bind.annotation.PathVariable UUID interviewId,
             @RequestHeader("Idempotency-Key") UUID requestId) {
-        return service.compose(jwt.getSubject(), interviewId, requestId).stream()
-                .map(QuestionResponse::from).toList();
+        var outcome = service.compose(jwt.getSubject(), interviewId, requestId);
+        return new ComposeResult(
+                outcome.questions().stream().map(QuestionResponse::from).toList(),
+                outcome.rounds(), outcome.trace());
     }
+
+    /** Composed questions plus the agent's round count and critique trace. */
+    public record ComposeResult(List<QuestionResponse> questions, int rounds, List<String> trace) {}
 }

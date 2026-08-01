@@ -39,6 +39,13 @@ public class AiAssessmentClient {
                 .retrieve().body(DraftResponse.class);
     }
 
+    public List<ModelAnswer> modelAnswers(List<ModelItem> items) {
+        var response = client.post().uri("/internal/v1/answers:model")
+                .contentType(MediaType.APPLICATION_JSON).header("X-Service-Token", serviceToken)
+                .body(new ModelRequest(items)).retrieve().body(ModelResponse.class);
+        return response == null || response.answers() == null ? List.of() : response.answers();
+    }
+
     public record EvalItem(UUID answerId, String questionPrompt, int maxScore,
             String answerText, String topic) {}
     public record EvalRequest(UUID sessionId, List<EvalItem> items) {}
@@ -50,4 +57,10 @@ public class AiAssessmentClient {
     public record DraftRequest(UUID sessionId, String outcome, boolean passed, List<FbItem> items) {}
     public record Leakage(boolean safe, List<String> flags) {}
     public record DraftResponse(String feedback, Leakage leakage) {}
+
+    public record ModelItem(String questionPrompt, String type,
+            List<String> options, List<String> correctAnswers) {}
+    public record ModelRequest(List<ModelItem> items) {}
+    public record ModelAnswer(String content) {}
+    public record ModelResponse(List<ModelAnswer> answers) {}
 }

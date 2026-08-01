@@ -11,9 +11,18 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
+    @ExceptionHandler(ResponseStatusException.class)
+    ProblemDetail responseStatus(ResponseStatusException exception, HttpServletRequest request) {
+        var status = HttpStatus.valueOf(exception.getStatusCode().value());
+        var detail = exception.getReason() == null || exception.getReason().isBlank()
+                ? status.getReasonPhrase() : exception.getReason();
+        return problem(status, status.getReasonPhrase(), detail, request);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ProblemDetail validation(MethodArgumentNotValidException exception, HttpServletRequest request) {
         var errors = new LinkedHashMap<String, String>();

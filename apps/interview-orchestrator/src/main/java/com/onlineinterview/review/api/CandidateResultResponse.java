@@ -11,6 +11,6 @@ public record CandidateResultResponse(
         String coachingFeedback) {
     public record CandidateAnswerResult(
             int order, String type, String prompt, String content,
-            int maxScore, Integer awardedScore, String feedback) {
+            int maxScore, Integer awardedScore, String feedback, String modelAnswer) {
     }
 }

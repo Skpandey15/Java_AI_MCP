@@ -364,6 +364,8 @@ spec:
             - {name: REDIS_PASSWORD, valueFrom: {secretKeyRef: {name: platform-secrets, key: REDIS_PASSWORD}}}
             - {name: MINIO_ACCESS_KEY, valueFrom: {secretKeyRef: {name: platform-secrets, key: MINIO_ACCESS_KEY}}}
             - {name: MINIO_SECRET_KEY, valueFrom: {secretKeyRef: {name: platform-secrets, key: MINIO_SECRET_KEY}}}
+            - {name: MAIL_USERNAME, valueFrom: {secretKeyRef: {name: platform-secrets, key: MAIL_USERNAME, optional: true}}}
+            - {name: MAIL_PASSWORD, valueFrom: {secretKeyRef: {name: platform-secrets, key: MAIL_PASSWORD, optional: true}}}
             - {name: SPRING_FLYWAY_ENABLED, value: "false"}
           startupProbe:
             httpGet: {path: /actuator/health/liveness, port: http}

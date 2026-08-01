@@ -82,6 +82,45 @@ def test_compose_loops_and_dedupes():
     assert resp.rounds == 2  # first round dropped the duplicate, needed a second
 
 
+def test_compose_mixed_types_and_validation():
+    from app.domain.composition_models import ComposeRequest
+    opts = ["Alpha", "Beta", "Gamma", "Delta"]
+    agent = CompositionAgent(FakeChat([
+        {"questions": [
+            {"prompt": "Single choice question one", "topic": "t", "type": "MCQ_SINGLE",
+             "options": opts, "correctAnswers": ["Alpha"]},
+            {"prompt": "Multiple choice question two", "topic": "t", "type": "MCQ_MULTIPLE",
+             "options": opts, "correctAnswers": ["Alpha", "Beta"]},
+            {"prompt": "Rejected short answer question three", "topic": "t", "type": "SHORT_TEXT",
+             "options": [], "correctAnswers": []},
+            {"prompt": "Accepted short answer question four", "topic": "t", "type": "SHORT_TEXT",
+             "options": [], "correctAnswers": []},
+            {"prompt": "Descriptive open ended question five", "topic": "t", "type": "LONG_TEXT",
+             "options": [], "correctAnswers": []},
+            {"prompt": "Malformed single choice six", "topic": "t", "type": "MCQ_SINGLE",
+             "options": opts, "correctAnswers": ["Alpha", "Beta"]},
+            {"prompt": "Another descriptive question seven here", "topic": "t", "type": "LONG_TEXT",
+             "options": [], "correctAnswers": []},
+        ]},
+        {"reviews": [{"accept": True, "reason": ""}, {"accept": True, "reason": ""},
+                     {"accept": False, "reason": "off topic"}, {"accept": True, "reason": ""},
+                     {"accept": True, "reason": ""}, {"accept": True, "reason": ""},
+                     {"accept": True, "reason": ""}]},
+    ]))
+    req = ComposeRequest.model_validate({
+        "skills": ["APIs"], "difficulty": "MEDIUM", "questionCount": 4, "maxRounds": 1,
+        "composition": {"mcqSingle": 1, "mcqMultiple": 1, "shortText": 1, "longText": 1}})
+    resp = agent.compose(req)
+    assert len(resp.questions) == 4
+    kinds = {q.type for q in resp.questions}
+    assert kinds == {"MCQ_SINGLE", "MCQ_MULTIPLE", "SHORT_TEXT", "LONG_TEXT"}
+    mcq = next(q for q in resp.questions if q.type == "MCQ_SINGLE")
+    assert mcq.correct_answers == ["Alpha"] and len(mcq.options) == 4
+    assert any("malformed" in line for line in resp.trace)
+    assert any("quota full" in line for line in resp.trace)
+    assert any("off topic" in line for line in resp.trace)
+
+
 def test_chat_client_parses(monkeypatch):
     import io
     import json as _json
@@ -145,6 +184,40 @@ def test_feedback_route(monkeypatch):
     body = {"sessionId": str(uuid4()), "outcome": "PASSED", "passed": True,
             "items": [{"questionPrompt": "Q", "maxScore": 5, "awardedScore": 4}]}
     assert client.post("/internal/v1/feedback:draft", json=body, headers=HEADERS).status_code == 200
+
+
+def test_model_answers_agent():
+    from app.domain.assessment_models import ModelAnswersRequest
+    agent = AssessmentAgent(FakeChat([
+        {"answers": [{"content": "**Correct answer:** Heap"},
+                     {"content": "**Correct answer:** PUT"}]},
+    ]))
+    req = ModelAnswersRequest.model_validate({"items": [
+        {"questionPrompt": "Which JVM area holds short-lived objects?", "type": "LONG_TEXT"},
+        {"questionPrompt": "Idempotent HTTP method?", "type": "MCQ_SINGLE",
+         "options": ["PUT", "POST"], "correctAnswers": ["PUT"]}]})
+    resp = agent.model_answers(req)
+    assert len(resp.answers) == 2
+    assert resp.answers[0].content.startswith("**Correct answer:**")
+
+
+def test_model_answers_route(monkeypatch):
+    from app.domain.assessment_models import ModelAnswer, ModelAnswersResponse
+    resp = ModelAnswersResponse(answers=[ModelAnswer(content="c")], usage=None)
+    monkeypatch.setattr(assessment_routes, "agent",
+                        type("A", (), {"model_answers": staticmethod(lambda r: resp)})())
+    body = {"items": [{"questionPrompt": "Q", "type": "LONG_TEXT"}]}
+    assert _post("/internal/v1/answers:model", body) == 200
+    assert _post("/internal/v1/answers:model", body, "no") == 401
+
+
+def test_model_answers_route_gateway_error(monkeypatch):
+    def raiser(r):
+        raise ModelGatewayError("x")
+    monkeypatch.setattr(assessment_routes, "agent",
+                        type("A", (), {"model_answers": staticmethod(raiser)})())
+    body = {"items": [{"questionPrompt": "Q", "type": "LONG_TEXT"}]}
+    assert _post("/internal/v1/answers:model", body) == 502
 
 
 def test_compose_route(monkeypatch):

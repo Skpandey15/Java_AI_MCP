@@ -81,8 +81,10 @@ public class AiQuestionClient {
     }
 
     public record ComposeRequest(List<String> skills, String difficulty, int questionCount,
-            List<String> existingPrompts, List<String> grounding, int maxRounds) {}
-    public record ComposedQuestion(String prompt, String topic) {}
+            QuestionComposition composition, List<String> existingPrompts, List<String> grounding,
+            int maxRounds) {}
+    public record ComposedQuestion(String prompt, String topic, QuestionType type,
+            List<String> options, List<String> correctAnswers) {}
     public record ComposeResponse(List<ComposedQuestion> questions, int rounds, List<String> trace) {}
 
     private byte[] jsonBody(GenerationRequest request) {

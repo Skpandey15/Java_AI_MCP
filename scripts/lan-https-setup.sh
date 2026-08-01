@@ -106,8 +106,14 @@ if [ -n "$AT" ]; then
 fi
 
 echo "== 10. limit candidates to one active session (deny second login) =="
-python "$ROOT/scripts/keycloak-single-session.py" "https://auth.$D:8443" \
-  || echo "  (skipped — run scripts/keycloak-single-session.py manually once Keycloak is up)"
+# Opt-in: this rebinds the Keycloak browser flow to a candidate-session-limit copy,
+# which has previously broken login. Off by default. Enable with ENABLE_SINGLE_SESSION=1.
+if [ "${ENABLE_SINGLE_SESSION:-0}" = "1" ]; then
+  python "$ROOT/scripts/keycloak-single-session.py" "https://auth.$D:8443" \
+    || echo "  (skipped — run scripts/keycloak-single-session.py manually once Keycloak is up)"
+else
+  echo "  (skipped — set ENABLE_SINGLE_SESSION=1 to enable the one-active-session limit)"
+fi
 
 echo ""
 echo "Done. Open:  https://interview.$D:8443"

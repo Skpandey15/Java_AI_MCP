@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { interviewApi, type AnswerSuggestion, type CoachingResponse, type SubmissionDetail } from '../api/interviewApi'
+import { Markdown } from '../components/Markdown'
 
 export function SubmissionReviewPage() {
   const { sessionId = '' } = useParams()
@@ -28,6 +29,12 @@ export function SubmissionReviewPage() {
       setOverallFeedback(loaded.feedback ?? '')
     }).catch((error: unknown) => setLoadError(error instanceof Error ? error.message : 'Unable to load submission'))
   }, [sessionId])
+
+  useEffect(() => {
+    if (!finalizeNotice) return
+    const timer = window.setTimeout(() => setFinalizeNotice(undefined), 6000)
+    return () => window.clearTimeout(timer)
+  }, [finalizeNotice])
 
   async function save(answerId: string) {
     const question = submission?.questions.find((item) => item.answerId === answerId)
@@ -108,6 +115,20 @@ export function SubmissionReviewPage() {
     catch (error) { setFinalizeNotice({ kind: 'error', text: error instanceof Error ? error.message : 'Approve failed' }) }
     finally { setAiBusy('') }
   }
+  async function genAnswerKey() {
+    setAiBusy('answerKey')
+    try { setSubmission(await interviewApi.generateAnswerKey(sessionId)) }
+    catch (error) { setFinalizeNotice({ kind: 'error', text: error instanceof Error ? error.message : 'Answer key generation failed' }) }
+    finally { setAiBusy('') }
+  }
+  async function emailResult() {
+    setAiBusy('email')
+    try {
+      const { sentTo } = await interviewApi.emailResult(sessionId)
+      setFinalizeNotice({ kind: 'success', text: `Result emailed to ${sentTo}.` })
+    } catch (error) { setFinalizeNotice({ kind: 'error', text: error instanceof Error ? error.message : 'Email failed' }) }
+    finally { setAiBusy('') }
+  }
 
   if (!submission) return <main className="dashboard">
     <p className={loadError ? 'error-message' : undefined} role={loadError ? 'alert' : undefined}>
@@ -128,8 +149,17 @@ export function SubmissionReviewPage() {
     <p><strong>Objective score:</strong> {submission.objectiveScore} / {submission.maxScore}</p>
     <p><strong>Passing requirement:</strong> {submission.passingPercentage}%</p>
     <p><strong>Review progress:</strong> {scoredQuestions} / {submission.questions.length} questions scored</p>
-    {pending && <button className="secondary-button" disabled={aiBusy === 'suggest'} onClick={() => void suggest()}>
-      {aiBusy === 'suggest' ? 'Scoring…' : '🤖 AI: suggest scores'}</button>}
+    <div className="compact-actions">
+      {pending && <button className="secondary-button" disabled={aiBusy === 'suggest'} onClick={() => void suggest()}>
+        {aiBusy === 'suggest' ? 'Scoring…' : '🤖 AI: suggest scores'}</button>}
+      <button className="secondary-button" disabled={aiBusy === 'answerKey'} onClick={() => void genAnswerKey()}
+        title="Generate a model answer (correct answer + why + example) for every question. Cached per question and shown to the candidate too.">
+        {aiBusy === 'answerKey'
+          ? 'Generating answer key…'
+          : submission.questions.some((q) => q.modelAnswer)
+            ? '🤖 Regenerate answer key'
+            : '🤖 Generate answer key (details + examples)'}</button>
+    </div>
     {submission.questions.map((question) => <section className="question-card" key={question.questionId}>
       <div className="question-meta"><span>{question.type.replaceAll('_', ' ')}</span><span>{question.maxScore} points</span></div>
       <h2>{question.order}. {question.prompt}</h2>
@@ -141,6 +171,10 @@ export function SubmissionReviewPage() {
         </p>)}
       </div>}
       <div className="answer-panel"><strong>Candidate answer</strong><pre>{question.content || 'No answer submitted'}</pre></div>
+      {question.modelAnswer && <div className="model-answer">
+        <strong>✓ Correct answer</strong>
+        <Markdown className="model-answer-content" content={question.modelAnswer} />
+      </div>}
       {question.answerId && suggestions[question.answerId] && <p className="ai-suggestion">
         🤖 AI suggests {suggestions[question.answerId].suggestedScore}/{question.maxScore} (confidence{' '}
         {Math.round(suggestions[question.answerId].confidence * 100)}%): {suggestions[question.answerId].justification}</p>}
@@ -176,11 +210,18 @@ export function SubmissionReviewPage() {
           <h2>Total score: {submission.totalScore} / {submission.maxScore} ({submission.percentage}%)</h2>
           <p><strong>Outcome:</strong> {submission.outcome === 'PASSED' ? 'Passed' : 'Not selected'}</p>
         </>}
-      {finalizeNotice && <p
-        className={finalizeNotice.kind === 'error' ? 'error-message' : 'status-message'}
-        role={finalizeNotice.kind === 'error' ? 'alert' : 'status'}>
-        {finalizeNotice.text}
-      </p>}
+      {finalizeNotice && <div
+        className={`toast ${finalizeNotice.kind === 'error' ? 'toast-error' : 'toast-success'}`}
+        role={finalizeNotice.kind === 'error' ? 'alert' : 'status'} aria-live="polite">
+        <span>{finalizeNotice.text}</span>
+        <button type="button" className="toast-close" aria-label="Dismiss"
+          onClick={() => setFinalizeNotice(undefined)}>×</button>
+      </div>}
+      {!pending && <div className="compact-actions">
+        <button className="secondary-button" disabled={aiBusy === 'email'} onClick={() => void emailResult()}
+          title="Email the candidate their outcome, score, and the approved coaching plan (needs coaching approved first).">
+          {aiBusy === 'email' ? 'Sending…' : '📧 Email result to candidate'}</button>
+      </div>}
       {!pending && <div className="coaching-panel">
         <h2>Candidate coaching feedback (AI)</h2>
         {!coaching && <button className="secondary-button" disabled={aiBusy === 'coach'} onClick={() => void genCoaching()}>
@@ -188,7 +229,7 @@ export function SubmissionReviewPage() {
         {coaching && <>
           <p className={coaching.leakageSafe ? 'status-message' : 'error-message'}>
             Leakage guard: {coaching.leakageSafe ? 'clean' : `flagged — ${coaching.leakageFlags.join('; ')}`} · status {coaching.status}</p>
-          <pre className="coaching-content">{coaching.content}</pre>
+          <Markdown className="coaching-content" content={coaching.content} />
           {coaching.status !== 'APPROVED'
             ? <button disabled={aiBusy === 'approve'} onClick={() => void releaseCoaching()}>
               {aiBusy === 'approve' ? 'Approving…' : 'Approve & release to candidate'}</button>
