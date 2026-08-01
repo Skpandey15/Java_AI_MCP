@@ -27,3 +27,6 @@ apps/ai-service/.ruff_cache/
 apps/ai-service/.coverage
 apps/ai-service/**/__pycache__/
 apps/ai-service/*.egg-info/
+
+# local dev TLS material (LAN HTTPS setup)
+scripts/.lan-certs/

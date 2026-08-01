@@ -89,6 +89,49 @@ public class AiQuestionService {
         return saved;
     }
 
+    @Transactional
+    public List<ManualQuestion> compose(String ownerSubject, UUID interviewId, UUID requestId) {
+        var existing = questions.findByGenerationRequestIdOrderByOrderAsc(requestId);
+        if (!existing.isEmpty()) return existing;
+        var definition = definitions.findById(interviewId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Interview not found"));
+        if (!definition.getOwnerSubject().equals(ownerSubject)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Interview not found");
+        }
+        if (definition.getStatus() != InterviewStatus.DRAFT
+                || (definition.getQuestionMode() != QuestionMode.DIRECT_LLM
+                && definition.getQuestionMode() != QuestionMode.RAG)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Composition requires a DIRECT_LLM or RAG draft interview");
+        }
+        var current = questions.findByInterviewDefinitionIdOrderByOrderAsc(interviewId);
+        var existingPrompts = current.stream().map(ManualQuestion::getPrompt).toList();
+        List<String> grounding = List.of();
+        if (definition.getQuestionMode() == QuestionMode.RAG) {
+            grounding = retrieve(ownerSubject, definition).stream()
+                    .map(KnowledgeVectorStore.SearchHit::content).toList();
+        }
+        var response = client.compose(new AiQuestionClient.ComposeRequest(
+                definition.getSkills(), definition.getDifficulty().name(),
+                definition.getQuestionCount(), existingPrompts, grounding, 3));
+        var generated = new java.util.ArrayList<ManualQuestion>();
+        int order = current.size();
+        for (var q : response.questions()) {
+            order++;
+            generated.add(ManualQuestion.generated(definition, order, q.prompt(), 10,
+                    com.onlineinterview.session.domain.QuestionType.LONG_TEXT,
+                    List.of(), List.of(), requestId, "composition-agent", "compose-v1"));
+        }
+        var saved = questions.saveAll(generated);
+        log.atInfo().addKeyValue("event", "ai.interview_composed")
+                .addKeyValue("interviewId", interviewId)
+                .addKeyValue("generationRequestId", requestId)
+                .addKeyValue("rounds", response.rounds())
+                .addKeyValue("questionCount", saved.size())
+                .log("Interview composed by agent");
+        return saved;
+    }
+
     private List<KnowledgeVectorStore.SearchHit> retrieve(
             String ownerSubject, com.onlineinterview.interview.domain.InterviewDefinition definition) {
         if (definition.getQuestionMode() != QuestionMode.RAG) return List.of();

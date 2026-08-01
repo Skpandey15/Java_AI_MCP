@@ -39,6 +39,8 @@ public class RateLimitInterceptor implements HandlerInterceptor {
                         "session-submit", properties::getSessionSubmitPerMinute),
                 new Rule("POST", "/api/v1/interviews/*/questions:generate",
                         "ai-generation", properties::getAiGenerationPerMinute),
+                new Rule("POST", "/api/v1/interviews/*/questions:compose",
+                        "ai-generation", properties::getAiGenerationPerMinute),
                 new Rule("POST", "/api/v1/knowledge/collections/*/documents",
                         "knowledge-mutation", properties::getKnowledgeMutationPerMinute),
                 new Rule("POST", "/api/v1/knowledge/documents/*:prepare",
