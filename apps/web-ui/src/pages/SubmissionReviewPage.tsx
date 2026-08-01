@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { interviewApi, type SubmissionDetail } from '../api/interviewApi'
+import { interviewApi, type AnswerSuggestion, type CoachingResponse, type SubmissionDetail } from '../api/interviewApi'
 
 export function SubmissionReviewPage() {
   const { sessionId = '' } = useParams()
@@ -14,6 +14,9 @@ export function SubmissionReviewPage() {
   const [finalizeNotice, setFinalizeNotice] = useState<{ kind: 'success' | 'error'; text: string }>()
   const [savingAnswer, setSavingAnswer] = useState('')
   const [finalizing, setFinalizing] = useState(false)
+  const [suggestions, setSuggestions] = useState<Record<string, AnswerSuggestion>>({})
+  const [coaching, setCoaching] = useState<CoachingResponse>()
+  const [aiBusy, setAiBusy] = useState('')
 
   useEffect(() => {
     interviewApi.submission(sessionId).then((loaded) => {
@@ -84,6 +87,28 @@ export function SubmissionReviewPage() {
     }
   }
 
+  async function suggest() {
+    setAiBusy('suggest')
+    try {
+      const list = await interviewApi.aiSuggest(sessionId)
+      setSuggestions(Object.fromEntries(list.map((s) => [s.answerId, s])))
+      setScores((current) => ({ ...current, ...Object.fromEntries(list.map((s) => [s.answerId, s.suggestedScore])) }))
+    } catch (error) { setFinalizeNotice({ kind: 'error', text: error instanceof Error ? error.message : 'AI suggest failed' }) }
+    finally { setAiBusy('') }
+  }
+  async function genCoaching() {
+    setAiBusy('coach')
+    try { setCoaching(await interviewApi.draftCoaching(sessionId)) }
+    catch (error) { setFinalizeNotice({ kind: 'error', text: error instanceof Error ? error.message : 'Coaching draft failed' }) }
+    finally { setAiBusy('') }
+  }
+  async function releaseCoaching() {
+    setAiBusy('approve')
+    try { setCoaching(await interviewApi.approveCoaching(sessionId)) }
+    catch (error) { setFinalizeNotice({ kind: 'error', text: error instanceof Error ? error.message : 'Approve failed' }) }
+    finally { setAiBusy('') }
+  }
+
   if (!submission) return <main className="dashboard">
     <p className={loadError ? 'error-message' : undefined} role={loadError ? 'alert' : undefined}>
       {loadError || 'Loading submission…'}
@@ -103,6 +128,8 @@ export function SubmissionReviewPage() {
     <p><strong>Objective score:</strong> {submission.objectiveScore} / {submission.maxScore}</p>
     <p><strong>Passing requirement:</strong> {submission.passingPercentage}%</p>
     <p><strong>Review progress:</strong> {scoredQuestions} / {submission.questions.length} questions scored</p>
+    {pending && <button className="secondary-button" disabled={aiBusy === 'suggest'} onClick={() => void suggest()}>
+      {aiBusy === 'suggest' ? 'Scoring…' : '🤖 AI: suggest scores'}</button>}
     {submission.questions.map((question) => <section className="question-card" key={question.questionId}>
       <div className="question-meta"><span>{question.type.replaceAll('_', ' ')}</span><span>{question.maxScore} points</span></div>
       <h2>{question.order}. {question.prompt}</h2>
@@ -114,6 +141,9 @@ export function SubmissionReviewPage() {
         </p>)}
       </div>}
       <div className="answer-panel"><strong>Candidate answer</strong><pre>{question.content || 'No answer submitted'}</pre></div>
+      {question.answerId && suggestions[question.answerId] && <p className="ai-suggestion">
+        🤖 AI suggests {suggestions[question.answerId].suggestedScore}/{question.maxScore} (confidence{' '}
+        {Math.round(suggestions[question.answerId].confidence * 100)}%): {suggestions[question.answerId].justification}</p>}
       {question.autoScored
         ? <p><strong>Automatic score:</strong> {question.awardedScore ?? 0} / {question.maxScore}</p>
         : question.answerId
@@ -151,6 +181,20 @@ export function SubmissionReviewPage() {
         role={finalizeNotice.kind === 'error' ? 'alert' : 'status'}>
         {finalizeNotice.text}
       </p>}
+      {!pending && <div className="coaching-panel">
+        <h2>Candidate coaching feedback (AI)</h2>
+        {!coaching && <button className="secondary-button" disabled={aiBusy === 'coach'} onClick={() => void genCoaching()}>
+          {aiBusy === 'coach' ? 'Generating…' : '🤖 Generate candidate feedback'}</button>}
+        {coaching && <>
+          <p className={coaching.leakageSafe ? 'status-message' : 'error-message'}>
+            Leakage guard: {coaching.leakageSafe ? 'clean' : `flagged — ${coaching.leakageFlags.join('; ')}`} · status {coaching.status}</p>
+          <pre className="coaching-content">{coaching.content}</pre>
+          {coaching.status !== 'APPROVED'
+            ? <button disabled={aiBusy === 'approve'} onClick={() => void releaseCoaching()}>
+              {aiBusy === 'approve' ? 'Approving…' : 'Approve & release to candidate'}</button>
+            : <p className="status-message">Released to the candidate.</p>}
+        </>}
+      </div>}
     </section>
   </main>
 }

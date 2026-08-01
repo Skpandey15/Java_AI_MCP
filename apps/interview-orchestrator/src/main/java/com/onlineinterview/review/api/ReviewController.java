@@ -61,6 +61,27 @@ public class ReviewController {
         return service.finalizeReview(jwt.getSubject(), sessionId, request.feedback());
     }
 
+    @PostMapping("/interviewer/submissions/{sessionId}/ai-suggest")
+    @PreAuthorize("hasRole('INTERVIEWER')")
+    public java.util.List<AssessmentResponses.AnswerSuggestion> aiSuggest(
+            @AuthenticationPrincipal Jwt jwt, @PathVariable UUID sessionId) {
+        return service.suggestScores(jwt.getSubject(), sessionId);
+    }
+
+    @PostMapping("/interviewer/submissions/{sessionId}/coaching")
+    @PreAuthorize("hasRole('INTERVIEWER')")
+    public AssessmentResponses.CoachingResponse draftCoaching(
+            @AuthenticationPrincipal Jwt jwt, @PathVariable UUID sessionId) {
+        return service.draftCoaching(jwt.getSubject(), sessionId);
+    }
+
+    @PostMapping("/interviewer/submissions/{sessionId}/coaching:approve")
+    @PreAuthorize("hasRole('INTERVIEWER')")
+    public AssessmentResponses.CoachingResponse approveCoaching(
+            @AuthenticationPrincipal Jwt jwt, @PathVariable UUID sessionId) {
+        return service.approveCoaching(jwt.getSubject(), sessionId);
+    }
+
     @GetMapping("/candidate/sessions/{sessionId}/result")
     @PreAuthorize("hasRole('CANDIDATE')")
     public CandidateResultResponse candidateResult(@AuthenticationPrincipal Jwt jwt,

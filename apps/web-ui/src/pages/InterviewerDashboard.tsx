@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   interviewApi, type AdminQuestion, type Assignment, type Interview, type KnowledgeCollection,
-  type Profile, type QuestionType,
+  type KnowledgeDocument, type Profile, type QuestionType,
 } from '../api/interviewApi'
 import { useAuth } from '../auth/AuthProvider'
 
@@ -33,6 +33,13 @@ const ecosystemTechnologies = {
     'OpenAI API', 'Anthropic API', 'LangChain', 'LangGraph', 'LlamaIndex',
     'Hugging Face Transformers', 'PyTorch', 'TensorFlow', 'Vector Databases',
     'Embeddings', 'Model Evaluation', 'Fine-tuning', 'LiteLLM', 'Ollama', 'MLflow',
+  ],
+  SYSTEM_DESIGN: [
+    'Scalability', 'High Availability', 'Load Balancing', 'Caching', 'CDN',
+    'Database Sharding', 'Replication', 'CAP Theorem', 'Consistency and Consensus',
+    'Message Queues', 'Event-Driven Architecture', 'Microservices', 'API Gateway',
+    'Rate Limiting', 'Idempotency', 'Distributed Transactions', 'Data Partitioning',
+    'Fault Tolerance', 'Observability', 'Capacity Estimation', 'Design Trade-offs',
   ],
 } as const
 
@@ -121,6 +128,27 @@ const technologyDescriptions: Record<string, string> = {
   LiteLLM: 'A model gateway offering a consistent API across multiple LLM providers.',
   Ollama: 'A local runtime for downloading and serving open-weight language models.',
   MLflow: 'A platform for tracking experiments, packaging models, and managing ML lifecycles.',
+  Scalability: 'Designing a system to handle growing load by scaling vertically or horizontally.',
+  'High Availability': 'Keeping a system operational with minimal downtime through redundancy and failover.',
+  'Load Balancing': 'Distributing incoming traffic across multiple servers to improve throughput and reliability.',
+  Caching: 'Storing frequently accessed data in fast storage to reduce latency and backend load.',
+  CDN: 'A content delivery network that serves assets from edge locations close to users.',
+  'Database Sharding': 'Partitioning data across multiple databases to scale writes and storage horizontally.',
+  Replication: 'Copying data across nodes for availability, read scaling, and durability.',
+  'CAP Theorem': 'The trade-off between consistency, availability, and partition tolerance in distributed systems.',
+  'Consistency and Consensus': 'Agreement protocols (e.g. Raft, Paxos) and consistency models for distributed state.',
+  'Message Queues': 'Asynchronous, decoupled communication between services via durable message brokers.',
+  'Event-Driven Architecture': 'Designing systems around the production, detection, and reaction to events.',
+  Microservices: 'Structuring an application as small, independently deployable, bounded services.',
+  'API Gateway': 'A single entry point that routes, throttles, and secures requests to backend services.',
+  'Rate Limiting': 'Controlling request volume per client to protect services and ensure fair usage.',
+  Idempotency: 'Ensuring repeated operations produce the same result, key to safe retries.',
+  'Distributed Transactions': 'Coordinating atomic changes across services using patterns like saga and outbox.',
+  'Data Partitioning': 'Splitting data by key or range to distribute load and enable horizontal scale.',
+  'Fault Tolerance': 'Designing systems to keep working correctly despite component failures.',
+  Observability: 'Understanding system state through metrics, logs, and distributed traces.',
+  'Capacity Estimation': 'Sizing traffic, storage, and bandwidth to plan infrastructure and bottlenecks.',
+  'Design Trade-offs': 'Reasoning about competing goals such as latency, consistency, cost, and complexity.',
 }
 
 const initialForm = {
@@ -413,7 +441,7 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
 export function InterviewerDashboard() {
   const auth = useAuth()
   const navigate = useNavigate()
-  const [activeView, setActiveView] = useState<'create' | 'drafts' | 'assign' | 'history'>('create')
+  const [activeView, setActiveView] = useState<'create' | 'drafts' | 'assign' | 'history' | 'knowledge'>('create')
   const [interviews, setInterviews] = useState<Interview[]>([])
   const [candidates, setCandidates] = useState<Profile[]>([])
   const [collections, setCollections] = useState<KnowledgeCollection[]>([])
@@ -495,6 +523,9 @@ export function InterviewerDashboard() {
           <button className={activeView === 'create' ? 'active' : ''} onClick={() => setActiveView('create')}>
             <span>1</span>Create interview draft
           </button>
+          <button className={activeView === 'knowledge' ? 'active' : ''} onClick={() => setActiveView('knowledge')}>
+            <span>📚</span>Knowledge base (RAG)
+          </button>
           <button className={activeView === 'drafts' ? 'active' : ''} onClick={() => setActiveView('drafts')}>
             <span>2</span>Edit and publish
           </button>
@@ -522,6 +553,7 @@ export function InterviewerDashboard() {
                 <option value="UI">UI ecosystem</option>
                 <option value="DATABASE">Database ecosystem</option>
                 <option value="AI">AI ecosystem</option>
+                <option value="SYSTEM_DESIGN">System Design</option>
               </select></label>
               <div className="technology-field">
                 <span>Technologies</span>
@@ -587,6 +619,7 @@ export function InterviewerDashboard() {
               || (form.questionMode === 'RAG' && !form.knowledgeCollectionId)}>Create draft</button>
           </form>}
 
+          {activeView === 'knowledge' && <KnowledgeBaseView notify={notify} />}
           {activeView === 'drafts' && <>
             <div className="section-heading"><h2>Edit and publish</h2><p>Complete questions, edit content, and publish ready drafts.</p></div>
             <div className="card-grid">
@@ -622,4 +655,155 @@ export function InterviewerDashboard() {
       </div>
     </main>
   )
+}
+
+function KnowledgeBaseView({ notify }: { notify: (message: string, error?: boolean) => void }) {
+  const [collections, setCollections] = useState<KnowledgeCollection[]>([])
+  const [selected, setSelected] = useState('')
+  const [documents, setDocuments] = useState<KnowledgeDocument[]>([])
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [docName, setDocName] = useState('')
+  const [docContent, setDocContent] = useState('')
+  const [busy, setBusy] = useState('')
+  const [source, setSource] = useState<'manual' | 'upload' | 'github'>('manual')
+  const [repoUrl, setRepoUrl] = useState('')
+  const [file, setFile] = useState<File>()
+
+  async function loadCollections() {
+    try { setCollections(await interviewApi.listKnowledgeCollections()) }
+    catch (error) { notify(messageOf(error), true) }
+  }
+  async function loadDocuments(id: string) {
+    if (!id) { setDocuments([]); return }
+    try { setDocuments(await interviewApi.listCollectionDocuments(id)) }
+    catch (error) { notify(messageOf(error), true) }
+  }
+  useEffect(() => { void loadCollections() }, [])
+  useEffect(() => { void loadDocuments(selected) }, [selected])
+
+  async function createCollection(event: FormEvent) {
+    event.preventDefault()
+    setBusy('collection')
+    try {
+      const created = await interviewApi.createCollection(name, description)
+      setName(''); setDescription('')
+      await loadCollections()
+      setSelected(created.id)
+      notify('Collection created.')
+    } catch (error) { notify(messageOf(error), true) } finally { setBusy('') }
+  }
+  async function addDocument(event: FormEvent) {
+    event.preventDefault()
+    setBusy('add')
+    try {
+      const doc = await interviewApi.addDocument(selected, docName, docContent)
+      await interviewApi.ingestDocument(doc.id)
+      setDocName(''); setDocContent('')
+      await loadDocuments(selected)
+      notify('Document added and ingested — ready for RAG.')
+    } catch (error) { notify(messageOf(error), true) } finally { setBusy('') }
+  }
+  async function ingest(documentId: string) {
+    setBusy(documentId)
+    try {
+      await interviewApi.ingestDocument(documentId)
+      await loadDocuments(selected)
+      notify('Document ingested and ready for RAG.')
+    } catch (error) { notify(messageOf(error), true) } finally { setBusy('') }
+  }
+  async function uploadFile(event: FormEvent) {
+    event.preventDefault()
+    if (!file) return
+    setBusy('upload')
+    try {
+      const doc = await interviewApi.uploadDocument(selected, file)
+      await interviewApi.ingestDocument(doc.id)
+      setFile(undefined)
+      await loadDocuments(selected)
+      notify('File uploaded, text extracted, and ingested — ready for RAG.')
+    } catch (error) { notify(messageOf(error), true) } finally { setBusy('') }
+  }
+  async function importGithub(event: FormEvent) {
+    event.preventDefault()
+    setBusy('github')
+    try {
+      const { name, text } = await fetchGithubText(repoUrl)
+      const doc = await interviewApi.addDocument(selected, name, text)
+      await interviewApi.ingestDocument(doc.id)
+      setRepoUrl('')
+      await loadDocuments(selected)
+      notify('GitHub docs imported and ingested — ready for RAG.')
+    } catch (error) { notify(messageOf(error), true) } finally { setBusy('') }
+  }
+
+  return <>
+    <div className="section-heading"><h2>Knowledge base (RAG)</h2>
+      <p>Create a collection, add a document, and ingest it. Ingested collections become
+        selectable in RAG question mode.</p></div>
+    <form className="form-grid" onSubmit={(e) => void createCollection(e)}>
+      <label>Collection name<input required value={name} onChange={(e) => setName(e.target.value)} /></label>
+      <label>Description<input value={description} onChange={(e) => setDescription(e.target.value)} /></label>
+      <button type="submit" disabled={busy === 'collection'}>{busy === 'collection' ? 'Creating…' : 'Create collection'}</button>
+    </form>
+    {collections.length > 0 && <label>Collection<select value={selected} onChange={(e) => setSelected(e.target.value)}>
+      <option value="">Select a collection</option>
+      {collections.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+    </select></label>}
+    {selected && <>
+      <div className="assignment-list">
+        <strong>Documents</strong>
+        {documents.length === 0 && <p className="empty-state">No documents yet.</p>}
+        {documents.map((d) => <div className="assignment-row" key={d.id}>
+          <span>{d.fileName} · {d.status}</span>
+          {d.status !== 'READY' && <button className="secondary-button" disabled={busy === d.id} onClick={() => void ingest(d.id)}>
+            {busy === d.id ? 'Ingesting…' : 'Ingest'}</button>}
+        </div>)}
+      </div>
+      <label>RAG Source<select value={source} onChange={(e) => setSource(e.target.value as 'manual' | 'upload' | 'github')}>
+        <option value="manual">Manual entry</option>
+        <option value="upload">Upload document (.txt .md .pdf .doc .ppt .xls)</option>
+        <option value="github">GitHub repository</option>
+      </select></label>
+      {source === 'manual' && <form className="form-grid" onSubmit={(e) => void addDocument(e)}>
+        <label>Document name<input required value={docName} onChange={(e) => setDocName(e.target.value)} placeholder="e.g. system-design-notes.md" /></label>
+        <label>Content (markdown or plain text)<textarea required rows={8} value={docContent} onChange={(e) => setDocContent(e.target.value)} /></label>
+        <button type="submit" disabled={busy === 'add'}>{busy === 'add' ? 'Adding…' : 'Add document + ingest'}</button>
+      </form>}
+      {source === 'upload' && <form className="form-grid" onSubmit={(e) => void uploadFile(e)}>
+        <label>File<input required type="file" accept=".txt,.md,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx"
+          onChange={(e) => setFile(e.target.files?.[0])} /></label>
+        <p className="assignment-window-note">Text is extracted server-side (PDF, Word, PowerPoint, Excel, text).</p>
+        <button type="submit" disabled={busy === 'upload' || !file}>{busy === 'upload' ? 'Uploading & ingesting…' : 'Upload + ingest'}</button>
+      </form>}
+      {source === 'github' && <form className="form-grid" onSubmit={(e) => void importGithub(e)}>
+        <label>Public repository URL<input required value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} placeholder="https://github.com/owner/repo" /></label>
+        <p className="assignment-window-note">Pulls README and Markdown/text docs from the repo's default branch.</p>
+        <button type="submit" disabled={busy === 'github'}>{busy === 'github' ? 'Importing & ingesting…' : 'Import + ingest'}</button>
+      </form>}
+    </>}
+  </>
+}
+
+async function fetchGithubText(repoUrl: string): Promise<{ name: string; text: string }> {
+  const match = repoUrl.match(/github\.com\/([^/]+)\/([^/#?]+)/)
+  if (!match) throw new Error('Enter a URL like https://github.com/owner/repo')
+  const owner = match[1]
+  const repo = match[2].replace(/\.git$/, '')
+  const meta = await fetch(`https://api.github.com/repos/${owner}/${repo}`)
+  if (!meta.ok) throw new Error(`Repository not found or private (HTTP ${meta.status})`)
+  const branch = (await meta.json() as { default_branch: string }).default_branch
+  const treeRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`)
+  if (!treeRes.ok) throw new Error(`Could not read repository tree (HTTP ${treeRes.status})`)
+  const tree = (await treeRes.json() as { tree: Array<{ path: string; type: string }> }).tree
+  const files = tree.filter((t) => t.type === 'blob' && /\.(md|markdown|txt|rst)$/i.test(t.path)).slice(0, 20)
+  if (files.length === 0) throw new Error('No Markdown/text docs found in the repository')
+  let text = ''
+  for (const f of files) {
+    const raw = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${f.path}`)
+    if (!raw.ok) continue
+    text += `\n\n# ${f.path}\n\n${await raw.text()}`
+    if (text.length > 420000) break
+  }
+  return { name: `${owner}-${repo}.md`, text: text.slice(0, 450000).trim() }
 }

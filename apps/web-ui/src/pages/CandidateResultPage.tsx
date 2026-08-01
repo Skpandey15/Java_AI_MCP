@@ -28,6 +28,9 @@ export function CandidateResultPage() {
           <p>{result.percentage}% · Passing requirement {result.passingPercentage}%</p>
         </section>
         <section className="score-hero"><span>Total score</span><strong>{result.totalScore} / {result.maxScore}</strong>{result.feedback && <p>{result.feedback}</p>}</section>
+        {result.coachingFeedback && <section className="card coaching-content-card">
+          <h2>Your development plan</h2>
+          <pre className="coaching-content">{result.coachingFeedback}</pre></section>}
         {result.answers.map((answer) => <section className="question-card" key={answer.order}>
           <div className="question-meta"><span>{answer.type.replaceAll('_', ' ')}</span><span>{answer.awardedScore ?? 0} / {answer.maxScore}</span></div>
           <h2>{answer.order}. {answer.prompt}</h2>
