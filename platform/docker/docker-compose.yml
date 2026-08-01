@@ -172,7 +172,10 @@ services:
       APP_ENVIRONMENT: ${APP_ENVIRONMENT:-local}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LITELLM_BASE_URL: http://litellm:4000
-      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-local-litellm-key}
+      # Scoped virtual key for the AI workload; must NOT be the gateway master key.
+      # Locally it defaults to the master key value so the keyless dev gateway accepts it;
+      # in uat/prod set LITELLM_API_KEY to a budgeted virtual key minted by LiteLLM.
+      LITELLM_API_KEY: ${LITELLM_API_KEY:-local-litellm-key}
       AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:-local-ai-service-token}
       INTERVIEW_QUESTION_MODEL: interview-question-model
       KNOWLEDGE_EMBEDDING_MODEL: knowledge-embedding-model

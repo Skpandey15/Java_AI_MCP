@@ -14,7 +14,7 @@ class LiteLLMEmbeddingClient:
             f"{settings.litellm_base_url}/v1/embeddings",
             data=json.dumps(body).encode(),
             headers={
-                "Authorization": f"Bearer {settings.litellm_master_key}",
+                "Authorization": f"Bearer {settings.litellm_api_key}",
                 "Content-Type": "application/json",
                 "X-Request-ID": get_request_id(),
             },

@@ -43,6 +43,14 @@ Kafka and MinIO. See the
 
 ### Status
 
+Implemented through Phase 7. Beyond the Phase 1/2A foundation below, the codebase now
+includes: LiteLLM-governed direct question generation and embeddings; pgvector RAG with
+grounded, cited questions; a bidirectional MCP layer (registry, tool policies, approval and
+audit); a transactional Kafka outbox with idempotent consumers; MinIO knowledge storage;
+observability (OpenTelemetry/Prometheus/Grafana/Loki); resilience controls; and TLS/secret
+hardening. Answer evaluation is currently objective auto-scoring plus interviewer review;
+asynchronous LLM-based evaluation is scaffolded but not yet the live scoring path.
+
 Phase 1 foundation is implemented:
 
 - React/TypeScript web application

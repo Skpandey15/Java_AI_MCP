@@ -28,6 +28,9 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
+                // Safe only because auth is a stateless Bearer JWT with no cookie/session auth.
+                // If this API ever moves to the recommended BFF/HttpOnly-cookie model, CSRF
+                // protection MUST be re-enabled (cookies are auto-sent by the browser).
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))

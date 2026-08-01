@@ -3,6 +3,7 @@ package com.onlineinterview.messaging.infrastructure;
 import java.util.function.Supplier;
 import java.util.concurrent.TimeUnit;
 import org.apache.kafka.clients.admin.Admin;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
 public class KafkaHealthIndicator implements HealthIndicator {
     private final Supplier<Admin> clients;
 
+    @Autowired
     public KafkaHealthIndicator(KafkaAdmin admin) {
         this(() -> Admin.create(admin.getConfigurationProperties()));
     }

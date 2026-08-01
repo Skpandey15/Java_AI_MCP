@@ -70,7 +70,7 @@ class LiteLLMClient:
             f"{settings.litellm_base_url}/v1/chat/completions",
             data=json.dumps(body).encode(),
             headers={
-                "Authorization": f"Bearer {settings.litellm_master_key}",
+                "Authorization": f"Bearer {settings.litellm_api_key}",
                 "Content-Type": "application/json",
                 "X-Request-ID": get_request_id(),
             },
@@ -78,7 +78,9 @@ class LiteLLMClient:
         )
         started = time.monotonic()
         try:
-            with urlopen(request, timeout=65) as response:
+            # Reasoning-model generation of a full question set can take ~60s; keep this
+            # comfortably above the model latency and aligned with the gateway timeout.
+            with urlopen(request, timeout=120) as response:
                 payload = json.loads(response.read())
         except (HTTPError, URLError, TimeoutError) as exc:
             raise ModelGatewayError("LiteLLM request failed") from exc

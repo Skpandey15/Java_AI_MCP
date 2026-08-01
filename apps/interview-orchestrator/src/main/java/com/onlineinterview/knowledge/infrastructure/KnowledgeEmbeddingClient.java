@@ -1,11 +1,13 @@
 package com.onlineinterview.knowledge.infrastructure;
 
+import java.net.http.HttpClient;
 import java.util.List;
 import com.onlineinterview.common.resilience.DownstreamCallExecutor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -20,7 +22,13 @@ public class KnowledgeEmbeddingClient {
             ObjectProvider<DownstreamCallExecutor> resilience,
             @Value("${app.ai-service.base-url}") String baseUrl,
             @Value("${app.ai-service.service-token}") String serviceToken) {
-        this.client = builder.baseUrl(baseUrl).build();
+        // Force HTTP/1.1: the JDK HttpClient defaults to HTTP/2, whose cleartext handshake
+        // the AI service's HTTP/1.1-only server rejects as "Invalid HTTP request received".
+        // Mirrors AiQuestionClient, which already pins HTTP/1.1.
+        var httpClient = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build();
+        this.client = builder.baseUrl(baseUrl)
+                .requestFactory(new JdkClientHttpRequestFactory(httpClient))
+                .build();
         this.serviceToken = serviceToken;
         this.resilience = resilience.getIfAvailable();
     }

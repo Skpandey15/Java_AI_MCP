@@ -29,9 +29,17 @@ Non-local overlays never contain a Kubernetes `Secret` or a Kustomize
 The external payload must provide:
 
 `DATABASE_PASSWORD`, `KEYCLOAK_DB_PASSWORD`, `KEYCLOAK_ADMIN_USERNAME`,
-`KEYCLOAK_ADMIN_PASSWORD`, `LITELLM_MASTER_KEY`, `AI_SERVICE_TOKEN`,
-`MCP_AUTHORIZATION_SECRET`, `REDIS_PASSWORD`, `MINIO_ACCESS_KEY`,
-`MINIO_SECRET_KEY`, and `OPENAI_API_KEY`.
+`KEYCLOAK_ADMIN_PASSWORD`, `LITELLM_MASTER_KEY`, `LITELLM_API_KEY`,
+`AI_SERVICE_TOKEN`, `MCP_AUTHORIZATION_SECRET`, `REDIS_PASSWORD`,
+`MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, and `OPENAI_API_KEY`.
+
+`LITELLM_MASTER_KEY` is admin-only and is injected **only** into the LiteLLM pod.
+`LITELLM_API_KEY` is the scoped gateway key the AI service uses and must be a
+**required** payload entry — a missing key blocks the ai-service pod from starting
+(the `secretKeyRef` cannot mount). Until LiteLLM runs with a `database_url` and a
+minted virtual key, set `LITELLM_API_KEY` to the same value as `LITELLM_MASTER_KEY`;
+once virtual keys are enabled, rotate `LITELLM_API_KEY` to a budgeted scoped key
+without any code or manifest change.
 
 External Secrets refreshes every 15 minutes. Deletion policy is `Retain` so a
 temporary provider or operator failure cannot delete the last synchronized

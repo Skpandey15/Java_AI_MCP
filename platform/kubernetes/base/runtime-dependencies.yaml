@@ -126,6 +126,10 @@ metadata:
   name: kafka
 spec:
   clusterIP: None
+  # Single-node KRaft resolves its own controller at kafka:9093 during startup, before
+  # the pod is Ready. Without this, the headless name has no A record yet and the broker
+  # dies with UnknownHostException, never becoming Ready — a bootstrap deadlock.
+  publishNotReadyAddresses: true
   selector:
     app.kubernetes.io/name: kafka
   ports:

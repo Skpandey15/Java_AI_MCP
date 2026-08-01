@@ -3,6 +3,10 @@ model_list:
     litellm_params:
       model: openai/gpt-5-mini
       api_key: os.environ/OPENAI_API_KEY
+      # gpt-5-mini is a reasoning model; default effort spends ~1800 reasoning tokens on a
+      # 10-question set and pushes latency past the request timeout. "low" keeps quality
+      # for structured question generation while cutting latency well under the timeout.
+      reasoning_effort: low
   - model_name: knowledge-embedding-model
     litellm_params:
       model: openai/text-embedding-3-small
@@ -13,7 +17,7 @@ router_settings:
   retry_after: 1
 litellm_settings:
   drop_params: true
-  request_timeout: 60
+  request_timeout: 120
   set_verbose: false
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY

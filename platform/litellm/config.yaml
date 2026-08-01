@@ -20,3 +20,10 @@ litellm_settings:
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
+  # Governance for non-local environments (requires a LiteLLM DATABASE_URL for key storage):
+  #   1. Set general_settings.database_url so virtual keys and budgets persist.
+  #   2. Mint a scoped virtual key per workload, e.g. the AI service:
+  #        POST /key/generate { "models": ["interview-question-model","knowledge-embedding-model"],
+  #                             "max_budget": 50, "budget_duration": "30d", "rpm_limit": 60 }
+  #      and inject that key as LITELLM_API_KEY into the ai-service (never the master key).
+  #   3. The master key is admin-only and must stay confined to this container.
