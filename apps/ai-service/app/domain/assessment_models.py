@@ -4,7 +4,6 @@ from pydantic import Field
 
 from app.domain.question_models import ApiModel, GenerationUsage
 
-
 # ---- Evaluation agent (suggest-only) ----
 
 class EvaluationItem(ApiModel):

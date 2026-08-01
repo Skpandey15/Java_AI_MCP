@@ -78,18 +78,21 @@ class CompositionAgent:
             hint = f"\nPrevious round feedback: {trace[-1]}" if trace else ""
             gen, gu = self.client.complete_json(
                 "You design fair, unambiguous, non-duplicative technical interview questions.",
-                (f"Generate exactly {need} {req.difficulty} descriptive interview questions on: {skills}. "
-                 f"Each must cover a distinct sub-topic and must NOT duplicate any of these existing "
-                 f"questions:\n- " + "\n- ".join(avoid[:60] or ["(none)"]) + hint + context),
+                (f"Generate exactly {need} {req.difficulty} descriptive interview questions "
+                 f"on: {skills}. Each must cover a distinct sub-topic and must NOT duplicate "
+                 "any of these existing questions:\n- "
+                 + "\n- ".join(avoid[:60] or ["(none)"]) + hint + context),
                 _GEN_SCHEMA)
             usages.append(gu)
-            candidates = [ComposedQuestion(prompt=str(q.get("prompt", "")), topic=str(q.get("topic", "")))
-                          for q in gen.get("questions", []) if q.get("prompt")]
+            candidates = [
+                ComposedQuestion(prompt=str(q.get("prompt", "")), topic=str(q.get("topic", "")))
+                for q in gen.get("questions", []) if q.get("prompt")]
             crit, cu = self.client.complete_json(
                 "You are a strict interview-question reviewer.",
-                (f"For {req.difficulty} questions on {skills}, review each question below in order. "
-                 "Accept only if it is on-topic, clearly at the target difficulty, unambiguous, and not a "
-                 "near-duplicate of another. Return a review per question with accept and a short reason.\n\n"
+                (f"For {req.difficulty} questions on {skills}, review each question below in "
+                 "order. Accept only if it is on-topic, clearly at the target difficulty, "
+                 "unambiguous, and not a near-duplicate of another. Return a review per "
+                 "question with accept and a short reason.\n\n"
                  + "\n".join(f"{i+1}. {c.prompt}" for i, c in enumerate(candidates))),
                 _CRIT_SCHEMA)
             usages.append(cu)

@@ -16,7 +16,8 @@ logger = logging.getLogger(__name__)
 @router.post("/questions:compose", response_model=ComposeResponse)
 def compose(request: ComposeRequest, x_service_token: str = Header(default="")) -> ComposeResponse:
     if not secrets.compare_digest(x_service_token, settings.ai_service_token):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid service token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid service token")
     try:
         response = agent.compose(request)
         logger.info("Interview composed", extra={

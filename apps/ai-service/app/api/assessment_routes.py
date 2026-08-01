@@ -20,7 +20,8 @@ logger = logging.getLogger(__name__)
 
 def _authorize(token: str) -> None:
     if not secrets.compare_digest(token, settings.ai_service_token):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid service token")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid service token")
 
 
 @router.post("/answers:evaluate", response_model=EvaluateAnswersResponse)
