@@ -63,7 +63,10 @@ def phaseQualityClasses = {
             'com/onlineinterview/messaging/**',
             'com/onlineinterview/profile/application/ProfileService*',
             'com/onlineinterview/profile/domain/UserProfile*',
-            'com/onlineinterview/shared/security/TenantClaim*'
+            'com/onlineinterview/shared/security/TenantClaim*',
+            'com/onlineinterview/session/domain/**',
+            'com/onlineinterview/interview/domain/**',
+            'com/onlineinterview/review/domain/**'
         ])
     })
 }

@@ -67,7 +67,7 @@ class AiQuestionServiceTest {
         var knowledge = mock(KnowledgeService.class);
         var metrics = mock(RagQualityMetrics.class);
         var service = new AiQuestionService(definitions, questions, client, knowledge,
-                new RagProperties(), metrics);
+                new RagProperties(), metrics, mock(CompositionJobStore.class), selfProvider());
         var collectionId = UUID.randomUUID();
         var interview = InterviewDefinition.draft("owner", "Java RAG", "Grounded interview",
                 List.of("Java"), InterviewDifficulty.MEDIUM, QuestionMode.RAG, 60, 1, 70,
