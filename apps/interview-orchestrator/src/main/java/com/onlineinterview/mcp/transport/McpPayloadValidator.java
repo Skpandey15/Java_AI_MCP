@@ -1,6 +1,6 @@
 package com.onlineinterview.mcp.transport;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import java.util.HashSet;
 import java.util.Set;
 import org.springframework.stereotype.Component;
@@ -32,9 +32,9 @@ public class McpPayloadValidator {
 
     private void validateObject(JsonNode value, JsonNode schema, String path) {
         Set<String> allowed = new HashSet<>();
-        schema.path("properties").fieldNames().forEachRemaining(allowed::add);
+        schema.path("properties").propertyNames().forEach(allowed::add);
         if (!schema.path("additionalProperties").asBoolean(true)) {
-            value.fieldNames().forEachRemaining(name -> {
+            value.propertyNames().forEach(name -> {
                 if (!allowed.contains(name)) {
                     throw new McpProtocolException(-32602,
                             "Unexpected MCP property at " + path + "." + name);

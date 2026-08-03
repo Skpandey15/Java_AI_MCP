@@ -1,34 +1,50 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { interviewApi, type SubmissionSummary } from '../api/interviewApi'
+import { interviewApi, type Profile, type SubmissionSummary } from '../api/interviewApi'
 
 export function InterviewerSubmissionsPage() {
   const navigate = useNavigate()
   const [submissions, setSubmissions] = useState<SubmissionSummary[]>([])
+  const [candidates, setCandidates] = useState<Profile[]>([])
+  const [candidateId, setCandidateId] = useState('')
   const [error, setError] = useState('')
   const [page, setPage] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    interviewApi.candidates().then(setCandidates).catch(() => { /* dropdown optional */ })
+  }, [])
+
+  useEffect(() => {
     setLoading(true)
     setError('')
-    interviewApi.submissions(page).then((result) => {
+    interviewApi.submissions(page, 20, candidateId).then((result) => {
       setSubmissions(result.content)
       setTotalPages(result.totalPages)
     }).catch((value: unknown) =>
       setError(value instanceof Error ? value.message : 'Unable to load submissions'))
       .finally(() => setLoading(false))
-  }, [page])
+  }, [page, candidateId])
 
   return <main className="dashboard">
     <div className="dashboard-header">
       <div><p className="eyebrow">Interviewer workspace</p><h1>Submission reviews</h1></div>
       <button className="secondary-button" onClick={() => navigate('/interviewer')}>Interview management</button>
     </div>
+    <label className="submission-filter">Candidate
+      <select value={candidateId} onChange={(event) => { setPage(0); setCandidateId(event.target.value) }}>
+        <option value="">All candidates</option>
+        {candidates.map((candidate) => <option key={candidate.id} value={candidate.id}>
+          {candidate.displayName} — {candidate.email}
+        </option>)}
+      </select>
+    </label>
     {error && <p className="error-message">{error}</p>}
     {loading && <p>Loading submissions…</p>}
-    {!loading && !error && submissions.length === 0 && <p>No submitted interviews were found.</p>}
+    {!loading && !error && submissions.length === 0 && <p>
+      {candidateId ? 'This candidate has no completed interviews.' : 'No submitted interviews were found.'}
+    </p>}
     <div className="card-grid">
       {submissions.map((submission) => <article className="card" key={submission.sessionId}>
         <div className="card-heading"><h2>{submission.interviewTitle}</h2><span className="badge">{submission.reviewStatus.replaceAll('_', ' ')}</span></div>

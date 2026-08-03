@@ -36,13 +36,13 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 25
       - uses: gradle/actions/setup-gradle@v4
       - run: chmod +x gradlew
-      - name: Build and test with bounded dependency-download retry
+      - name: Build, test, and verify coverage with bounded dependency-download retry
         run: |
           for attempt in 1 2 3; do
-            if ./gradlew clean test bootJar --no-daemon; then
+            if ./gradlew clean test jacocoTestCoverageVerification bootJar --no-daemon; then
               exit 0
             fi
             if [ "$attempt" -eq 3 ]; then
@@ -60,7 +60,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.13"
       - run: python -m pip install uv==0.8.22
       - run: uv sync --frozen --extra dev
       - run: uv run --extra dev ruff check .

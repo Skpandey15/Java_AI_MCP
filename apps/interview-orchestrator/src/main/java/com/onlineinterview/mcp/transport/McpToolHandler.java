@@ -1,6 +1,6 @@
 package com.onlineinterview.mcp.transport;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.onlineinterview.mcp.application.McpAuthorizationContext;
 
 public interface McpToolHandler {

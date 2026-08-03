@@ -1,7 +1,7 @@
 package com.onlineinterview.mcp.transport;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.onlineinterview.mcp.application.McpAuthorizationContext;
 import com.onlineinterview.mcp.domain.McpAiEvaluation;
 import com.onlineinterview.mcp.infrastructure.McpAiEvaluationRepository;

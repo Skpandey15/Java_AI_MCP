@@ -63,13 +63,26 @@ public class InterviewSession {
     }
 
     public void submit(Instant now) {
-        enforceExpiry(now);
         if (state != SessionState.IN_PROGRESS) {
             throw new IllegalStateException("Only an active session can be submitted");
         }
         state = SessionState.SUBMITTED;
-        submittedAt = now;
+        submittedAt = now.isAfter(expiresAt) ? expiresAt : now;
         reviewStatus = ReviewStatus.PENDING_REVIEW;
+    }
+
+    /** Auto-submit a session whose time has run out so it is scored and queued for review,
+     *  instead of dead-ending in EXPIRED. Returns true if it transitioned. Idempotent once
+     *  submitted (the scheduled sweep and lazy access paths both call this safely). */
+    public boolean autoSubmitIfExpired(Instant now) {
+        if ((state == SessionState.IN_PROGRESS || state == SessionState.EXPIRED)
+                && !now.isBefore(expiresAt)) {
+            state = SessionState.SUBMITTED;
+            submittedAt = expiresAt;
+            reviewStatus = ReviewStatus.PENDING_REVIEW;
+            return true;
+        }
+        return false;
     }
 
     public void recordObjectiveScore(int score) {

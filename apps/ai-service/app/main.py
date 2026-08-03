@@ -11,6 +11,7 @@ from app.api.embedding_routes import router as embedding_router
 from app.api.question_routes import router as question_router
 from app.api.topic_routes import router as topic_router
 from app.observability import configure_logging, request_context
+from app.tracing import configure_tracing
 
 configure_logging()
 
@@ -27,6 +28,7 @@ app = FastAPI(
     description="Question generation, RAG and evaluation capabilities.",
 )
 app.middleware("http")(request_context)
+configure_tracing(app)
 app.include_router(question_router)
 app.include_router(embedding_router)
 app.include_router(assessment_router)

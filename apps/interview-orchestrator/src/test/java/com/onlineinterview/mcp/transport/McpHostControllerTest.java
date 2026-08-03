@@ -3,8 +3,8 @@ package com.onlineinterview.mcp.transport;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import com.onlineinterview.mcp.application.*;
 import com.onlineinterview.mcp.domain.*;
 import java.time.Instant;
@@ -121,7 +121,7 @@ class McpHostControllerTest {
         return session;
     }
 
-    private void assertError(org.springframework.http.ResponseEntity<com.fasterxml.jackson.databind.JsonNode> response,
+    private void assertError(org.springframework.http.ResponseEntity<tools.jackson.databind.JsonNode> response,
             int code) {
         assertThat(response.getBody().path("error").path("code").asInt()).isEqualTo(code);
     }

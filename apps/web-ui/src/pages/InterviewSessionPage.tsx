@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { interviewApi, type InterviewSession, type Question } from '../api/interviewApi'
 
@@ -17,6 +17,7 @@ export function InterviewSessionPage() {
   const [status, setStatus] = useState('')
   const [statusError, setStatusError] = useState(false)
   const [statusNonce, setStatusNonce] = useState(0)
+  const autoSubmittedRef = useRef(false)
 
   const note = (text: string, error = false) => {
     setStatus(text); setStatusError(error); setStatusNonce((n) => n + 1)
@@ -72,8 +73,8 @@ export function InterviewSessionPage() {
     void save(questionId, content)
   }
 
-  async function submit() {
-    if (!session || !window.confirm('Submit this interview? Answers cannot be changed afterward.')) return
+  async function doSubmit() {
+    if (!session) return
     try {
       const submitted = await interviewApi.submitSession(session.id)
       setSession(submitted)
@@ -82,6 +83,20 @@ export function InterviewSessionPage() {
       note(error instanceof Error ? error.message : 'Unable to submit interview.', true)
     }
   }
+
+  async function submit() {
+    if (!window.confirm('Submit this interview? Answers cannot be changed afterward.')) return
+    await doSubmit()
+  }
+
+  // Auto-submit when the timer reaches zero so the candidate never ends up stuck at 0.
+  useEffect(() => {
+    if (session?.state === 'IN_PROGRESS' && secondsLeft === 0 && !autoSubmittedRef.current) {
+      autoSubmittedRef.current = true
+      note('Time is up — submitting your interview…')
+      void doSubmit()
+    }
+  }, [secondsLeft, session?.state]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function answerControl(question: Question) {
     const disabled = session?.state !== 'IN_PROGRESS' || secondsLeft === 0

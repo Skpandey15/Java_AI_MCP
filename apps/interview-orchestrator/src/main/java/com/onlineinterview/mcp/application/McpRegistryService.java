@@ -1,6 +1,6 @@
 package com.onlineinterview.mcp.application;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.onlineinterview.mcp.domain.McpAccessType;
 import com.onlineinterview.mcp.domain.McpClassification;
 import com.onlineinterview.mcp.domain.McpTransport;

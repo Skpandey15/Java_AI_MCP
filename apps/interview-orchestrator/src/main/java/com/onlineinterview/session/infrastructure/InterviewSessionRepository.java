@@ -1,7 +1,9 @@
 package com.onlineinterview.session.infrastructure;
 
 import com.onlineinterview.session.domain.InterviewSession;
+import com.onlineinterview.session.domain.ReviewStatus;
 import com.onlineinterview.session.domain.SessionState;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,6 +29,10 @@ public interface InterviewSessionRepository extends JpaRepository<InterviewSessi
             String ownerSubject, SessionState state, Pageable pageable);
 
     @EntityGraph(attributePaths = {"assignment", "assignment.interviewDefinition"})
+    Page<InterviewSession> findByAssignment_InterviewDefinition_OwnerSubjectAndStateAndCandidateId(
+            String ownerSubject, SessionState state, UUID candidateId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"assignment", "assignment.interviewDefinition"})
     Optional<InterviewSession> findByIdAndAssignment_InterviewDefinition_OwnerSubject(
             UUID id, String ownerSubject);
 
@@ -34,4 +40,9 @@ public interface InterviewSessionRepository extends JpaRepository<InterviewSessi
     List<InterviewSession> findByCandidateIdOrderByStartedAtDesc(UUID candidateId);
 
     long countByAssignmentId(UUID assignmentId);
+
+    // Un-submitted sessions whose time has run out — the scheduled sweep auto-finalizes these.
+    @EntityGraph(attributePaths = {"assignment", "assignment.interviewDefinition"})
+    List<InterviewSession> findByExpiresAtBeforeAndReviewStatus(
+            Instant cutoff, ReviewStatus reviewStatus);
 }

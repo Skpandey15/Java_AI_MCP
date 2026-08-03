@@ -1,7 +1,7 @@
 package com.onlineinterview.ai;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.onlineinterview.common.api.CorrelationIdFilter;
 import com.onlineinterview.common.resilience.DownstreamCallExecutor;
 import com.onlineinterview.interview.domain.QuestionComposition;
@@ -106,7 +106,7 @@ public class AiQuestionClient {
     private byte[] jsonBody(GenerationRequest request) {
         try {
             return objectMapper.writeValueAsBytes(request);
-        } catch (JsonProcessingException exception) {
+        } catch (JacksonException exception) {
             throw new IllegalArgumentException("Unable to serialize AI generation request", exception);
         }
     }

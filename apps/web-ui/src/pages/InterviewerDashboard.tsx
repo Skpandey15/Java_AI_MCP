@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  interviewApi, type AdminQuestion, type Assignment, type Interview, type KnowledgeCollection,
-  type KnowledgeDocument, type Profile, type QuestionType,
+  interviewApi, type AdminQuestion, type Assignment, type ComposeJob, type Interview,
+  type KnowledgeCollection, type KnowledgeDocument, type Profile, type QuestionType,
 } from '../api/interviewApi'
 import { useAuth } from '../auth/AuthProvider'
 
@@ -48,9 +48,166 @@ const ecosystemTechnologies = {
     'SonarQube', 'Trivy', 'JFrog Artifactory', 'GitOps',
     'Blue-Green Deployment', 'Canary Deployment', 'Pipeline as Code',
   ],
+  DESIGN_PRINCIPLES: [
+    'Single Responsibility Principle', 'Open/Closed Principle', 'Liskov Substitution Principle',
+    'Interface Segregation Principle', 'Dependency Inversion Principle', 'DRY', 'KISS', 'YAGNI',
+    'Separation of Concerns', 'Cohesion and Coupling', 'Composition over Inheritance',
+    'Encapsulation', 'Law of Demeter', 'Dependency Injection', 'Fail Fast',
+    'Principle of Least Astonishment', 'Clean Code',
+  ],
+  DESIGN_PATTERNS: [
+    'Design Patterns Overview', 'Singleton', 'Factory Method', 'Abstract Factory', 'Builder',
+    'Prototype', 'Adapter', 'Decorator', 'Facade', 'Proxy', 'Composite', 'Bridge',
+    'Observer', 'Strategy', 'Command', 'State', 'Template Method', 'Iterator', 'Mediator',
+    'Chain of Responsibility', 'Visitor', 'Repository Pattern', 'Model-View-Controller (MVC)',
+  ],
+  LEADERSHIP: [
+    'Team Management', 'Mentoring and Coaching', 'Conflict Resolution', 'Decision Making',
+    'Delegation', 'Communication', 'Stakeholder Management', 'Strategic Thinking',
+    'Emotional Intelligence', 'Giving and Receiving Feedback', 'Motivation and Influence',
+    'Ownership and Accountability', 'Change Management', 'Hiring and Interviewing',
+    'Cross-functional Collaboration', 'Time and Priority Management',
+  ],
+  JAVA_AI: [
+    'Spring AI', 'LangChain4j', 'Deep Java Library (DJL)', 'Semantic Kernel (Java)',
+    'RAG with Spring AI', 'Embeddings in Java', 'Vector Stores (Java)',
+    'Tool/Function Calling (Java)', 'Structured Output (Java)', 'Chat Memory',
+    'Prompt Templates (Java)', 'Spring AI Advisors', 'MCP Java SDK',
+    'Streaming Responses (Java)', 'Ollama on the JVM', 'LLM Observability (Micrometer)',
+  ],
+  CLOUD: [
+    'AWS', 'AWS Lambda', 'Amazon S3', 'Amazon EKS', 'Amazon Bedrock', 'Amazon RDS',
+    'Microsoft Azure', 'Azure Functions', 'Azure OpenAI', 'Azure Kubernetes Service',
+    'Google Cloud Platform', 'Cloud Run', 'Vertex AI', 'Serverless Architecture',
+    'Infrastructure as Code', 'Cloud IAM', 'Cloud Cost Optimization', 'Multi-Cloud Strategy',
+  ],
+  ARCHITECTURE: [
+    'Domain-Driven Design', 'Bounded Contexts', 'Aggregates and Entities', 'Ubiquitous Language',
+    'Hexagonal Architecture', 'Clean Architecture', 'CQRS', 'Event Sourcing',
+    'Microservices Decomposition', 'Monolith vs Microservices', 'Modular Monolith',
+    'Event-Driven Architecture', 'Saga Pattern', 'Strangler Fig Pattern', 'C4 Model',
+    'Architecture Decision Records', 'Architecture Trade-off Analysis', 'API Gateway Pattern',
+  ],
+  SECURITY: [
+    'Application Security', 'OWASP Top 10', 'OAuth 2.0', 'OpenID Connect', 'JWT',
+    'Zero Trust Architecture', 'Secrets Management', 'Key Management (KMS)',
+    'Encryption at Rest and in Transit', 'TLS and mTLS', 'Threat Modeling', 'SAST and DAST',
+    'Supply-Chain Security', 'API Security', 'Identity and Access Management', 'GDPR',
+    'SOC 2', 'Secure Coding Practices',
+  ],
+  INTERVIEW_STYLE: [
+    'Tricky Java Questions', 'Concurrency Gotchas', 'JVM Memory Puzzles', 'Collections Edge Cases',
+    'Spring Boot Pitfalls', 'Debugging Scenarios', 'Production Incident Scenarios',
+    'Performance Troubleshooting', 'System Design Use Cases', 'Real-world Architecture Cases',
+    'API Design Trade-off Cases', 'Distributed Systems Failure Scenarios',
+    'Security Vulnerability Scenarios', 'Data Modeling Cases', 'Refactoring Scenarios',
+    'GenAI Use-Case Design', 'Behavioral Situational (STAR)', 'Estimation Questions',
+  ],
+  OBSERVABILITY: [
+    'Observability Fundamentals', 'Metrics', 'Logging', 'Distributed Tracing', 'OpenTelemetry',
+    'Prometheus', 'Grafana', 'Loki', 'Tempo', 'Jaeger', 'Micrometer', 'SLI, SLO, SLA',
+    'Error Budgets', 'Golden Signals', 'Alerting', 'Incident Response', 'Postmortems',
+    'On-Call Practices', 'Chaos Engineering', 'Capacity Planning',
+  ],
+  DATA_ENGINEERING: [
+    'Data Pipelines', 'ETL and ELT', 'Batch Processing', 'Stream Processing', 'Kafka Streams',
+    'Apache Flink', 'Apache Spark', 'Change Data Capture', 'Data Lakes', 'Data Warehouses',
+    'Data Lakehouse', 'Apache Airflow', 'dbt', 'Delta Lake', 'Schema Evolution',
+    'Feature Stores', 'Data Quality', 'Data Governance', 'Data Mesh',
+  ],
+  AI_GOVERNANCE: [
+    'Responsible AI', 'AI Governance', 'LLM Evaluation', 'Guardrails', 'Hallucination Mitigation',
+    'Prompt Injection Defense', 'PII and Data Privacy', 'Bias and Fairness', 'Explainability',
+    'Model Registry', 'Model Monitoring', 'Drift Detection', 'LLMOps', 'AI Red Teaming',
+    'Content Moderation', 'Human-in-the-Loop', 'AI Cost and Latency Optimization', 'EU AI Act',
+    'Model Cards', 'Audit and Traceability',
+  ],
+  DATA_STRUCTURES: [
+    'Arrays', 'Strings', 'Linked Lists', 'Stacks', 'Queues', 'Hash Tables', 'Sets', 'Trees',
+    'Binary Search Trees', 'Heaps and Priority Queues', 'Tries', 'Graphs',
+    'Balanced Trees (AVL, Red-Black)', 'Segment Trees', 'Fenwick Tree (BIT)',
+    'Union-Find (Disjoint Set)', 'LRU Cache', 'Skip Lists', 'Bloom Filters',
+  ],
+  ALGORITHMS: [
+    'Time and Space Complexity', 'Sorting Algorithms', 'Searching Algorithms', 'Binary Search',
+    'Two Pointers', 'Sliding Window', 'Recursion', 'Backtracking', 'Divide and Conquer',
+    'Greedy Algorithms', 'Dynamic Programming', 'Graph Traversal (BFS and DFS)',
+    'Shortest Path (Dijkstra, Bellman-Ford)', 'Minimum Spanning Tree', 'Topological Sort',
+    'Bit Manipulation', 'String Matching', 'Hashing Techniques',
+  ],
+  PERFORMANCE: [
+    'Garbage Collection Tuning', 'JIT Compilation', 'Heap and Memory Profiling',
+    'Memory Leak Detection', 'Escape Analysis', 'Java Flight Recorder (JFR)', 'async-profiler',
+    'VisualVM', 'JMH Microbenchmarking', 'Flame Graphs', 'JMeter', 'Gatling', 'k6',
+    'Load and Stress Testing', 'Soak Testing', 'Connection Pooling', 'Caching Strategies',
+    'N+1 Query Problem', 'Database Query Optimization', 'Lazy vs Eager Loading', 'Batching',
+    'Virtual Threads (Project Loom)', 'Reactive and Non-Blocking (WebFlux)', 'Thread-Pool Tuning',
+    'Backpressure', 'Latency vs Throughput', 'Tail Latency (p99)', 'Performance Budgets',
+    'Application Performance Monitoring (APM)', 'Compression and Payload Size', 'Amdahl’s Law',
+  ],
+  TESTING: [
+    'Testing Fundamentals', 'Test Pyramid', 'Unit Testing', 'Integration Testing',
+    'End-to-End Testing', 'Test-Driven Development (TDD)', 'Behavior-Driven Development (BDD)',
+    'JUnit 5', 'Mockito', 'Testcontainers', 'Contract Testing (Pact)', 'Mutation Testing',
+    'Property-Based Testing', 'Code Coverage', 'Mocking and Stubbing', 'Test Doubles',
+    'Test Automation Strategy', 'Regression Testing', 'Flaky Test Management',
+  ],
+  API_DESIGN: [
+    'API Design Fundamentals', 'REST', 'RESTful Maturity (Richardson)', 'GraphQL', 'gRPC',
+    'API Versioning', 'OpenAPI and Swagger', 'Idempotent APIs', 'Pagination and Filtering',
+    'HATEOAS', 'Webhooks', 'API Error Handling', 'Authentication for APIs', 'API Rate Limiting',
+    'API Contracts', 'Enterprise Integration Patterns', 'Message-Based Integration',
+    'Backend for Frontend (BFF)',
+  ],
+  OS_LINUX: [
+    'Operating System Fundamentals', 'Processes and Threads', 'Process Scheduling',
+    'Memory Management', 'Virtual Memory', 'Paging and Segmentation', 'File Systems',
+    'Inter-Process Communication', 'System Calls', 'Concurrency and Deadlocks',
+    'Linux Command Line', 'Shell Scripting', 'Signals', 'Namespaces and cgroups',
+    'CPU and I/O Scheduling', 'Kernel vs User Space',
+  ],
+  NETWORKING: [
+    'Networking Fundamentals', 'OSI Model', 'TCP/IP', 'UDP', 'HTTP/1.1', 'HTTP/2',
+    'HTTP/3 and QUIC', 'HTTPS and TLS Handshake', 'DNS', 'WebSockets', 'Load Balancing Algorithms',
+    'Reverse Proxies', 'Content Delivery Networks', 'Firewalls and NAT', 'Sockets',
+    'Network Latency and Bandwidth',
+  ],
+  MACHINE_LEARNING: [
+    'Machine Learning Fundamentals', 'Supervised Learning', 'Unsupervised Learning', 'Regression',
+    'Classification', 'Clustering', 'Decision Trees and Random Forests', 'Gradient Boosting (XGBoost)',
+    'Feature Engineering', 'Data Preprocessing', 'Model Evaluation Metrics',
+    'Overfitting and Regularization', 'Cross-Validation', 'Neural Networks Basics',
+    'Model Training and Tuning', 'MLOps', 'Model Deployment',
+  ],
+  CODE_QUALITY: [
+    'Coding Standards and Style Guides', 'Naming Conventions', 'Code Formatting (Spotless)',
+    'EditorConfig', 'Checkstyle', 'PMD', 'SpotBugs', 'SonarLint', 'ESLint and Prettier',
+    'Static Code Analysis', 'Code Review Practices', 'Pull Request Etiquette',
+    'Javadoc and Documentation', 'Readability and Maintainability', 'Cyclomatic Complexity',
+    'Technical Debt Management', 'Linting Gates in CI', 'Null-Safety and Optional',
+    'Immutability Conventions', 'Error-Handling and Logging Standards',
+  ],
 } as const
 
 type Ecosystem = keyof typeof ecosystemTechnologies
+
+const ecosystemLabels: Record<Ecosystem, string> = {
+  JAVA: 'Java', PYTHON: 'Python', UI: 'UI', DATABASE: 'Database', AI: 'AI',
+  SYSTEM_DESIGN: 'System Design', CI_CD: 'CI/CD', DESIGN_PRINCIPLES: 'Software Design Principles',
+  DESIGN_PATTERNS: 'Design Patterns', LEADERSHIP: 'Leadership Quality',
+  JAVA_AI: 'GenAI on the JVM (Java)', CLOUD: 'Cloud & Serverless',
+  ARCHITECTURE: 'Software Architecture & DDD', SECURITY: 'Security & Compliance',
+  INTERVIEW_STYLE: 'Tricky & Use-Case Questions', OBSERVABILITY: 'Observability & SRE',
+  DATA_ENGINEERING: 'Data & Streaming Engineering', AI_GOVERNANCE: 'AI Governance & Responsible AI',
+  DATA_STRUCTURES: 'Data Structures', ALGORITHMS: 'Algorithms',
+  PERFORMANCE: 'Performance Engineering', TESTING: 'Testing & Quality Engineering',
+  API_DESIGN: 'API Design & Integration', OS_LINUX: 'Operating Systems & Linux',
+  NETWORKING: 'Networking & Protocols', MACHINE_LEARNING: 'Machine Learning (Classical & MLOps)',
+  CODE_QUALITY: 'Code Quality & Standards',
+}
+
+const sortedEcosystems = (Object.keys(ecosystemLabels) as Ecosystem[])
+  .sort((a, b) => ecosystemLabels[a].localeCompare(ecosystemLabels[b]))
 
 const technologyDescriptions: Record<string, string> = {
   Java: 'A general-purpose JVM language widely used for enterprise and backend systems.',
@@ -179,6 +336,381 @@ const technologyDescriptions: Record<string, string> = {
   'Blue-Green Deployment': 'A release strategy that switches traffic between two identical environments to minimize downtime.',
   'Canary Deployment': 'A progressive rollout that shifts a small traffic share to a new version before full release.',
   'Pipeline as Code': 'Defining build and deployment pipelines in version-controlled files alongside application code.',
+  'Single Responsibility Principle': 'A class or module should have one, and only one, reason to change.',
+  'Open/Closed Principle': 'Software entities should be open for extension but closed for modification.',
+  'Liskov Substitution Principle': 'Subtypes must be substitutable for their base types without breaking behavior.',
+  'Interface Segregation Principle': 'Clients should not be forced to depend on interfaces they do not use.',
+  'Dependency Inversion Principle': 'Depend on abstractions, not concretions; high-level modules should not depend on low-level ones.',
+  DRY: 'Don’t Repeat Yourself — every piece of knowledge should have a single, authoritative representation.',
+  KISS: 'Keep It Simple — favor the simplest design that solves the problem.',
+  YAGNI: 'You Aren’t Gonna Need It — don’t build functionality until it is actually required.',
+  'Separation of Concerns': 'Divide a system into distinct sections, each addressing a separate responsibility.',
+  'Cohesion and Coupling': 'Aim for high cohesion within modules and low coupling between them.',
+  'Composition over Inheritance': 'Prefer assembling behavior from components over deep inheritance hierarchies.',
+  Encapsulation: 'Hide internal state and expose behavior through a well-defined interface.',
+  'Law of Demeter': 'A unit should only talk to its immediate collaborators, not reach through them.',
+  'Dependency Injection': 'Supply a component’s dependencies from outside rather than constructing them internally.',
+  'Fail Fast': 'Detect and surface errors as early as possible instead of continuing in a bad state.',
+  'Principle of Least Astonishment': 'Designs should behave the way users and developers reasonably expect.',
+  'Clean Code': 'Readable, well-named, small-function code that is easy to understand and change.',
+  'Design Patterns Overview': 'Reusable, named solutions to recurring software design problems.',
+  Singleton: 'Ensures a class has a single instance with a global access point.',
+  'Factory Method': 'Defers object creation to subclasses via a common creation interface.',
+  'Abstract Factory': 'Creates families of related objects without specifying their concrete classes.',
+  Builder: 'Constructs a complex object step by step, separating construction from representation.',
+  Prototype: 'Creates new objects by cloning an existing instance.',
+  Adapter: 'Converts one interface into another that clients expect.',
+  Decorator: 'Adds responsibilities to an object dynamically without changing its class.',
+  Facade: 'Provides a simplified interface to a larger, complex subsystem.',
+  Proxy: 'A surrogate that controls access to another object.',
+  Composite: 'Treats individual objects and compositions of objects uniformly in a tree structure.',
+  Bridge: 'Decouples an abstraction from its implementation so they can vary independently.',
+  Observer: 'Notifies dependent objects automatically when a subject’s state changes.',
+  Strategy: 'Encapsulates interchangeable algorithms behind a common interface.',
+  Command: 'Encapsulates a request as an object, enabling queuing, logging, and undo.',
+  State: 'Lets an object alter its behavior when its internal state changes.',
+  'Template Method': 'Defines the skeleton of an algorithm, deferring some steps to subclasses.',
+  Iterator: 'Provides sequential access to elements of a collection without exposing its structure.',
+  Mediator: 'Centralizes complex communication between related objects.',
+  'Chain of Responsibility': 'Passes a request along a chain of handlers until one handles it.',
+  Visitor: 'Adds operations to object structures without modifying their classes.',
+  'Repository Pattern': 'Abstracts data access behind a collection-like interface.',
+  'Model-View-Controller (MVC)': 'Separates an application into model, view, and controller responsibilities.',
+  'Team Management': 'Leading, organizing, and developing a team to deliver effectively.',
+  'Mentoring and Coaching': 'Growing others’ skills and careers through guidance and feedback.',
+  'Conflict Resolution': 'Addressing disagreements constructively to reach workable outcomes.',
+  'Decision Making': 'Weighing options and trade-offs to choose a course of action under uncertainty.',
+  Delegation: 'Assigning ownership and authority appropriately to develop the team and scale impact.',
+  Communication: 'Conveying ideas clearly and listening actively across audiences.',
+  'Stakeholder Management': 'Aligning expectations and building trust with partners across the organization.',
+  'Strategic Thinking': 'Connecting day-to-day work to longer-term goals and direction.',
+  'Emotional Intelligence': 'Recognizing and managing one’s own and others’ emotions effectively.',
+  'Giving and Receiving Feedback': 'Exchanging candid, actionable feedback to drive improvement.',
+  'Motivation and Influence': 'Inspiring and persuading others without relying solely on authority.',
+  'Ownership and Accountability': 'Taking responsibility for outcomes and following through on commitments.',
+  'Change Management': 'Guiding teams through organizational or technical change.',
+  'Hiring and Interviewing': 'Assessing candidates fairly and building strong, diverse teams.',
+  'Cross-functional Collaboration': 'Working effectively across disciplines and organizational boundaries.',
+  'Time and Priority Management': 'Focusing effort on the highest-impact work amid competing demands.',
+  'Spring AI': 'Spring’s framework for building AI applications with portable model, RAG, and tool abstractions.',
+  LangChain4j: 'A Java library for LLM apps — chains, agents, RAG, memory, and tool calling on the JVM.',
+  'Deep Java Library (DJL)': 'An engine-agnostic deep-learning library for training and inference in Java.',
+  'Semantic Kernel (Java)': 'Microsoft’s SDK for orchestrating LLMs, plugins, and planners from Java.',
+  'RAG with Spring AI': 'Building retrieval-augmented generation pipelines using Spring AI’s document and vector APIs.',
+  'Embeddings in Java': 'Generating and using vector embeddings for search and similarity from Java.',
+  'Vector Stores (Java)': 'Integrating pgvector, Redis, Milvus, or Pinecone through Java/Spring vector-store clients.',
+  'Tool/Function Calling (Java)': 'Letting an LLM invoke Java methods/functions as tools during a conversation.',
+  'Structured Output (Java)': 'Coercing LLM responses into typed Java objects or JSON schemas.',
+  'Chat Memory': 'Persisting and windowing conversation history for multi-turn LLM interactions.',
+  'Prompt Templates (Java)': 'Parameterized, reusable prompt definitions managed in Java.',
+  'Spring AI Advisors': 'Interceptors that augment Spring AI calls with RAG, memory, logging, or safety.',
+  'MCP Java SDK': 'Building Model Context Protocol clients and servers in Java to expose tools and resources.',
+  'Streaming Responses (Java)': 'Consuming token-streamed LLM output reactively (Flux) in Java services.',
+  'Ollama on the JVM': 'Running and calling local models via Ollama from Java/Spring applications.',
+  'LLM Observability (Micrometer)': 'Instrumenting token usage, latency, and cost of LLM calls with Micrometer metrics and traces.',
+  AWS: 'Amazon Web Services — the market-leading cloud platform of compute, storage, and managed services.',
+  'AWS Lambda': 'Serverless functions that run code on demand without managing servers.',
+  'Amazon S3': 'Highly durable object storage for files, backups, and data lakes.',
+  'Amazon EKS': 'Amazon’s managed Kubernetes service for running containerized workloads.',
+  'Amazon Bedrock': 'A managed service for building GenAI apps with foundation models via one API.',
+  'Amazon RDS': 'Managed relational databases (PostgreSQL, MySQL, etc.) with automated operations.',
+  'Microsoft Azure': 'Microsoft’s cloud platform for compute, data, identity, and AI services.',
+  'Azure Functions': 'Azure’s event-driven serverless compute service.',
+  'Azure OpenAI': 'Enterprise-hosted OpenAI models with Azure security, networking, and compliance.',
+  'Azure Kubernetes Service': 'Azure’s managed Kubernetes (AKS) for container orchestration.',
+  'Google Cloud Platform': 'Google’s cloud for compute, data, and AI, including Vertex AI.',
+  'Cloud Run': 'Google’s serverless platform for running containers that scale to zero.',
+  'Vertex AI': 'Google Cloud’s managed platform for training, tuning, and serving ML and GenAI models.',
+  'Serverless Architecture': 'Designing systems from managed, event-driven, auto-scaling building blocks.',
+  'Infrastructure as Code': 'Provisioning and versioning cloud infrastructure through declarative code.',
+  'Cloud IAM': 'Managing identities, roles, and least-privilege access to cloud resources.',
+  'Cloud Cost Optimization': 'Right-sizing, autoscaling, and governance to control cloud spend.',
+  'Multi-Cloud Strategy': 'Designing portable workloads and governance across more than one cloud provider.',
+  'Domain-Driven Design': 'Modeling software around the business domain and its ubiquitous language.',
+  'Bounded Contexts': 'Explicit boundaries within which a domain model and its terms are consistent.',
+  'Aggregates and Entities': 'Consistency boundaries and identity-bearing objects in a domain model.',
+  'Ubiquitous Language': 'A shared, precise vocabulary used by developers and domain experts alike.',
+  'Hexagonal Architecture': 'Ports-and-adapters design that isolates the core domain from external concerns.',
+  'Clean Architecture': 'Layered design with dependencies pointing inward toward stable business rules.',
+  CQRS: 'Command Query Responsibility Segregation — separate models for writes and reads.',
+  'Event Sourcing': 'Persisting state as an append-only log of domain events.',
+  'Microservices Decomposition': 'Splitting a system into independently deployable, domain-aligned services.',
+  'Monolith vs Microservices': 'Choosing between a single deployable and distributed services by trade-off.',
+  'Modular Monolith': 'A single deployable with strong internal module boundaries.',
+  'Saga Pattern': 'Managing distributed transactions as a sequence of compensable local steps.',
+  'Strangler Fig Pattern': 'Incrementally replacing a legacy system by routing features to the new one.',
+  'C4 Model': 'A hierarchy of context, container, component, and code diagrams for architecture.',
+  'Architecture Decision Records': 'Lightweight documents that capture significant architectural decisions and rationale.',
+  'Architecture Trade-off Analysis': 'Reasoning about competing quality attributes to justify a design choice.',
+  'API Gateway Pattern': 'A single entry point that routes, secures, and aggregates calls to services.',
+  'Application Security': 'Protecting applications against threats across their design, code, and runtime.',
+  'OWASP Top 10': 'The most critical web application security risks and how to mitigate them.',
+  'OAuth 2.0': 'A delegated authorization framework for granting scoped access via tokens.',
+  'OpenID Connect': 'An identity layer over OAuth 2.0 for authenticating users.',
+  JWT: 'JSON Web Tokens — signed, self-contained tokens for claims and authorization.',
+  'Zero Trust Architecture': 'Never-trust-always-verify security with per-request authentication and authorization.',
+  'Secrets Management': 'Securely storing, rotating, and accessing credentials and keys.',
+  'Key Management (KMS)': 'Centralized creation, rotation, and control of cryptographic keys.',
+  'Encryption at Rest and in Transit': 'Protecting data both when stored and while moving across networks.',
+  'TLS and mTLS': 'Transport encryption and mutual certificate-based service authentication.',
+  'Threat Modeling': 'Systematically identifying and mitigating potential attacks on a system.',
+  'SAST and DAST': 'Static and dynamic application security testing in the delivery pipeline.',
+  'Supply-Chain Security': 'Securing dependencies, builds, and artifacts against tampering (SBOM, signing).',
+  'API Security': 'Authentication, authorization, rate limiting, and input validation for APIs.',
+  'Identity and Access Management': 'Governing who can access what across systems and environments.',
+  GDPR: 'The EU regulation governing personal-data privacy and protection.',
+  'SOC 2': 'An audit framework for security, availability, and confidentiality controls.',
+  'Secure Coding Practices': 'Writing code that avoids common vulnerabilities by design.',
+  'Tricky Java Questions': 'Subtle Java behaviors and gotchas that test deep language understanding.',
+  'Concurrency Gotchas': 'Race conditions, visibility, and synchronization pitfalls in multithreaded code.',
+  'JVM Memory Puzzles': 'Heap, stack, GC, and memory-model scenarios that probe JVM internals.',
+  'Collections Edge Cases': 'Corner cases in equals/hashCode, iteration, ordering, and mutability.',
+  'Spring Boot Pitfalls': 'Common misconfigurations and surprising behaviors in Spring Boot apps.',
+  'Debugging Scenarios': 'Diagnosing a described failure from symptoms, logs, and reasoning.',
+  'Production Incident Scenarios': 'Handling realistic outages: triage, root cause, and mitigation.',
+  'Performance Troubleshooting': 'Finding and fixing latency, throughput, and resource bottlenecks.',
+  'System Design Use Cases': 'Designing a system for a concrete real-world requirement end to end.',
+  'Real-world Architecture Cases': 'Case studies that ask for architecture decisions and trade-offs.',
+  'API Design Trade-off Cases': 'Choosing between REST/gRPC/GraphQL and versioning strategies for a scenario.',
+  'Distributed Systems Failure Scenarios': 'Reasoning about partitions, retries, idempotency, and consistency under failure.',
+  'Security Vulnerability Scenarios': 'Spotting and remediating a vulnerability from a described situation.',
+  'Data Modeling Cases': 'Designing schemas and access patterns for a given domain and workload.',
+  'Refactoring Scenarios': 'Improving a described legacy design while preserving behavior.',
+  'GenAI Use-Case Design': 'Designing a practical AI feature: RAG, agents, evaluation, cost, and guardrails.',
+  'Behavioral Situational (STAR)': 'Situation-Task-Action-Result questions on collaboration and leadership.',
+  'Estimation Questions': 'Back-of-the-envelope capacity, throughput, and sizing estimates.',
+  'Observability Fundamentals': 'Understanding system behavior from metrics, logs, and traces together.',
+  Metrics: 'Numeric time-series signals (rates, latencies, saturation) for monitoring health.',
+  Logging: 'Structured, searchable event records for diagnosing behavior across services.',
+  'Distributed Tracing': 'Following a single request end to end across services via correlated spans.',
+  OpenTelemetry: 'A vendor-neutral standard and SDKs for generating metrics, logs, and traces.',
+  Prometheus: 'A time-series database and monitoring system with a powerful query language (PromQL).',
+  Grafana: 'A dashboarding and visualization platform for metrics, logs, and traces.',
+  Loki: 'A horizontally scalable, label-based log aggregation system by Grafana.',
+  Tempo: 'A high-scale distributed tracing backend by Grafana.',
+  Jaeger: 'An open-source, end-to-end distributed tracing system.',
+  Micrometer: 'A JVM metrics facade that instruments applications for many monitoring backends.',
+  'SLI, SLO, SLA': 'Service level indicators, objectives, and agreements that define reliability targets.',
+  'Error Budgets': 'The allowable amount of unreliability derived from an SLO, balancing risk and velocity.',
+  'Golden Signals': 'Latency, traffic, errors, and saturation — the core signals of service health.',
+  Alerting: 'Detecting and notifying on conditions that require attention, minimizing noise.',
+  'Incident Response': 'Coordinated triage, mitigation, and communication during outages.',
+  Postmortems: 'Blameless analysis of incidents to capture causes and preventive actions.',
+  'On-Call Practices': 'Sustainable rotations, escalation, and runbooks for operating services.',
+  'Chaos Engineering': 'Deliberately injecting failures to validate resilience assumptions.',
+  'Capacity Planning': 'Forecasting resource needs to meet demand without over-provisioning.',
+  'Data Pipelines': 'Automated flows that move and transform data between systems.',
+  'ETL and ELT': 'Extract-transform-load patterns for populating warehouses and lakes.',
+  'Batch Processing': 'Processing large, bounded datasets on a schedule.',
+  'Stream Processing': 'Processing unbounded event streams continuously and with low latency.',
+  'Kafka Streams': 'A Java library for building stateful stream-processing apps on Kafka.',
+  'Apache Flink': 'A distributed engine for stateful stream and batch processing.',
+  'Apache Spark': 'A unified analytics engine for large-scale batch and streaming data.',
+  'Change Data Capture': 'Streaming row-level database changes to downstream systems in near real time.',
+  'Data Lakes': 'Central repositories storing raw structured and unstructured data at scale.',
+  'Data Warehouses': 'Optimized stores for structured analytical queries and reporting.',
+  'Data Lakehouse': 'An architecture combining lake flexibility with warehouse management and performance.',
+  'Apache Airflow': 'A platform to author, schedule, and monitor data workflows as code.',
+  dbt: 'A tool for transforming warehouse data with version-controlled, tested SQL models.',
+  'Delta Lake': 'A storage layer bringing ACID transactions and versioning to data lakes.',
+  'Schema Evolution': 'Managing changes to data schemas without breaking producers or consumers.',
+  'Feature Stores': 'Centralized management of curated ML features for training and serving.',
+  'Data Quality': 'Ensuring accuracy, completeness, and consistency of data with checks and monitoring.',
+  'Data Governance': 'Policies for data ownership, lineage, access, and compliance.',
+  'Data Mesh': 'A decentralized approach treating data as a product owned by domain teams.',
+  'Responsible AI': 'Building AI that is fair, transparent, accountable, and safe.',
+  'AI Governance': 'Policies, roles, and controls for how AI systems are built, approved, and operated.',
+  'LLM Evaluation': 'Measuring model output quality, accuracy, and safety with datasets and judges.',
+  Guardrails: 'Input/output constraints that keep model behavior within safe, allowed bounds.',
+  'Hallucination Mitigation': 'Techniques (grounding, citations, verification) to reduce fabricated outputs.',
+  'Prompt Injection Defense': 'Protecting LLM systems from malicious instructions embedded in inputs.',
+  'PII and Data Privacy': 'Detecting and protecting personal data in prompts, outputs, and logs.',
+  'Bias and Fairness': 'Identifying and reducing unfair or discriminatory model behavior.',
+  Explainability: 'Making model decisions interpretable to stakeholders and auditors.',
+  'Model Registry': 'A versioned catalog of models with lineage, stages, and metadata.',
+  'Model Monitoring': 'Tracking model quality, latency, cost, and safety in production.',
+  'Drift Detection': 'Spotting shifts in input data or model performance over time.',
+  LLMOps: 'Operational practices for deploying, versioning, and monitoring LLM applications.',
+  'AI Red Teaming': 'Adversarially testing AI systems to uncover harmful or unsafe behavior.',
+  'Content Moderation': 'Filtering unsafe or policy-violating model inputs and outputs.',
+  'Human-in-the-Loop': 'Inserting human review or approval into AI-driven workflows.',
+  'AI Cost and Latency Optimization': 'Managing token cost, caching, routing, and latency of LLM systems.',
+  'EU AI Act': 'The EU’s risk-based regulation governing AI systems and their obligations.',
+  'Model Cards': 'Standardized documentation of a model’s intended use, data, and limitations.',
+  'Audit and Traceability': 'Recording AI decisions, prompts, and versions for accountability and review.',
+  Arrays: 'Contiguous, index-based collections with constant-time access.',
+  Strings: 'Sequences of characters and the algorithms that operate on them.',
+  'Linked Lists': 'Node-based sequences (singly/doubly) with efficient insertion and deletion.',
+  Stacks: 'Last-in-first-out structures used for recursion, undo, and parsing.',
+  Queues: 'First-in-first-out structures, including deques and circular queues.',
+  'Hash Tables': 'Key-value maps offering average constant-time lookup via hashing.',
+  Sets: 'Collections of unique elements with fast membership tests.',
+  Trees: 'Hierarchical node structures underpinning search, ordering, and indexing.',
+  'Binary Search Trees': 'Ordered trees enabling logarithmic search, insert, and delete when balanced.',
+  'Heaps and Priority Queues': 'Partially ordered trees giving fast access to the min or max element.',
+  Tries: 'Prefix trees for efficient string storage, lookup, and autocomplete.',
+  Graphs: 'Nodes and edges modeling networks, dependencies, and relationships.',
+  'Balanced Trees (AVL, Red-Black)': 'Self-balancing BSTs that guarantee logarithmic operations.',
+  'Segment Trees': 'Trees for efficient range queries and updates over an array.',
+  'Fenwick Tree (BIT)': 'A binary indexed tree for fast prefix-sum queries and updates.',
+  'Union-Find (Disjoint Set)': 'A structure for grouping elements and testing connectivity efficiently.',
+  'LRU Cache': 'A cache that evicts the least-recently-used entry, backed by a map and linked list.',
+  'Skip Lists': 'Probabilistic layered lists giving logarithmic search without tree balancing.',
+  'Bloom Filters': 'Space-efficient probabilistic sets that answer membership with no false negatives.',
+  'Time and Space Complexity': 'Analyzing algorithm cost with Big-O for runtime and memory.',
+  'Sorting Algorithms': 'Ordering data with quicksort, mergesort, heapsort, and their trade-offs.',
+  'Searching Algorithms': 'Locating elements efficiently in sorted or unsorted data.',
+  'Binary Search': 'Halving the search space each step to find items in sorted data in log time.',
+  'Two Pointers': 'Using two indices to scan or converge over a sequence efficiently.',
+  'Sliding Window': 'Maintaining a moving range to solve subarray/substring problems in linear time.',
+  Recursion: 'Solving problems by having a function call itself on smaller inputs.',
+  Backtracking: 'Exploring candidates and abandoning paths that cannot lead to a solution.',
+  'Divide and Conquer': 'Breaking a problem into subproblems, solving, and combining results.',
+  'Greedy Algorithms': 'Making the locally optimal choice at each step to reach a global solution.',
+  'Dynamic Programming': 'Solving overlapping subproblems by storing and reusing results.',
+  'Graph Traversal (BFS and DFS)': 'Systematically visiting graph nodes breadth-first or depth-first.',
+  'Shortest Path (Dijkstra, Bellman-Ford)': 'Finding minimum-cost paths in weighted graphs.',
+  'Minimum Spanning Tree': 'Connecting all nodes at minimum total edge weight (Kruskal, Prim).',
+  'Topological Sort': 'Ordering nodes of a DAG so every edge points forward.',
+  'Bit Manipulation': 'Solving problems with bitwise operations and bit tricks.',
+  'String Matching': 'Finding patterns in text with KMP, Rabin-Karp, and related algorithms.',
+  'Hashing Techniques': 'Designing hash functions and handling collisions for fast lookups.',
+  'Garbage Collection Tuning': 'Configuring GC (G1, ZGC, Shenandoah) to balance pause time and throughput.',
+  'JIT Compilation': 'How the JVM compiles hot code to native, and warmup and inlining effects.',
+  'Heap and Memory Profiling': 'Analyzing heap usage, allocations, and retained sizes to reduce memory pressure.',
+  'Memory Leak Detection': 'Finding objects that are unintentionally retained and cause OutOfMemory errors.',
+  'Escape Analysis': 'JVM optimization that can stack-allocate or eliminate objects that never escape.',
+  'Java Flight Recorder (JFR)': 'Low-overhead JVM event recording for production profiling and diagnostics.',
+  'async-profiler': 'A low-overhead sampling profiler for CPU, allocation, and lock analysis on the JVM.',
+  VisualVM: 'A GUI tool for monitoring, profiling, and heap-dump analysis of JVM applications.',
+  'JMH Microbenchmarking': 'The Java Microbenchmark Harness for accurate, warmup-aware micro-benchmarks.',
+  'Flame Graphs': 'A visualization of sampled stack traces to spot where CPU time is spent.',
+  JMeter: 'A tool for load and functional testing of applications and APIs.',
+  Gatling: 'A code-driven, high-throughput load-testing tool with expressive scenarios.',
+  k6: 'A developer-centric load-testing tool with JavaScript-scripted scenarios.',
+  'Load and Stress Testing': 'Validating behavior and limits under expected and extreme traffic.',
+  'Soak Testing': 'Running sustained load over long periods to reveal leaks and degradation.',
+  'Connection Pooling': 'Reusing database/HTTP connections to avoid per-request setup overhead.',
+  'Caching Strategies': 'Choosing cache placement, eviction, and invalidation to cut latency and load.',
+  'N+1 Query Problem': 'Detecting and eliminating repeated per-row queries in ORM data access.',
+  'Database Query Optimization': 'Improving queries with indexing, execution-plan analysis, and rewrites.',
+  'Lazy vs Eager Loading': 'Trading off deferred and upfront data fetching for latency and memory.',
+  Batching: 'Grouping operations or requests to amortize overhead and boost throughput.',
+  'Virtual Threads (Project Loom)': 'Lightweight JVM threads that scale blocking-style concurrency cheaply.',
+  'Reactive and Non-Blocking (WebFlux)': 'Non-blocking, backpressure-aware processing for high concurrency.',
+  'Thread-Pool Tuning': 'Sizing and configuring pools to maximize utilization without contention.',
+  Backpressure: 'Controlling flow so fast producers do not overwhelm slower consumers.',
+  'Latency vs Throughput': 'Balancing per-request speed against total processed volume.',
+  'Tail Latency (p99)': 'Measuring and reducing worst-case latencies, not just averages.',
+  'Performance Budgets': 'Setting explicit limits on latency, size, or resource use to enforce speed.',
+  'Application Performance Monitoring (APM)': 'End-to-end tracking of app latency, errors, and bottlenecks in production.',
+  'Compression and Payload Size': 'Reducing transfer size (gzip, protobuf) to improve response times.',
+  'Amdahl’s Law': 'The limit that a program’s serial fraction places on parallel speedup.',
+  'Testing Fundamentals': 'Principles of effective automated testing and what makes tests valuable.',
+  'Test Pyramid': 'Balancing many fast unit tests against fewer slow integration and E2E tests.',
+  'Unit Testing': 'Testing individual units in isolation for correctness.',
+  'Integration Testing': 'Verifying that components work together, including databases and services.',
+  'End-to-End Testing': 'Validating complete user flows through the running system.',
+  'Test-Driven Development (TDD)': 'Writing a failing test first, then code, then refactoring.',
+  'Behavior-Driven Development (BDD)': 'Specifying behavior in business-readable Given-When-Then scenarios.',
+  'JUnit 5': 'The modern Java testing framework with extensions, parameterized, and nested tests.',
+  Testcontainers: 'Spinning up real dependencies (DBs, brokers) in containers for reliable tests.',
+  'Contract Testing (Pact)': 'Verifying provider and consumer agree on an API contract independently.',
+  'Mutation Testing': 'Measuring test quality by introducing code mutations and checking tests catch them.',
+  'Property-Based Testing': 'Generating many inputs to assert properties hold across a wide space.',
+  'Code Coverage': 'Measuring which code is exercised by tests, with its uses and limits.',
+  'Mocking and Stubbing': 'Replacing real collaborators with controlled test substitutes.',
+  'Test Doubles': 'Mocks, stubs, fakes, spies, and dummies used to isolate the unit under test.',
+  'Test Automation Strategy': 'Deciding what, when, and how to automate across the pipeline.',
+  'Regression Testing': 'Re-running tests to ensure changes don’t break existing behavior.',
+  'Flaky Test Management': 'Detecting, quarantining, and fixing non-deterministic tests.',
+  'API Design Fundamentals': 'Principles of clear, consistent, evolvable interfaces between systems.',
+  REST: 'Resource-oriented HTTP APIs using verbs, status codes, and representations.',
+  'RESTful Maturity (Richardson)': 'The maturity levels from plain HTTP to hypermedia-driven REST.',
+  GraphQL: 'A query language letting clients request exactly the data they need from one endpoint.',
+  'gRPC': 'A high-performance, contract-first RPC framework over HTTP/2 using Protocol Buffers.',
+  'API Versioning': 'Evolving APIs without breaking clients via URI, header, or media-type strategies.',
+  'OpenAPI and Swagger': 'Describing REST APIs in a standard spec for docs, clients, and validation.',
+  'Idempotent APIs': 'Designing operations that produce the same result when safely retried.',
+  'Pagination and Filtering': 'Returning large result sets efficiently with limits, cursors, and queries.',
+  HATEOAS: 'Hypermedia links that let clients navigate an API dynamically.',
+  Webhooks: 'Server-to-server callbacks that push events to subscribers.',
+  'API Error Handling': 'Consistent, informative error responses and status-code semantics.',
+  'Authentication for APIs': 'Securing APIs with tokens, keys, OAuth, and mTLS.',
+  'API Rate Limiting': 'Throttling clients to protect capacity and ensure fair use.',
+  'API Contracts': 'Explicit, versioned agreements defining request/response shapes.',
+  'Enterprise Integration Patterns': 'Proven messaging patterns (routing, transformation, aggregation) for integration.',
+  'Message-Based Integration': 'Connecting systems asynchronously through queues and topics.',
+  'Backend for Frontend (BFF)': 'A tailored API layer per client type that aggregates downstream services.',
+  'Operating System Fundamentals': 'Core OS concepts: processes, memory, I/O, and the kernel’s role.',
+  'Processes and Threads': 'Units of execution and how they share (or isolate) resources.',
+  'Process Scheduling': 'How the OS decides which process/thread runs next.',
+  'Memory Management': 'Allocating, protecting, and reclaiming memory across processes.',
+  'Virtual Memory': 'Giving each process a large private address space backed by paging.',
+  'Paging and Segmentation': 'Mapping virtual addresses to physical memory in fixed or variable blocks.',
+  'File Systems': 'Organizing, storing, and accessing files, inodes, and directories.',
+  'Inter-Process Communication': 'Pipes, sockets, shared memory, and message passing between processes.',
+  'System Calls': 'The interface programs use to request services from the kernel.',
+  'Concurrency and Deadlocks': 'Coordinating concurrent execution and avoiding deadlock and starvation.',
+  'Linux Command Line': 'Navigating and operating a system with core Linux commands.',
+  'Shell Scripting': 'Automating tasks with bash/sh scripts and pipelines.',
+  Signals: 'Asynchronous notifications delivered to processes by the OS.',
+  'Namespaces and cgroups': 'Linux primitives that isolate and limit resources behind containers.',
+  'CPU and I/O Scheduling': 'Prioritizing compute and disk/network operations for throughput and fairness.',
+  'Kernel vs User Space': 'The privilege boundary separating the kernel from application code.',
+  'Networking Fundamentals': 'How data moves across networks and the layers involved.',
+  'OSI Model': 'The seven-layer reference model for network communication.',
+  'TCP/IP': 'The connection-oriented, reliable transport and addressing suite of the internet.',
+  UDP: 'A lightweight, connectionless transport for low-latency, loss-tolerant traffic.',
+  'HTTP/1.1': 'The classic request/response web protocol with keep-alive connections.',
+  'HTTP/2': 'A binary, multiplexed HTTP version reducing latency over a single connection.',
+  'HTTP/3 and QUIC': 'HTTP over QUIC/UDP for faster, connection-migrating, head-of-line-free transport.',
+  'HTTPS and TLS Handshake': 'Establishing encrypted, authenticated connections and negotiating keys.',
+  DNS: 'The distributed system that resolves human-readable names to IP addresses.',
+  WebSockets: 'A full-duplex, persistent connection for real-time bidirectional messaging.',
+  'Load Balancing Algorithms': 'Distributing traffic across servers (round-robin, least-connections, hashing).',
+  'Reverse Proxies': 'Front-facing servers that route, terminate TLS, cache, and protect backends.',
+  'Content Delivery Networks': 'Edge networks that cache content close to users to cut latency.',
+  'Firewalls and NAT': 'Filtering traffic and translating addresses at network boundaries.',
+  Sockets: 'The endpoint abstraction for sending and receiving data over a network.',
+  'Network Latency and Bandwidth': 'The delay and capacity characteristics that shape performance.',
+  'Machine Learning Fundamentals': 'Core concepts of learning patterns from data to make predictions.',
+  'Supervised Learning': 'Training models on labeled examples to predict outputs.',
+  'Unsupervised Learning': 'Finding structure in unlabeled data (clusters, embeddings).',
+  Regression: 'Predicting continuous values from input features.',
+  Classification: 'Assigning inputs to discrete categories.',
+  Clustering: 'Grouping similar data points without labels.',
+  'Decision Trees and Random Forests': 'Tree-based models and ensembles for classification and regression.',
+  'Gradient Boosting (XGBoost)': 'Powerful boosted-tree ensembles widely used for tabular data.',
+  'Feature Engineering': 'Creating and selecting informative inputs to improve model performance.',
+  'Data Preprocessing': 'Cleaning, encoding, scaling, and splitting data for modeling.',
+  'Model Evaluation Metrics': 'Accuracy, precision/recall, F1, ROC-AUC, RMSE, and when to use each.',
+  'Overfitting and Regularization': 'Preventing models from memorizing noise via regularization and validation.',
+  'Cross-Validation': 'Estimating generalization by training/testing across data folds.',
+  'Neural Networks Basics': 'Layers, activations, and backpropagation fundamentals.',
+  'Model Training and Tuning': 'Fitting models and optimizing hyperparameters.',
+  MLOps: 'Operationalizing ML with pipelines, CI/CD, versioning, and monitoring.',
+  'Model Deployment': 'Serving models reliably via batch, real-time, or edge inference.',
+  'Coding Standards and Style Guides': 'Team-wide conventions (e.g. Google/Sun Java Style) that keep code consistent.',
+  'Naming Conventions': 'Consistent, intention-revealing names for classes, methods, and variables.',
+  'Code Formatting (Spotless)': 'Automated, enforced formatting so style is never debated in review.',
+  EditorConfig: 'A shared file that keeps indentation and whitespace consistent across editors.',
+  Checkstyle: 'A static tool that enforces Java coding conventions and style rules.',
+  PMD: 'A source analyzer that flags likely bugs, dead code, and bad practices.',
+  SpotBugs: 'A bytecode analyzer that detects common bug patterns in Java.',
+  SonarLint: 'An IDE tool that surfaces code smells, bugs, and vulnerabilities as you type.',
+  'ESLint and Prettier': 'Linting and formatting for JavaScript/TypeScript codebases.',
+  'Static Code Analysis': 'Analyzing code without running it to catch defects, smells, and risks.',
+  'Code Review Practices': 'Effective, respectful review that improves quality and shares knowledge.',
+  'Pull Request Etiquette': 'Small, focused PRs with clear descriptions and constructive feedback.',
+  'Javadoc and Documentation': 'Documenting APIs and intent so code is understandable and maintainable.',
+  'Readability and Maintainability': 'Writing code that is easy to read, reason about, and change safely.',
+  'Cyclomatic Complexity': 'A metric of branching complexity used to flag hard-to-test methods.',
+  'Technical Debt Management': 'Tracking, prioritizing, and paying down accumulated shortcuts.',
+  'Linting Gates in CI': 'Failing the build when style or quality checks are not met.',
+  'Null-Safety and Optional': 'Avoiding null-pointer errors with Optional and null-safety conventions.',
+  'Immutability Conventions': 'Favoring immutable objects and final fields for safer, simpler code.',
+  'Error-Handling and Logging Standards': 'Consistent exception handling and structured, useful logging.',
 }
 
 const initialForm = {
@@ -225,7 +757,7 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
   const [endsAt, setEndsAt] = useState(() => toLocalInput(new Date(Date.now() + interview.durationMinutes * 60_000)))
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [generating, setGenerating] = useState(false)
-  const [composeReport, setComposeReport] = useState<{ rounds: number; trace: string[] }>()
+  const [composeReport, setComposeReport] = useState<{ rounds: number; questionCount: number }>()
   const questionFormRef = useRef<HTMLFormElement>(null)
   const isMcq = draft.type === 'MCQ_SINGLE' || draft.type === 'MCQ_MULTIPLE'
   const actualComposition = questions.reduce((counts, question) => ({
@@ -349,17 +881,32 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
   async function compose() {
     setGenerating(true)
     setComposeReport(undefined)
-    notify('Composition agent is planning, generating, critiquing and de-duplicating…')
+    notify('Composition agent is running in the background — planning, generating and critiquing…')
     try {
-      const result = await interviewApi.composeQuestions(interview.id)
-      setComposeReport({ rounds: result.rounds, trace: result.trace })
-      notify(`Agent composed ${result.questions.length} question(s) over ${result.rounds} round(s).`)
-      await loadQuestions()
+      const started = await interviewApi.composeQuestions(interview.id)
+      const job = await pollComposeJob(started.jobId)
+      if (job.status === 'SUCCEEDED') {
+        setComposeReport({ rounds: job.rounds, questionCount: job.questionCount })
+        notify(`Agent composed ${job.questionCount} question(s) over ${job.rounds} round(s).`)
+        await loadQuestions()
+      } else {
+        notify(job.error || 'Composition failed.', true)
+      }
     } catch (error) {
       notify(messageOf(error), true)
     } finally {
       setGenerating(false)
     }
+  }
+
+  async function pollComposeJob(jobId: string): Promise<ComposeJob> {
+    for (let attempt = 0; attempt < 150; attempt++) { // up to ~5 min at 2s intervals
+      const job = await interviewApi.composeJob(jobId)
+      if (job.status === 'SUCCEEDED' || job.status === 'FAILED') return job
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+    }
+    return { jobId, status: 'FAILED', questionCount: 0, rounds: 0,
+      error: 'Timed out waiting for the composition agent.' }
   }
 
   async function publish() {
@@ -451,8 +998,7 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
               <span>AI Gateway is creating and validating the question set…</span>
             </div>}
             {composeReport && !generating && <div className="agent-trace">
-              <strong>🤖 Agent run · {composeReport.rounds} round(s)</strong>
-              <ol>{composeReport.trace.map((line, i) => <li key={i}>{line}</li>)}</ol>
+              <strong>🤖 Agent composed {composeReport.questionCount} question(s) over {composeReport.rounds} round(s)</strong>
             </div>}
           </>}
         {(interview.questionMode === 'MANUAL' || draft.id) &&
@@ -583,10 +1129,10 @@ export function InterviewerDashboard() {
   }
 
   function setEcosystem(ecosystem: Ecosystem) {
-    const firstTechnology = ecosystemTechnologies[ecosystem][0]
+    // Ecosystem is a browse filter, not a hard reset: switching it keeps the technologies
+    // already picked (from any ecosystem) so an interview can mix across ecosystems.
     setTechQuery('')
-    setSuggestedTopics([])
-    setForm({...form, ecosystem, technologies: [firstTechnology], topics: []})
+    setForm({...form, ecosystem})
   }
 
   function toggleTechnology(technology: string) {
@@ -660,13 +1206,8 @@ export function InterviewerDashboard() {
             <div className="inline-fields">
               <label>Ecosystem<select value={form.ecosystem}
                 onChange={(e) => setEcosystem(e.target.value as Ecosystem)}>
-                <option value="JAVA">Java ecosystem</option>
-                <option value="PYTHON">Python ecosystem</option>
-                <option value="UI">UI ecosystem</option>
-                <option value="DATABASE">Database ecosystem</option>
-                <option value="AI">AI ecosystem</option>
-                <option value="SYSTEM_DESIGN">System Design</option>
-                <option value="CI_CD">CI/CD ecosystem</option>
+                {sortedEcosystems.map((value) =>
+                  <option key={value} value={value}>{ecosystemLabels[value]}</option>)}
               </select></label>
               <div className="technology-field">
                 <span>Technologies</span>
@@ -691,7 +1232,15 @@ export function InterviewerDashboard() {
                       .length === 0 && <p className="technology-empty">No technologies match “{techQuery}”.</p>}
                   </div>
                 </details>
-                <small>Select one or more technologies.</small>
+                <small>Pick from any ecosystem — switch the Ecosystem filter to add more; selections are kept.</small>
+                {form.technologies.length > 0 && <div className="selected-technologies" aria-label="Selected technologies">
+                  {form.technologies.map((technology) =>
+                    <span key={technology} className="tech-chip">
+                      {technology}
+                      <button type="button" aria-label={`Remove ${technology}`}
+                        onClick={() => toggleTechnology(technology)}>×</button>
+                    </span>)}
+                </div>}
                 <div className="technology-description" role="status" aria-live="polite">
                   {form.technologies.length === 0
                     ? <span>Select a technology to see its description.</span>

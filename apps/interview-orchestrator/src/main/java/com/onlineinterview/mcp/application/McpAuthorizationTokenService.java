@@ -1,6 +1,6 @@
 package com.onlineinterview.mcp.application;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Clock;
@@ -36,7 +36,7 @@ public class McpAuthorizationTokenService {
             String payload = Base64.getUrlEncoder().withoutPadding()
                     .encodeToString(mapper.writeValueAsBytes(context));
             return payload + "." + signature(payload);
-        } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
+        } catch (tools.jackson.core.JacksonException exception) {
             throw new IllegalArgumentException("Unable to serialize MCP authorization", exception);
         }
     }

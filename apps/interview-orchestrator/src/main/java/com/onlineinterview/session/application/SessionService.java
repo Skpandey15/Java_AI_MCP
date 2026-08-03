@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -140,15 +141,7 @@ public class SessionService {
         var session = ownedSession(subject, sessionId);
         try {
             session.submit(Instant.now());
-            var submittedAnswers = answers.findBySession_Id(sessionId);
-            submittedAnswers.forEach(InterviewAnswer::scoreObjective);
-            int objectiveScore = submittedAnswers.stream()
-                    .filter(InterviewAnswer::isAutoScored)
-                    .map(InterviewAnswer::getAwardedScore)
-                    .filter(java.util.Objects::nonNull)
-                    .mapToInt(Integer::intValue)
-                    .sum();
-            session.recordObjectiveScore(objectiveScore);
+            applyObjectiveScore(session);
         } catch (IllegalStateException exception) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, exception.getMessage(), exception);
         }
@@ -156,6 +149,38 @@ public class SessionService {
                 .addKeyValue("sessionId", sessionId)
                 .log("Interview session submitted");
         return view(session);
+    }
+
+    /** Scores auto-gradable (MCQ) answers and records the objective total on the session. */
+    private void applyObjectiveScore(InterviewSession session) {
+        var submittedAnswers = answers.findBySession_Id(session.getId());
+        submittedAnswers.forEach(InterviewAnswer::scoreObjective);
+        int objectiveScore = submittedAnswers.stream()
+                .filter(InterviewAnswer::isAutoScored)
+                .map(InterviewAnswer::getAwardedScore)
+                .filter(java.util.Objects::nonNull)
+                .mapToInt(Integer::intValue)
+                .sum();
+        session.recordObjectiveScore(objectiveScore);
+    }
+
+    /** Safety net: auto-submit sessions whose time expired without an explicit submit, so they
+     *  are scored and queued for review instead of dead-ending. Runs on a fixed schedule; the
+     *  candidate UI also auto-submits at 0 for immediacy. */
+    @Transactional
+    @Scheduled(fixedDelayString = "${app.session.expiry-sweep-ms:60000}")
+    public void finalizeExpiredSessions() {
+        var now = Instant.now();
+        var expired = sessions.findByExpiresAtBeforeAndReviewStatus(
+                now, com.onlineinterview.session.domain.ReviewStatus.NOT_SUBMITTED);
+        for (var session : expired) {
+            if (session.autoSubmitIfExpired(now)) {
+                applyObjectiveScore(session);
+                log.atInfo().addKeyValue("event", "session.auto_submitted")
+                        .addKeyValue("sessionId", session.getId())
+                        .log("Expired interview session auto-submitted for review");
+            }
+        }
     }
 
     private InterviewSession ownedSession(String subject, UUID sessionId) {

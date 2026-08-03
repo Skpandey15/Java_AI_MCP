@@ -45,7 +45,10 @@ export type Question = {
 export type AdminQuestion = Question & {
   correctAnswers: string[]; source: string; citations: QuestionCitation[]
 }
-export type ComposeResult = { questions: Question[]; rounds: number; trace: string[] }
+export type ComposeJob = {
+  jobId: string; status: 'PENDING' | 'RUNNING' | 'SUCCEEDED' | 'FAILED'
+  questionCount: number; rounds: number; error?: string
+}
 export type SavedAnswer = { id: string; questionId: string; content: string; updatedAt: string; version: number }
 export type InterviewSession = {
   id: string
@@ -210,9 +213,12 @@ export const interviewApi = {
     `/api/v1/interviews/${interviewId}/questions:generate`,
     { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() } },
   ),
-  composeQuestions: (interviewId: string) => request<ComposeResult>(
+  composeQuestions: (interviewId: string) => request<ComposeJob>(
     `/api/v1/interviews/${interviewId}/questions:compose`,
     { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() } },
+  ),
+  composeJob: (jobId: string) => request<ComposeJob>(
+    `/api/v1/interviews/composition-jobs/${jobId}`,
   ),
   listQuestions: (interviewId: string) => request<AdminQuestion[]>(
     `/api/v1/interviews/${interviewId}/questions`,
@@ -235,8 +241,8 @@ export const interviewApi = {
     request<SavedAnswer>(`/api/v1/candidate/sessions/${sessionId}/answers/${questionId}`, {
       method: 'PUT', body: JSON.stringify({ content, expectedVersion }),
     }),
-  submissions: (page = 0, size = 20) => request<PageResponse<SubmissionSummary>>(
-    `/api/v1/interviewer/submissions?page=${page}&size=${size}`,
+  submissions: (page = 0, size = 20, candidateId = '') => request<PageResponse<SubmissionSummary>>(
+    `/api/v1/interviewer/submissions?page=${page}&size=${size}${candidateId ? `&candidateId=${candidateId}` : ''}`,
   ),
   submission: (sessionId: string) => request<SubmissionDetail>(
     `/api/v1/interviewer/submissions/${sessionId}`,

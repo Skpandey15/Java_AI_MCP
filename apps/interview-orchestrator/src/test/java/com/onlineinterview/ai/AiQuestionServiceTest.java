@@ -23,6 +23,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
 
 class AiQuestionServiceTest {
+    @SuppressWarnings("unchecked")
+    private static org.springframework.beans.factory.ObjectProvider<AiQuestionService> selfProvider() {
+        return mock(org.springframework.beans.factory.ObjectProvider.class);
+    }
+
     @Test
     void persistsStructuredQuestionsWithGenerationMetadata() {
         var definitions = mock(InterviewDefinitionRepository.class);
@@ -30,7 +35,8 @@ class AiQuestionServiceTest {
         var client = mock(AiQuestionClient.class);
         var knowledge = mock(KnowledgeService.class);
         var service = new AiQuestionService(definitions, questions, client, knowledge,
-                new RagProperties(), mock(RagQualityMetrics.class));
+                new RagProperties(), mock(RagQualityMetrics.class),
+                mock(CompositionJobStore.class), selfProvider());
         var interview = InterviewDefinition.draft("owner", "Java AI", "Senior interview",
                 List.of("Java", "Spring AI"), InterviewDifficulty.HARD,
                 QuestionMode.DIRECT_LLM, 60, 1);
@@ -61,7 +67,7 @@ class AiQuestionServiceTest {
         var knowledge = mock(KnowledgeService.class);
         var metrics = mock(RagQualityMetrics.class);
         var service = new AiQuestionService(definitions, questions, client, knowledge,
-                new RagProperties(), metrics);
+                new RagProperties(), metrics, mock(CompositionJobStore.class), selfProvider());
         var collectionId = UUID.randomUUID();
         var interview = InterviewDefinition.draft("owner", "Java RAG", "Grounded interview",
                 List.of("Java"), InterviewDifficulty.MEDIUM, QuestionMode.RAG, 60, 1, 70,
@@ -99,7 +105,8 @@ class AiQuestionServiceTest {
         var client = mock(AiQuestionClient.class);
         var knowledge = mock(KnowledgeService.class);
         var service = new AiQuestionService(definitions, questions, client, knowledge,
-                new RagProperties(), mock(RagQualityMetrics.class));
+                new RagProperties(), mock(RagQualityMetrics.class),
+                mock(CompositionJobStore.class), selfProvider());
         var collectionId = UUID.randomUUID();
         var interview = InterviewDefinition.draft("owner", "Java RAG", "Grounded interview",
                 List.of("Java"), InterviewDifficulty.MEDIUM, QuestionMode.RAG, 60, 1, 70,

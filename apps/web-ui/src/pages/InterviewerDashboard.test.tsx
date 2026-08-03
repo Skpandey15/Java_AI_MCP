@@ -106,7 +106,7 @@ describe('InterviewerDashboard question editing', () => {
     expect(screen.getByRole('checkbox', {name: 'Django'})).toBeInTheDocument()
     expect(screen.queryByRole('checkbox', {name: 'Spring Boot'})).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('checkbox', {name: 'Django'}))
-    expect(screen.getByText(/general-purpose language popular for web development/)).toBeInTheDocument()
+    expect(screen.getByText(/general-purpose JVM language widely used for enterprise/)).toBeInTheDocument()
     expect(screen.getByText(/batteries-included Python web framework/)).toBeInTheDocument()
   })
 })

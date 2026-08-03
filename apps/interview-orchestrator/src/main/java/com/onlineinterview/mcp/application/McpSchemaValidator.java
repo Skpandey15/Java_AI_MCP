@@ -1,7 +1,7 @@
 package com.onlineinterview.mcp.application;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import org.springframework.stereotype.Component;
 
@@ -28,7 +28,7 @@ public class McpSchemaValidator {
             }
             rejectUnsafeKeywords(root);
             return root;
-        } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
+        } catch (tools.jackson.core.JacksonException exception) {
             throw new IllegalArgumentException("MCP schema is not valid JSON", exception);
         }
     }
@@ -38,9 +38,9 @@ public class McpSchemaValidator {
             if (node.has("$ref") || node.has("$dynamicRef")) {
                 throw new IllegalArgumentException("Remote schema references are not allowed");
             }
-            node.elements().forEachRemaining(this::rejectUnsafeKeywords);
+            node.values().forEach(this::rejectUnsafeKeywords);
         } else if (node.isArray()) {
-            node.elements().forEachRemaining(this::rejectUnsafeKeywords);
+            node.values().forEach(this::rejectUnsafeKeywords);
         }
     }
 }
