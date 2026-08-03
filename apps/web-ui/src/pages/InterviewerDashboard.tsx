@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  interviewApi, type AdminQuestion, type Assignment, type Interview, type KnowledgeCollection,
-  type KnowledgeDocument, type Profile, type QuestionType,
+  interviewApi, type AdminQuestion, type Assignment, type ComposeJob, type Interview,
+  type KnowledgeCollection, type KnowledgeDocument, type Profile, type QuestionType,
 } from '../api/interviewApi'
 import { useAuth } from '../auth/AuthProvider'
 
@@ -190,6 +190,24 @@ const ecosystemTechnologies = {
 } as const
 
 type Ecosystem = keyof typeof ecosystemTechnologies
+
+const ecosystemLabels: Record<Ecosystem, string> = {
+  JAVA: 'Java', PYTHON: 'Python', UI: 'UI', DATABASE: 'Database', AI: 'AI',
+  SYSTEM_DESIGN: 'System Design', CI_CD: 'CI/CD', DESIGN_PRINCIPLES: 'Software Design Principles',
+  DESIGN_PATTERNS: 'Design Patterns', LEADERSHIP: 'Leadership Quality',
+  JAVA_AI: 'GenAI on the JVM (Java)', CLOUD: 'Cloud & Serverless',
+  ARCHITECTURE: 'Software Architecture & DDD', SECURITY: 'Security & Compliance',
+  INTERVIEW_STYLE: 'Tricky & Use-Case Questions', OBSERVABILITY: 'Observability & SRE',
+  DATA_ENGINEERING: 'Data & Streaming Engineering', AI_GOVERNANCE: 'AI Governance & Responsible AI',
+  DATA_STRUCTURES: 'Data Structures', ALGORITHMS: 'Algorithms',
+  PERFORMANCE: 'Performance Engineering', TESTING: 'Testing & Quality Engineering',
+  API_DESIGN: 'API Design & Integration', OS_LINUX: 'Operating Systems & Linux',
+  NETWORKING: 'Networking & Protocols', MACHINE_LEARNING: 'Machine Learning (Classical & MLOps)',
+  CODE_QUALITY: 'Code Quality & Standards',
+}
+
+const sortedEcosystems = (Object.keys(ecosystemLabels) as Ecosystem[])
+  .sort((a, b) => ecosystemLabels[a].localeCompare(ecosystemLabels[b]))
 
 const technologyDescriptions: Record<string, string> = {
   Java: 'A general-purpose JVM language widely used for enterprise and backend systems.',
@@ -739,7 +757,7 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
   const [endsAt, setEndsAt] = useState(() => toLocalInput(new Date(Date.now() + interview.durationMinutes * 60_000)))
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [generating, setGenerating] = useState(false)
-  const [composeReport, setComposeReport] = useState<{ rounds: number; trace: string[] }>()
+  const [composeReport, setComposeReport] = useState<{ rounds: number; questionCount: number }>()
   const questionFormRef = useRef<HTMLFormElement>(null)
   const isMcq = draft.type === 'MCQ_SINGLE' || draft.type === 'MCQ_MULTIPLE'
   const actualComposition = questions.reduce((counts, question) => ({
@@ -863,17 +881,32 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
   async function compose() {
     setGenerating(true)
     setComposeReport(undefined)
-    notify('Composition agent is planning, generating, critiquing and de-duplicating…')
+    notify('Composition agent is running in the background — planning, generating and critiquing…')
     try {
-      const result = await interviewApi.composeQuestions(interview.id)
-      setComposeReport({ rounds: result.rounds, trace: result.trace })
-      notify(`Agent composed ${result.questions.length} question(s) over ${result.rounds} round(s).`)
-      await loadQuestions()
+      const started = await interviewApi.composeQuestions(interview.id)
+      const job = await pollComposeJob(started.jobId)
+      if (job.status === 'SUCCEEDED') {
+        setComposeReport({ rounds: job.rounds, questionCount: job.questionCount })
+        notify(`Agent composed ${job.questionCount} question(s) over ${job.rounds} round(s).`)
+        await loadQuestions()
+      } else {
+        notify(job.error || 'Composition failed.', true)
+      }
     } catch (error) {
       notify(messageOf(error), true)
     } finally {
       setGenerating(false)
     }
+  }
+
+  async function pollComposeJob(jobId: string): Promise<ComposeJob> {
+    for (let attempt = 0; attempt < 150; attempt++) { // up to ~5 min at 2s intervals
+      const job = await interviewApi.composeJob(jobId)
+      if (job.status === 'SUCCEEDED' || job.status === 'FAILED') return job
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+    }
+    return { jobId, status: 'FAILED', questionCount: 0, rounds: 0,
+      error: 'Timed out waiting for the composition agent.' }
   }
 
   async function publish() {
@@ -965,8 +998,7 @@ export function InterviewCard({ interview, candidates, notify, reload, showQuest
               <span>AI Gateway is creating and validating the question set…</span>
             </div>}
             {composeReport && !generating && <div className="agent-trace">
-              <strong>🤖 Agent run · {composeReport.rounds} round(s)</strong>
-              <ol>{composeReport.trace.map((line, i) => <li key={i}>{line}</li>)}</ol>
+              <strong>🤖 Agent composed {composeReport.questionCount} question(s) over {composeReport.rounds} round(s)</strong>
             </div>}
           </>}
         {(interview.questionMode === 'MANUAL' || draft.id) &&
@@ -1097,10 +1129,10 @@ export function InterviewerDashboard() {
   }
 
   function setEcosystem(ecosystem: Ecosystem) {
-    const firstTechnology = ecosystemTechnologies[ecosystem][0]
+    // Ecosystem is a browse filter, not a hard reset: switching it keeps the technologies
+    // already picked (from any ecosystem) so an interview can mix across ecosystems.
     setTechQuery('')
-    setSuggestedTopics([])
-    setForm({...form, ecosystem, technologies: [firstTechnology], topics: []})
+    setForm({...form, ecosystem})
   }
 
   function toggleTechnology(technology: string) {
@@ -1174,33 +1206,8 @@ export function InterviewerDashboard() {
             <div className="inline-fields">
               <label>Ecosystem<select value={form.ecosystem}
                 onChange={(e) => setEcosystem(e.target.value as Ecosystem)}>
-                <option value="JAVA">Java ecosystem</option>
-                <option value="PYTHON">Python ecosystem</option>
-                <option value="UI">UI ecosystem</option>
-                <option value="DATABASE">Database ecosystem</option>
-                <option value="AI">AI ecosystem</option>
-                <option value="SYSTEM_DESIGN">System Design</option>
-                <option value="CI_CD">CI/CD ecosystem</option>
-                <option value="DESIGN_PRINCIPLES">Software Design Principles</option>
-                <option value="DESIGN_PATTERNS">Design Patterns</option>
-                <option value="LEADERSHIP">Leadership Quality</option>
-                <option value="JAVA_AI">GenAI on the JVM (Java)</option>
-                <option value="CLOUD">Cloud &amp; Serverless</option>
-                <option value="ARCHITECTURE">Software Architecture &amp; DDD</option>
-                <option value="SECURITY">Security &amp; Compliance</option>
-                <option value="INTERVIEW_STYLE">Tricky &amp; Use-Case Questions</option>
-                <option value="OBSERVABILITY">Observability &amp; SRE</option>
-                <option value="DATA_ENGINEERING">Data &amp; Streaming Engineering</option>
-                <option value="AI_GOVERNANCE">AI Governance &amp; Responsible AI</option>
-                <option value="DATA_STRUCTURES">Data Structures</option>
-                <option value="ALGORITHMS">Algorithms</option>
-                <option value="PERFORMANCE">Performance Engineering</option>
-                <option value="TESTING">Testing &amp; Quality Engineering</option>
-                <option value="API_DESIGN">API Design &amp; Integration</option>
-                <option value="OS_LINUX">Operating Systems &amp; Linux</option>
-                <option value="NETWORKING">Networking &amp; Protocols</option>
-                <option value="MACHINE_LEARNING">Machine Learning (Classical &amp; MLOps)</option>
-                <option value="CODE_QUALITY">Code Quality &amp; Standards</option>
+                {sortedEcosystems.map((value) =>
+                  <option key={value} value={value}>{ecosystemLabels[value]}</option>)}
               </select></label>
               <div className="technology-field">
                 <span>Technologies</span>
@@ -1225,7 +1232,15 @@ export function InterviewerDashboard() {
                       .length === 0 && <p className="technology-empty">No technologies match “{techQuery}”.</p>}
                   </div>
                 </details>
-                <small>Select one or more technologies.</small>
+                <small>Pick from any ecosystem — switch the Ecosystem filter to add more; selections are kept.</small>
+                {form.technologies.length > 0 && <div className="selected-technologies" aria-label="Selected technologies">
+                  {form.technologies.map((technology) =>
+                    <span key={technology} className="tech-chip">
+                      {technology}
+                      <button type="button" aria-label={`Remove ${technology}`}
+                        onClick={() => toggleTechnology(technology)}>×</button>
+                    </span>)}
+                </div>}
                 <div className="technology-description" role="status" aria-live="polite">
                   {form.technologies.length === 0
                     ? <span>Select a technology to see its description.</span>

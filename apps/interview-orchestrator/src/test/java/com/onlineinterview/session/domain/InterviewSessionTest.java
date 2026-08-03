@@ -31,6 +31,23 @@ class InterviewSessionTest {
     }
 
     @Test
+    void autoSubmitsWhenTimeExpires() {
+        Instant now = Instant.parse("2026-07-18T10:00:00Z");
+        var definition = InterviewDefinition.draft("owner", "Java", "Java interview",
+                List.of("Java"), InterviewDifficulty.HARD, QuestionMode.MANUAL, 60, 1);
+        definition.publish();
+        var assignment = InterviewAssignment.schedule(definition, UUID.randomUUID(),
+                now.minusSeconds(60), now.plusSeconds(7200), 1);
+        var session = InterviewSession.start(assignment, assignment.getCandidateId(), now);
+
+        assertThat(session.autoSubmitIfExpired(now.plusSeconds(3600))).isTrue();
+        assertThat(session.getState()).isEqualTo(SessionState.SUBMITTED);
+        assertThat(session.getReviewStatus()).isEqualTo(ReviewStatus.PENDING_REVIEW);
+        // idempotent once submitted
+        assertThat(session.autoSubmitIfExpired(now.plusSeconds(3601))).isFalse();
+    }
+
+    @Test
     void snapshotsPassOutcomeAtConfiguredThreshold() {
         Instant now = Instant.parse("2026-07-18T10:00:00Z");
         var definition = InterviewDefinition.draft("owner", "Java", "Java interview",

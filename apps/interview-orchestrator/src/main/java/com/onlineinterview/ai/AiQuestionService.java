@@ -31,17 +31,70 @@ public class AiQuestionService {
     private final KnowledgeService knowledge;
     private final RagProperties ragProperties;
     private final RagQualityMetrics ragMetrics;
+    private final CompositionJobStore jobs;
+    // Self reference so @Async/@Transactional boundaries go through the Spring proxy.
+    private final org.springframework.beans.factory.ObjectProvider<AiQuestionService> self;
 
     public AiQuestionService(InterviewDefinitionRepository definitions,
             ManualQuestionRepository questions, AiQuestionClient client,
             KnowledgeService knowledge, RagProperties ragProperties,
-            RagQualityMetrics ragMetrics) {
+            RagQualityMetrics ragMetrics, CompositionJobStore jobs,
+            org.springframework.beans.factory.ObjectProvider<AiQuestionService> self) {
         this.definitions = definitions;
         this.questions = questions;
         this.client = client;
         this.knowledge = knowledge;
         this.ragProperties = ragProperties;
         this.ragMetrics = ragMetrics;
+        this.jobs = jobs;
+        this.self = self;
+    }
+
+    /** Starts an async composition job and returns immediately with its status. Idempotent on
+     *  the request id: a repeated call returns the existing job instead of starting another. */
+    @Transactional
+    public CompositionJobStore.Job startCompose(String ownerSubject, UUID interviewId,
+            UUID requestId) {
+        var existing = jobs.findByRequestId(requestId);
+        if (existing.isPresent()) return existing.get();
+        var definition = definitions.findById(interviewId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Interview not found"));
+        if (!definition.getOwnerSubject().equals(ownerSubject)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Interview not found");
+        }
+        if (definition.getStatus() != InterviewStatus.DRAFT
+                || (definition.getQuestionMode() != QuestionMode.DIRECT_LLM
+                && definition.getQuestionMode() != QuestionMode.RAG)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Composition requires a DIRECT_LLM or RAG draft interview");
+        }
+        var jobId = UUID.randomUUID();
+        jobs.create(jobId, interviewId, ownerSubject, requestId);
+        self.getObject().runComposeAsync(jobId, ownerSubject, interviewId, requestId);
+        return jobs.findByIdAndOwner(jobId, ownerSubject).orElseThrow();
+    }
+
+    /** Background worker: runs the compose loop and records the outcome on the job. Job-status
+     *  writes auto-commit (JdbcTemplate) so FAILED is recorded even if the work tx rolls back. */
+    @org.springframework.scheduling.annotation.Async
+    public void runComposeAsync(UUID jobId, String ownerSubject, UUID interviewId, UUID requestId) {
+        jobs.markRunning(jobId);
+        try {
+            var outcome = self.getObject().compose(ownerSubject, interviewId, requestId);
+            jobs.markSucceeded(jobId, outcome.questions().size(), outcome.rounds());
+        } catch (Exception exception) {
+            log.atWarn().addKeyValue("event", "ai.composition_job_failed")
+                    .addKeyValue("jobId", jobId).setCause(exception)
+                    .log("Async composition job failed");
+            jobs.markFailed(jobId, exception.getMessage());
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public CompositionJobStore.Job composeJob(String ownerSubject, UUID jobId) {
+        return jobs.findByIdAndOwner(jobId, ownerSubject)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Composition job not found"));
     }
 
     @Transactional

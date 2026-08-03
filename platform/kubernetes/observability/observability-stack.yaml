@@ -52,6 +52,7 @@ metadata:
   namespace: observability
 spec:
   replicas: 1
+  strategy: { type: Recreate }
   selector: { matchLabels: { app: loki } }
   template:
     metadata:
@@ -70,7 +71,7 @@ spec:
           resources: { requests: { cpu: 50m, memory: 128Mi }, limits: { memory: 512Mi } }
       volumes:
         - { name: config, configMap: { name: loki-config } }
-        - { name: data, emptyDir: {} }
+        - { name: data, persistentVolumeClaim: { claimName: loki-data } }
 ---
 apiVersion: v1
 kind: Service
@@ -116,6 +117,7 @@ metadata:
   namespace: observability
 spec:
   replicas: 1
+  strategy: { type: Recreate }
   selector: { matchLabels: { app: tempo } }
   template:
     metadata:
@@ -137,7 +139,7 @@ spec:
           resources: { requests: { cpu: 50m, memory: 128Mi }, limits: { memory: 512Mi } }
       volumes:
         - { name: config, configMap: { name: tempo-config } }
-        - { name: data, emptyDir: {} }
+        - { name: data, persistentVolumeClaim: { claimName: tempo-data } }
 ---
 apiVersion: v1
 kind: Service
@@ -281,6 +283,7 @@ metadata:
   namespace: observability
 spec:
   replicas: 1
+  strategy: { type: Recreate }
   selector: { matchLabels: { app: grafana } }
   template:
     metadata:
@@ -304,7 +307,7 @@ spec:
           resources: { requests: { cpu: 50m, memory: 128Mi }, limits: { memory: 512Mi } }
       volumes:
         - { name: datasources, configMap: { name: grafana-datasources } }
-        - { name: data, emptyDir: {} }
+        - { name: data, persistentVolumeClaim: { claimName: grafana-data } }
 ---
 apiVersion: v1
 kind: Service
@@ -335,3 +338,25 @@ spec:
           - path: /
             pathType: Prefix
             backend: { service: { name: grafana, port: { number: 3000 } } }
+---
+# Persistent storage so logs and traces survive pod restarts (k3d local-path StorageClass).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: loki-data, namespace: observability }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 5Gi } }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: tempo-data, namespace: observability }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 5Gi } }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: { name: grafana-data, namespace: observability }
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: { requests: { storage: 1Gi } }

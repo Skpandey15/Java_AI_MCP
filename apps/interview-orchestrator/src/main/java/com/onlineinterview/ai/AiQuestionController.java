@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,17 +33,29 @@ public class AiQuestionController {
 
     @PostMapping("/interviews/{interviewId}/questions:compose")
     @PreAuthorize("hasRole('INTERVIEWER')")
-    public ComposeResult compose(@AuthenticationPrincipal Jwt jwt,
+    @org.springframework.web.bind.annotation.ResponseStatus(org.springframework.http.HttpStatus.ACCEPTED)
+    public ComposeJobResponse compose(@AuthenticationPrincipal Jwt jwt,
             @org.springframework.web.bind.annotation.PathVariable UUID interviewId,
             @RequestHeader("Idempotency-Key") UUID requestId) {
-        var outcome = service.compose(jwt.getSubject(), interviewId, requestId);
-        return new ComposeResult(
-                outcome.questions().stream().map(QuestionResponse::from).toList(),
-                outcome.rounds(), outcome.trace());
+        return ComposeJobResponse.from(service.startCompose(jwt.getSubject(), interviewId, requestId));
     }
 
-    /** Composed questions plus the agent's round count and critique trace. */
-    public record ComposeResult(List<QuestionResponse> questions, int rounds, List<String> trace) {}
+    @GetMapping("/interviews/composition-jobs/{jobId}")
+    @PreAuthorize("hasRole('INTERVIEWER')")
+    public ComposeJobResponse composeJob(@AuthenticationPrincipal Jwt jwt,
+            @org.springframework.web.bind.annotation.PathVariable UUID jobId) {
+        return ComposeJobResponse.from(service.composeJob(jwt.getSubject(), jobId));
+    }
+
+    /** Async composition job status: PENDING | RUNNING | SUCCEEDED | FAILED. */
+    public record ComposeJobResponse(UUID jobId, String status, int questionCount, int rounds,
+            String error) {
+        static ComposeJobResponse from(
+                com.onlineinterview.ai.CompositionJobStore.Job job) {
+            return new ComposeJobResponse(job.id(), job.status(), job.questionCount(),
+                    job.rounds(), job.error());
+        }
+    }
 
     @PostMapping("/topics:suggest")
     @PreAuthorize("hasRole('INTERVIEWER')")
