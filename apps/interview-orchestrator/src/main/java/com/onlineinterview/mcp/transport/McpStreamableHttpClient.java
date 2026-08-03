@@ -1,8 +1,8 @@
 package com.onlineinterview.mcp.transport;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import com.onlineinterview.mcp.application.McpPolicyService.AuthorizedTool;
 import java.net.http.HttpClient;
 import java.time.Duration;
@@ -126,7 +126,7 @@ public class McpStreamableHttpClient {
                                 -32700, "MCP SSE response contains no data"));
             }
             return mapper.readTree(json);
-        } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
+        } catch (tools.jackson.core.JacksonException exception) {
             throw new McpProtocolException(-32700, "Invalid MCP JSON response");
         }
     }

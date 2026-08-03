@@ -2,20 +2,19 @@ plugins {
     id 'java'
     id 'jacoco'
     id 'info.solidsoft.pitest' version '1.19.0'
-    id 'org.springframework.boot' version '3.5.14'
+    id 'org.springframework.boot' version '4.0.7'
     id 'io.spring.dependency-management' version '1.1.7'
 }
 
 group = 'com.onlineinterview'
 version = '0.1.0-SNAPSHOT'
 
-ext['jackson-bom.version'] = '2.21.4'
-ext['tomcat.version'] = '10.1.55'
-ext['postgresql.version'] = '42.7.12'
+// Version pins removed: Spring Boot 4.0's BOM manages Tomcat 11 / Jackson / PostgreSQL for
+// Jakarta EE 11. Overriding them (e.g. Tomcat 10.1) would break the EE-version alignment.
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(25)
     }
 }
 
@@ -25,13 +24,17 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    // Boot 4.0 split RestClient auto-configuration (RestClient.Builder bean) into this module.
+    implementation 'org.springframework.boot:spring-boot-restclient'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
-    implementation 'org.springframework.kafka:spring-kafka'
+    // Boot 4.0 moved Kafka auto-configuration into its own module; the starter pulls both
+    // spring-kafka and spring-boot-kafka (KafkaAutoConfiguration -> KafkaTemplate bean).
+    implementation 'org.springframework.boot:spring-boot-starter-kafka'
     implementation 'io.micrometer:micrometer-registry-prometheus'
     implementation 'io.micrometer:micrometer-tracing-bridge-otel'
     implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
@@ -44,9 +47,16 @@ dependencies {
     runtimeOnly 'org.postgresql:postgresql'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-webmvc-test'
+    testImplementation 'org.springframework.boot:spring-boot-data-jpa-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'com.h2database:h2'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+jacoco {
+    // 0.8.15 understands JDK 25 bytecode (0.8.12 throws "Type T not present" on newer classfiles).
+    toolVersion = '0.8.15'
 }
 
 tasks.named('test') {

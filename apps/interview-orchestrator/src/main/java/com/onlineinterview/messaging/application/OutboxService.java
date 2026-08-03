@@ -1,7 +1,7 @@
 package com.onlineinterview.messaging.application;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.onlineinterview.messaging.domain.OutboxEvent;
 import com.onlineinterview.messaging.infrastructure.OutboxEventRepository;
 import java.time.Clock;
@@ -32,7 +32,7 @@ public class OutboxService {
         try {
             events.save(OutboxEvent.pending(aggregateType, aggregateId, eventType,
                     mapper.writeValueAsString(payload), clock.instant()));
-        } catch (JsonProcessingException exception) {
+        } catch (JacksonException exception) {
             throw new IllegalArgumentException("Unable to serialize outbox event", exception);
         }
     }

@@ -2,7 +2,7 @@ package com.onlineinterview.mcp.transport;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.onlineinterview.mcp.application.McpAuthorizationContext;
 import com.onlineinterview.mcp.domain.*;
 import java.time.Instant;
@@ -17,9 +17,9 @@ class McpToolDispatcherTest {
         McpToolHandler handler = new McpToolHandler() {
             public String serverKey() { return "knowledge"; }
             public String toolName() { return "search_knowledge"; }
-            public com.fasterxml.jackson.databind.JsonNode execute(
+            public tools.jackson.databind.JsonNode execute(
                     McpAuthorizationContext context,
-                    com.fasterxml.jackson.databind.JsonNode arguments) {
+                    tools.jackson.databind.JsonNode arguments) {
                 return mapper.createObjectNode().put("accepted", true);
             }
         };

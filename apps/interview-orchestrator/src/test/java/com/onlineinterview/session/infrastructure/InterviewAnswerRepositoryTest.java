@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.onlineinterview.session.domain.InterviewAnswer;
 import org.junit.jupiter.api.Test;
-import org.springframework.data.mapping.PropertyPath;
+import org.springframework.data.core.PropertyPath;
 
 class InterviewAnswerRepositoryTest {
     @Test

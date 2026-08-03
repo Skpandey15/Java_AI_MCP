@@ -3,7 +3,7 @@ package com.onlineinterview.mcp.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.onlineinterview.mcp.domain.McpActorRole;
 import com.onlineinterview.mcp.domain.McpWorkflow;
 import java.time.Clock;
@@ -48,7 +48,7 @@ class McpAuthorizationTokenServiceTest {
         var properties = new McpAuthorizationProperties();
         properties.setAuthorizationSecret("01234567890123456789012345678901");
         return new McpAuthorizationTokenService(
-                new ObjectMapper().findAndRegisterModules(), properties,
+                new ObjectMapper(), properties,
                 Clock.fixed(now, ZoneOffset.UTC));
     }
 

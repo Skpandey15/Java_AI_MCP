@@ -29,6 +29,10 @@ public interface InterviewSessionRepository extends JpaRepository<InterviewSessi
             String ownerSubject, SessionState state, Pageable pageable);
 
     @EntityGraph(attributePaths = {"assignment", "assignment.interviewDefinition"})
+    Page<InterviewSession> findByAssignment_InterviewDefinition_OwnerSubjectAndStateAndCandidateId(
+            String ownerSubject, SessionState state, UUID candidateId, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"assignment", "assignment.interviewDefinition"})
     Optional<InterviewSession> findByIdAndAssignment_InterviewDefinition_OwnerSubject(
             UUID id, String ownerSubject);
 

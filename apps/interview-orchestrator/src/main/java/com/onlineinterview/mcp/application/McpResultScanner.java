@@ -1,6 +1,6 @@
 package com.onlineinterview.mcp.application;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.onlineinterview.mcp.transport.McpProtocolException;
 import java.util.Iterator;
 import java.util.Map;
@@ -24,9 +24,7 @@ public class McpResultScanner {
 
     private void scan(JsonNode node) {
         if (node.isObject()) {
-            Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
-            while (fields.hasNext()) {
-                var field = fields.next();
+            for (var field : node.properties()) {
                 if (SENSITIVE_NAME.matcher(field.getKey()).matches()) reject();
                 scan(field.getValue());
             }

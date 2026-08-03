@@ -241,8 +241,8 @@ export const interviewApi = {
     request<SavedAnswer>(`/api/v1/candidate/sessions/${sessionId}/answers/${questionId}`, {
       method: 'PUT', body: JSON.stringify({ content, expectedVersion }),
     }),
-  submissions: (page = 0, size = 20) => request<PageResponse<SubmissionSummary>>(
-    `/api/v1/interviewer/submissions?page=${page}&size=${size}`,
+  submissions: (page = 0, size = 20, candidateId = '') => request<PageResponse<SubmissionSummary>>(
+    `/api/v1/interviewer/submissions?page=${page}&size=${size}${candidateId ? `&candidateId=${candidateId}` : ''}`,
   ),
   submission: (sessionId: string) => request<SubmissionDetail>(
     `/api/v1/interviewer/submissions/${sessionId}`,

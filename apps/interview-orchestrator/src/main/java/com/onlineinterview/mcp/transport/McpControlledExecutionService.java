@@ -1,7 +1,7 @@
 package com.onlineinterview.mcp.transport;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.onlineinterview.mcp.application.*;
 import com.onlineinterview.mcp.domain.*;
 import com.onlineinterview.mcp.infrastructure.*;
@@ -129,7 +129,7 @@ public class McpControlledExecutionService implements AutoCloseable {
         }
         try {
             return mapper.readTree(execution.getResultJson());
-        } catch (com.fasterxml.jackson.core.JsonProcessingException exception) {
+        } catch (tools.jackson.core.JacksonException exception) {
             throw new McpProtocolException(-32603, "Stored MCP result is invalid");
         }
     }

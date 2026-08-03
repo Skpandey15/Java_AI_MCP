@@ -1,6 +1,6 @@
 package com.onlineinterview.mcp.api;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import com.onlineinterview.mcp.application.McpRegistryService.ServerDefinition;
 import com.onlineinterview.mcp.application.McpRegistryService.ToolDefinition;
 import java.util.List;

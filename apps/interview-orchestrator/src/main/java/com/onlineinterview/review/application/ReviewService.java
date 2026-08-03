@@ -157,10 +157,13 @@ public class ReviewService {
 
     @Transactional(readOnly = true)
     public PageResponse<SubmissionSummaryResponse> queue(
-            String ownerSubject, int page, int size) {
+            String ownerSubject, UUID candidateId, int page, int size) {
         var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "submittedAt"));
-        var sessionPage = sessions.findByAssignment_InterviewDefinition_OwnerSubjectAndState(
-                ownerSubject, SessionState.SUBMITTED, pageable);
+        var sessionPage = candidateId == null
+                ? sessions.findByAssignment_InterviewDefinition_OwnerSubjectAndState(
+                        ownerSubject, SessionState.SUBMITTED, pageable)
+                : sessions.findByAssignment_InterviewDefinition_OwnerSubjectAndStateAndCandidateId(
+                        ownerSubject, SessionState.SUBMITTED, candidateId, pageable);
         var candidateIds = sessionPage.stream().map(InterviewSession::getCandidateId).collect(Collectors.toSet());
         Map<UUID, UserProfile> candidates = profiles.findAllById(candidateIds).stream()
                 .collect(Collectors.toMap(UserProfile::getId, Function.identity()));

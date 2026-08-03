@@ -36,9 +36,10 @@ public class ReviewController {
     @PreAuthorize("hasRole('INTERVIEWER')")
     public PageResponse<SubmissionSummaryResponse> queue(
             @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) UUID candidateId,
             @RequestParam(defaultValue = "0") @Min(0) int page,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
-        return service.queue(jwt.getSubject(), page, size);
+        return service.queue(jwt.getSubject(), candidateId, page, size);
     }
 
     @GetMapping("/interviewer/submissions/{sessionId}")

@@ -3,8 +3,8 @@ package com.onlineinterview.messaging.application;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.onlineinterview.messaging.domain.OutboxEvent;
 import com.onlineinterview.messaging.infrastructure.OutboxEventRepository;
 import java.time.*;
@@ -33,7 +33,7 @@ class OutboxServiceTest {
     @Test
     void rejectsPayloadThatCannotBeSerialized() throws Exception {
         var mapper = mock(ObjectMapper.class);
-        when(mapper.writeValueAsString(any())).thenThrow(new JsonProcessingException("bad") {});
+        when(mapper.writeValueAsString(any())).thenThrow(new JacksonException("bad") {});
         var service = new OutboxService(
                 mock(OutboxEventRepository.class), mapper, Clock.systemUTC());
         assertThatThrownBy(() -> service.record(

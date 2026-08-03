@@ -2,8 +2,8 @@ package com.onlineinterview.mcp.transport;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 import com.onlineinterview.mcp.application.*;
 import com.onlineinterview.mcp.domain.*;
 import com.sun.net.httpserver.HttpServer;

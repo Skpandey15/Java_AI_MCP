@@ -2,7 +2,7 @@ package com.onlineinterview.mcp.application;
 
 import static org.assertj.core.api.Assertions.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.onlineinterview.mcp.transport.McpProtocolException;
 import org.junit.jupiter.api.Test;
 
