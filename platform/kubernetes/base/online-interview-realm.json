@@ -5,6 +5,12 @@
     "registrationEmailAsUsername":  true,
     "loginWithEmailAllowed":  true,
     "verifyEmail":  false,
+    "bruteForceProtected": true,
+    "failureFactor": 5,
+    "waitIncrementSeconds": 30,
+    "accessTokenLifespan": 300,
+    "revokeRefreshToken": true,
+    "refreshTokenMaxReuse": 0,
     "roles":  {
                   "realm":  [
                                 {
@@ -14,6 +20,10 @@
                                 {
                                     "name":  "interviewer",
                                     "description":  "Administratively assigned interviewer access"
+                                },
+                                {
+                                    "name":  "platform_admin",
+                                    "description":  "Restricted identity provisioning administration"
                                 }
                             ]
               },
@@ -63,6 +73,17 @@
                                                                    "id.token.claim":  "true",
                                                                    "userinfo.token.claim":  "true"
                                                                }
+                                                },
+                                                {
+                                                    "name": "api-audience",
+                                                    "protocol": "openid-connect",
+                                                    "protocolMapper": "oidc-audience-mapper",
+                                                    "consentRequired": false,
+                                                    "config": {
+                                                        "included.client.audience": "online-interview-web",
+                                                        "access.token.claim": "true",
+                                                        "id.token.claim": "false"
+                                                    }
                                                 }
                                             ]
                     }

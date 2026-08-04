@@ -152,6 +152,7 @@ spec:
             - {name: KC_DB_URL, value: jdbc:postgresql://postgres:5432/keycloak}
             - {name: KC_DB_USERNAME, value: keycloak}
             - {name: KC_DB_PASSWORD, valueFrom: {secretKeyRef: {name: platform-secrets, key: KEYCLOAK_DB_PASSWORD}}}
+            - {name: KEYCLOAK_SMTP_PASSWORD, valueFrom: {secretKeyRef: {name: platform-secrets, key: KEYCLOAK_SMTP_PASSWORD, optional: true}}}
           startupProbe:
             httpGet: {path: /health/started, port: 9000}
             failureThreshold: 60
@@ -346,6 +347,7 @@ spec:
             - {name: DATABASE_PASSWORD, valueFrom: {secretKeyRef: {name: platform-secrets, key: DATABASE_PASSWORD}}}
             - {name: AI_SERVICE_TOKEN, valueFrom: {secretKeyRef: {name: platform-secrets, key: AI_SERVICE_TOKEN}}}
             - {name: MCP_AUTHORIZATION_SECRET, valueFrom: {secretKeyRef: {name: platform-secrets, key: MCP_AUTHORIZATION_SECRET}}}
+            - {name: KEYCLOAK_ADMIN_CLIENT_SECRET, valueFrom: {secretKeyRef: {name: platform-secrets, key: KEYCLOAK_ADMIN_CLIENT_SECRET, optional: true}}}
             - {name: REDIS_PASSWORD, valueFrom: {secretKeyRef: {name: platform-secrets, key: REDIS_PASSWORD}}}
             - {name: MINIO_ACCESS_KEY, valueFrom: {secretKeyRef: {name: platform-secrets, key: MINIO_ACCESS_KEY}}}
             - {name: MINIO_SECRET_KEY, valueFrom: {secretKeyRef: {name: platform-secrets, key: MINIO_SECRET_KEY}}}
@@ -361,6 +363,7 @@ spec:
             - {name: DATABASE_PASSWORD, valueFrom: {secretKeyRef: {name: platform-secrets, key: DATABASE_PASSWORD}}}
             - {name: AI_SERVICE_TOKEN, valueFrom: {secretKeyRef: {name: platform-secrets, key: AI_SERVICE_TOKEN}}}
             - {name: MCP_AUTHORIZATION_SECRET, valueFrom: {secretKeyRef: {name: platform-secrets, key: MCP_AUTHORIZATION_SECRET}}}
+            - {name: KEYCLOAK_ADMIN_CLIENT_SECRET, valueFrom: {secretKeyRef: {name: platform-secrets, key: KEYCLOAK_ADMIN_CLIENT_SECRET, optional: true}}}
             - {name: REDIS_PASSWORD, valueFrom: {secretKeyRef: {name: platform-secrets, key: REDIS_PASSWORD}}}
             - {name: MINIO_ACCESS_KEY, valueFrom: {secretKeyRef: {name: platform-secrets, key: MINIO_ACCESS_KEY}}}
             - {name: MINIO_SECRET_KEY, valueFrom: {secretKeyRef: {name: platform-secrets, key: MINIO_SECRET_KEY}}}

@@ -16,14 +16,18 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import com.onlineinterview.shared.security.TenantClaim;
+import org.springframework.beans.factory.annotation.Value;
 
 @RestController
 @RequestMapping("/api/v1")
 public class ProfileController {
     private final ProfileService profileService;
+    private final boolean requireVerifiedEmail;
 
-    public ProfileController(ProfileService profileService) {
+    public ProfileController(ProfileService profileService,
+            @Value("${app.identity.require-verified-email:true}") boolean requireVerifiedEmail) {
         this.profileService = profileService;
+        this.requireVerifiedEmail = requireVerifiedEmail;
     }
 
     @GetMapping("/me")
@@ -42,12 +46,16 @@ public class ProfileController {
     }
 
     @PostMapping("/profiles/registration-complete")
+    @PreAuthorize("hasRole('CANDIDATE') and !hasRole('INTERVIEWER')")
     public ResponseEntity<ProfileResponse> completeRegistration(
             @AuthenticationPrincipal Jwt jwt,
             @Validated @RequestBody RegistrationRequest request) {
         String email = jwt.getClaimAsString("email");
-        if (email == null || email.isBlank()) {
-            throw new IllegalArgumentException("A verified email claim is required");
+        if (email == null || email.isBlank() || (requireVerifiedEmail
+                && !Boolean.TRUE.equals(jwt.getClaimAsBoolean("email_verified")))) {
+            throw new ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "A verified email claim is required");
         }
         var profile = profileService.registerCandidate(
                 TenantClaim.required(jwt), jwt.getSubject(), email, request.displayName());
