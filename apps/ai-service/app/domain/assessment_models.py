@@ -86,3 +86,20 @@ class ModelAnswer(ApiModel):
 class ModelAnswersResponse(ApiModel):
     answers: list[ModelAnswer]
     usage: GenerationUsage | None = None
+
+
+# ---- Explain-answer agent (candidate-answer-aware detailed explanation) ----
+
+class ExplainAnswerRequest(ApiModel):
+    question_prompt: str = Field(min_length=1, max_length=4000)
+    type: str = Field(default="LONG_TEXT", max_length=20)
+    options: list[str] = Field(default_factory=list, max_length=20)
+    correct_answers: list[str] = Field(default_factory=list, max_length=20)
+    candidate_answer: str = Field(default="", max_length=20000)
+    max_score: int = Field(ge=1, le=100)
+    awarded_score: int = Field(default=0, ge=0)
+
+
+class ExplainAnswerResponse(ApiModel):
+    content: str
+    usage: GenerationUsage | None = None

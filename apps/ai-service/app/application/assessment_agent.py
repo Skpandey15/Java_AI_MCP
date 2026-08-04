@@ -19,6 +19,8 @@ from app.domain.assessment_models import (
     DraftFeedbackResponse,
     EvaluateAnswersRequest,
     EvaluateAnswersResponse,
+    ExplainAnswerRequest,
+    ExplainAnswerResponse,
     GenerationUsage,
     LeakageVerdict,
     ModelAnswer,
@@ -92,6 +94,13 @@ _MODEL_ANSWER_SCHEMA = {
         }
     },
     "required": ["answers"],
+    "additionalProperties": False,
+}
+
+_EXPLAIN_SCHEMA = {
+    "type": "object",
+    "properties": {"content": {"type": "string"}},
+    "required": ["content"],
     "additionalProperties": False,
 }
 
@@ -236,3 +245,33 @@ class AssessmentAgent:
         answers = [ModelAnswer(content=str(a.get("content", "")))
                    for a in parsed.get("answers", [])]
         return ModelAnswersResponse(answers=answers, usage=_sum_usage(usage))
+
+    def explain_answer(self, request: ExplainAnswerRequest) -> ExplainAnswerResponse:
+        """Explain, for ONE candidate's specific (wrong or partial) answer, why it falls
+        short and how to reach the correct answer. Candidate-answer-aware: it reads the
+        submitted text and critiques what they actually wrote, then gives the correct
+        answer with a concrete example. Interviewer-facing review aid."""
+        lines = [f"Question [{request.type}]: {request.question_prompt}"]
+        if request.options:
+            lines.append(f"Options: {request.options}")
+        if request.correct_answers:
+            lines.append(
+                f"Correct option(s) / key points (ground truth): {request.correct_answers}")
+        lines.append(f"Score awarded: {request.awarded_score}/{request.max_score}")
+        lines.append("Candidate's answer:\n"
+                     + (request.candidate_answer.strip() or "(no answer submitted)"))
+        system = (
+            "You are a senior technical interviewer giving targeted feedback on ONE answer a "
+            "candidate got wrong or only partially right. Return a `content` string in "
+            "GitHub-flavored Markdown with exactly these parts: `**What you answered:**` a short "
+            "restatement of the candidate's answer; `**Why it's not fully correct:**` a specific "
+            "explanation of the mistakes or gaps in THEIR answer — reference what they actually "
+            "wrote and do not invent content they did not write; `**Correct answer:**` a concise "
+            "correct answer; and `**Example:**` a concrete example (code snippet or scenario). "
+            "Use the provided correct option(s)/key points as ground truth. Be specific and "
+            "constructive, not generic. If no answer was submitted, say so and give the correct "
+            "answer with an example."
+        )
+        parsed, usage = self.client.complete_json(system, "\n".join(lines), _EXPLAIN_SCHEMA)
+        return ExplainAnswerResponse(content=str(parsed.get("content", "")),
+                                     usage=_sum_usage(usage))

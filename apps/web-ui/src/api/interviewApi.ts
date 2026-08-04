@@ -73,7 +73,7 @@ export type ReviewQuestion = {
   questionId: string; answerId?: string; order: number; type: QuestionType; prompt: string
   options: string[]; correctAnswers: string[]; content: string; maxScore: number
   awardedScore?: number; feedback?: string; autoScored: boolean; citations: QuestionCitation[]
-  modelAnswer?: string
+  modelAnswer?: string; detailedAnswer?: string
 }
 export type SubmissionDetail = {
   sessionId: string; interviewTitle: string; candidateName: string; candidateEmail: string
@@ -122,9 +122,27 @@ async function ensureToken(): Promise<void> {
   if (!keycloak.token) throw new Error('Authentication token is unavailable')
 }
 
+// fetch() rejects with a TypeError only for network-level failures — the backend being
+// down, a refused/timed-out connection, DNS failure, or a blocked CORS preflight — never
+// for an HTTP error status (those resolve with response.ok === false). Convert those into
+// a friendly, actionable ApiError so every page shows a "service is unavailable" message
+// instead of the raw browser "Failed to fetch". A deliberate AbortController cancel is
+// re-thrown untouched so callers can tell it apart.
+const SERVICE_DOWN_MESSAGE =
+  'The service is currently unavailable. It should be back in a few minutes — please try again shortly.'
+
+async function safeFetch(input: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init)
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
+    throw new ApiError(0, SERVICE_DOWN_MESSAGE)
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   await ensureToken()
-  const response = await fetch(`${apiBaseUrl}${path}`, {
+  const response = await safeFetch(`${apiBaseUrl}${path}`, {
     ...init,
     headers: {
       Authorization: `Bearer ${keycloak.token}`,
@@ -171,7 +189,7 @@ export const interviewApi = {
     await ensureToken()
     const form = new FormData()
     form.append('file', file)
-    const res = await fetch(`${apiBaseUrl}/api/v1/knowledge/collections/${collectionId}/documents:upload`, {
+    const res = await safeFetch(`${apiBaseUrl}/api/v1/knowledge/collections/${collectionId}/documents:upload`, {
       method: 'POST', headers: { Authorization: `Bearer ${keycloak.token}` }, body: form,
     })
     if (!res.ok) {
@@ -259,6 +277,8 @@ export const interviewApi = {
     `/api/v1/interviewer/submissions/${sessionId}/ai-suggest`, { method: 'POST' }),
   generateAnswerKey: (sessionId: string) => request<SubmissionDetail>(
     `/api/v1/interviewer/submissions/${sessionId}/answer-key`, { method: 'POST' }),
+  explainAnswer: (sessionId: string, answerId: string) => request<SubmissionDetail>(
+    `/api/v1/interviewer/submissions/${sessionId}/answers/${answerId}/explain`, { method: 'POST' }),
   emailResult: (sessionId: string) => request<{ sentTo: string }>(
     `/api/v1/interviewer/submissions/${sessionId}/email-result`, { method: 'POST' }),
   draftCoaching: (sessionId: string) => request<CoachingResponse>(

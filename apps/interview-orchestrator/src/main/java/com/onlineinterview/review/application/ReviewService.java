@@ -45,13 +45,15 @@ public class ReviewService {
     private final com.onlineinterview.review.infrastructure.AiAssessmentClient assessment;
     private final com.onlineinterview.review.infrastructure.CoachingFeedbackStore coaching;
     private final com.onlineinterview.review.infrastructure.ModelAnswerStore modelAnswers;
+    private final com.onlineinterview.review.infrastructure.AnswerExplanationStore explanations;
 
     public ReviewService(InterviewSessionRepository sessions, InterviewAnswerRepository answers,
             ManualQuestionRepository questions, UserProfileRepository profiles,
             ReviewAuditEventRepository auditEvents, OutboxService outbox,
             com.onlineinterview.review.infrastructure.AiAssessmentClient assessment,
             com.onlineinterview.review.infrastructure.CoachingFeedbackStore coaching,
-            com.onlineinterview.review.infrastructure.ModelAnswerStore modelAnswers) {
+            com.onlineinterview.review.infrastructure.ModelAnswerStore modelAnswers,
+            com.onlineinterview.review.infrastructure.AnswerExplanationStore explanations) {
         this.sessions = sessions;
         this.answers = answers;
         this.questions = questions;
@@ -61,6 +63,7 @@ public class ReviewService {
         this.assessment = assessment;
         this.coaching = coaching;
         this.modelAnswers = modelAnswers;
+        this.explanations = explanations;
     }
 
     /** Generate (or reuse) the AI answer key — the correct answer with details and an example —
@@ -91,6 +94,39 @@ public class ReviewService {
                     .addKeyValue("sessionId", sessionId)
                     .addKeyValue("questionCount", missing.size())
                     .log("AI answer key generated");
+        }
+        return detail(session);
+    }
+
+    /** Generate (or reuse) the AI "detailed answer" for a single submitted answer — the
+     *  candidate-answer-aware explanation of why THIS answer fell short plus the correct answer.
+     *  Backs the reviewer's per-question "Detailed answer" action on wrong answers. Cached per
+     *  answer (never reused across candidates, since it critiques this candidate's own text). */
+    @Transactional
+    public SubmissionDetailResponse explainAnswer(String ownerSubject, UUID sessionId,
+            UUID answerId) {
+        var session = ownedSubmission(ownerSubject, sessionId);
+        var answer = answers.findByIdAndSession_Id(answerId, sessionId)
+                .filter(a -> a.getQuestion().getInterviewDefinition().getId()
+                        .equals(session.getAssignment().getInterviewDefinition().getId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Answer not found for this submission"));
+        if (!explanations.findByAnswerIds(List.of(answerId)).containsKey(answerId)) {
+            var question = answer.getQuestion();
+            var request = new com.onlineinterview.review.infrastructure.AiAssessmentClient
+                    .ExplainRequest(question.getPrompt(), question.getType().name(),
+                    question.getOptions(), question.getCorrectAnswers(),
+                    answer.getContent() == null ? "" : answer.getContent(),
+                    question.getMaxScore(),
+                    answer.getAwardedScore() == null ? 0 : answer.getAwardedScore());
+            var generated = assessment.explainAnswer(request);
+            if (generated != null && generated.content() != null && !generated.content().isBlank()) {
+                explanations.upsert(answerId, generated.content());
+            }
+            log.atInfo().addKeyValue("event", "review.answer_explained")
+                    .addKeyValue("sessionId", sessionId)
+                    .addKeyValue("answerId", answerId)
+                    .log("AI detailed answer generated for a single submitted answer");
         }
         return detail(session);
     }
@@ -316,6 +352,8 @@ public class ReviewService {
                 .collect(Collectors.toMap(InterviewAnswer::getQuestionId, Function.identity()));
         var keys = modelAnswers.findByQuestionIds(
                 questionList.stream().map(q -> q.getId()).toList());
+        var detailedAnswers = explanations.findByAnswerIds(
+                byQuestion.values().stream().map(InterviewAnswer::getId).toList());
         var reviewQuestions = questionList.stream().map(question -> {
             var answer = byQuestion.get(question.getId());
             return new ReviewQuestionResponse(question.getId(), answer == null ? null : answer.getId(),
@@ -326,7 +364,8 @@ public class ReviewService {
                     answer == null ? null : answer.getReviewerFeedback(),
                     answer != null && answer.isAutoScored(),
                     question.getCitations().stream().map(QuestionCitationResponse::from).toList(),
-                    keys.get(question.getId()));
+                    keys.get(question.getId()),
+                    answer == null ? null : detailedAnswers.get(answer.getId()));
         }).toList();
         int maxScore = questionList.stream().mapToInt(q -> q.getMaxScore()).sum();
         return new SubmissionDetailResponse(session.getId(), definition.getTitle(),

@@ -220,6 +220,49 @@ def test_model_answers_route_gateway_error(monkeypatch):
     assert _post("/internal/v1/answers:model", body) == 502
 
 
+def test_explain_answer_agent():
+    from app.domain.assessment_models import ExplainAnswerRequest
+    agent = AssessmentAgent(FakeChat([
+        {"content": "**What you answered:** X\n**Why it's not fully correct:** ...\n"
+                    "**Correct answer:** PUT\n**Example:** ..."},
+    ]))
+    req = ExplainAnswerRequest.model_validate({
+        "questionPrompt": "Idempotent HTTP method?", "type": "MCQ_SINGLE",
+        "options": ["PUT", "POST"], "correctAnswers": ["PUT"],
+        "candidateAnswer": "POST", "maxScore": 5, "awardedScore": 0})
+    resp = agent.explain_answer(req)
+    assert resp.content.startswith("**What you answered:**")
+
+
+def test_explain_answer_agent_handles_blank_answer():
+    from app.domain.assessment_models import ExplainAnswerRequest
+    agent = AssessmentAgent(FakeChat([{"content": "No answer submitted. Correct answer: ..."}]))
+    req = ExplainAnswerRequest.model_validate({
+        "questionPrompt": "Explain TCP handshake", "type": "LONG_TEXT",
+        "candidateAnswer": "   ", "maxScore": 10})
+    resp = agent.explain_answer(req)
+    assert "No answer submitted" in resp.content
+
+
+def test_explain_answer_route(monkeypatch):
+    from app.domain.assessment_models import ExplainAnswerResponse
+    resp = ExplainAnswerResponse(content="c", usage=None)
+    monkeypatch.setattr(assessment_routes, "agent",
+                        type("A", (), {"explain_answer": staticmethod(lambda r: resp)})())
+    body = {"questionPrompt": "Q", "type": "LONG_TEXT", "candidateAnswer": "A", "maxScore": 5}
+    assert _post("/internal/v1/answers:explain", body) == 200
+    assert _post("/internal/v1/answers:explain", body, "no") == 401
+
+
+def test_explain_answer_route_gateway_error(monkeypatch):
+    def raiser(r):
+        raise ModelGatewayError("x")
+    monkeypatch.setattr(assessment_routes, "agent",
+                        type("A", (), {"explain_answer": staticmethod(raiser)})())
+    body = {"questionPrompt": "Q", "type": "LONG_TEXT", "candidateAnswer": "A", "maxScore": 5}
+    assert _post("/internal/v1/answers:explain", body) == 502
+
+
 def test_topic_agent_dedupes():
     from app.application.topic_agent import TopicAgent
     from app.domain.topic_models import SuggestTopicsRequest

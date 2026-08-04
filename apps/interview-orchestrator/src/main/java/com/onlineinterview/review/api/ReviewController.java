@@ -79,6 +79,14 @@ public class ReviewController {
         return service.generateAnswerKey(jwt.getSubject(), sessionId);
     }
 
+    @PostMapping("/interviewer/submissions/{sessionId}/answers/{answerId}/explain")
+    @PreAuthorize("hasRole('INTERVIEWER')")
+    public SubmissionDetailResponse explainAnswer(
+            @AuthenticationPrincipal Jwt jwt, @PathVariable UUID sessionId,
+            @PathVariable UUID answerId) {
+        return service.explainAnswer(jwt.getSubject(), sessionId, answerId);
+    }
+
     @PostMapping("/interviewer/submissions/{sessionId}/coaching")
     @PreAuthorize("hasRole('INTERVIEWER')")
     public AssessmentResponses.CoachingResponse draftCoaching(

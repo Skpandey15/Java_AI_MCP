@@ -10,6 +10,8 @@ from app.domain.assessment_models import (
     DraftFeedbackResponse,
     EvaluateAnswersRequest,
     EvaluateAnswersResponse,
+    ExplainAnswerRequest,
+    ExplainAnswerResponse,
     ModelAnswersRequest,
     ModelAnswersResponse,
 )
@@ -88,3 +90,21 @@ def model_answers(
                          extra={"event": "ai.model_answers_failed"})
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY,
                             detail="Model answer generation failed") from exc
+
+
+@router.post("/answers:explain", response_model=ExplainAnswerResponse)
+def explain_answer(
+    request: ExplainAnswerRequest,
+    x_service_token: str = Header(default=""),
+) -> ExplainAnswerResponse:
+    _authorize(x_service_token)
+    try:
+        response = agent.explain_answer(request)
+        logger.info("Answer explanation generated",
+                    extra={"event": "ai.answer_explained"})
+        return response
+    except (ModelGatewayError, ValueError) as exc:
+        logger.exception("Answer explanation failed",
+                         extra={"event": "ai.answer_explanation_failed"})
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY,
+                            detail="Answer explanation failed") from exc

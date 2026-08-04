@@ -1,7 +1,7 @@
 # Local-only: containerizes a pre-built bootJar (built on the host with cached Gradle deps)
 # to avoid re-downloading the full dependency graph inside Docker. Mirrors the runtime
 # stage of the production Dockerfile.
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 RUN apk upgrade --no-cache
 RUN addgroup -S app && adduser -S app -G app
 WORKDIR /app
