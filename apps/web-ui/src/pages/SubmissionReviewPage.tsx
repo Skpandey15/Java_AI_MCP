@@ -18,6 +18,7 @@ export function SubmissionReviewPage() {
   const [suggestions, setSuggestions] = useState<Record<string, AnswerSuggestion>>({})
   const [coaching, setCoaching] = useState<CoachingResponse>()
   const [aiBusy, setAiBusy] = useState('')
+  const [detailBusy, setDetailBusy] = useState('')
 
   useEffect(() => {
     interviewApi.submission(sessionId).then((loaded) => {
@@ -121,6 +122,12 @@ export function SubmissionReviewPage() {
     catch (error) { setFinalizeNotice({ kind: 'error', text: error instanceof Error ? error.message : 'Answer key generation failed' }) }
     finally { setAiBusy('') }
   }
+  async function detailedAnswer(questionId: string) {
+    setDetailBusy(questionId)
+    try { setSubmission(await interviewApi.generateQuestionAnswerKey(sessionId, questionId)) }
+    catch (error) { setFinalizeNotice({ kind: 'error', text: error instanceof Error ? error.message : 'Detailed answer failed' }) }
+    finally { setDetailBusy('') }
+  }
   async function emailResult() {
     setAiBusy('email')
     try {
@@ -175,6 +182,11 @@ export function SubmissionReviewPage() {
         <strong>✓ Correct answer</strong>
         <Markdown className="model-answer-content" content={question.modelAnswer} />
       </div>}
+      {!question.modelAnswer && (question.awardedScore ?? 0) < question.maxScore && <button
+        className="secondary-button ai-detailed-answer" disabled={detailBusy === question.questionId}
+        onClick={() => void detailedAnswer(question.questionId)}
+        title="Fetch a detailed model answer for this question from the AI (correct answer + why + example).">
+        {detailBusy === question.questionId ? 'Fetching detailed answer…' : '🤖 Detailed answer'}</button>}
       {question.answerId && suggestions[question.answerId] && <p className="ai-suggestion">
         🤖 AI suggests {suggestions[question.answerId].suggestedScore}/{question.maxScore} (confidence{' '}
         {Math.round(suggestions[question.answerId].confidence * 100)}%): {suggestions[question.answerId].justification}</p>}

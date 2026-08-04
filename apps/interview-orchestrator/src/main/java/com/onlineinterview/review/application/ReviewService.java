@@ -95,6 +95,38 @@ public class ReviewService {
         return detail(session);
     }
 
+    /** Generate (or reuse) the AI detailed model answer for a single question — backs the
+     *  reviewer's per-question "Detailed answer" action on wrong answers. Cached per question,
+     *  so it shares storage with the bulk answer key and is reused for every candidate. */
+    @Transactional
+    public SubmissionDetailResponse generateQuestionAnswerKey(String ownerSubject, UUID sessionId,
+            UUID questionId) {
+        var session = ownedSubmission(ownerSubject, sessionId);
+        var definition = session.getAssignment().getInterviewDefinition();
+        var question = questions.findByInterviewDefinitionIdOrderByOrderAsc(definition.getId())
+                .stream().filter(q -> q.getId().equals(questionId)).findFirst()
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Question not found for this submission"));
+        if (!modelAnswers.findByQuestionIds(List.of(questionId)).containsKey(questionId)) {
+            var item = new com.onlineinterview.review.infrastructure.AiAssessmentClient.ModelItem(
+                    question.getPrompt(), question.getType().name(),
+                    question.getOptions(), question.getCorrectAnswers());
+            var generated = assessment.modelAnswers(List.of(item));
+            if (!generated.isEmpty()) {
+                var content = generated.get(0).content();
+                if (content != null && !content.isBlank()) {
+                    modelAnswers.upsert(questionId, content);
+                }
+            }
+            log.atInfo().addKeyValue("event", "review.answer_key_generated")
+                    .addKeyValue("sessionId", sessionId)
+                    .addKeyValue("questionId", questionId)
+                    .addKeyValue("questionCount", 1)
+                    .log("AI detailed answer generated for a single question");
+        }
+        return detail(session);
+    }
+
     @Transactional(readOnly = true)
     public java.util.List<com.onlineinterview.review.api.AssessmentResponses.AnswerSuggestion>
             suggestScores(String ownerSubject, UUID sessionId) {

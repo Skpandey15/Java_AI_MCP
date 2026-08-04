@@ -259,6 +259,8 @@ export const interviewApi = {
     `/api/v1/interviewer/submissions/${sessionId}/ai-suggest`, { method: 'POST' }),
   generateAnswerKey: (sessionId: string) => request<SubmissionDetail>(
     `/api/v1/interviewer/submissions/${sessionId}/answer-key`, { method: 'POST' }),
+  generateQuestionAnswerKey: (sessionId: string, questionId: string) => request<SubmissionDetail>(
+    `/api/v1/interviewer/submissions/${sessionId}/questions/${questionId}/answer-key`, { method: 'POST' }),
   emailResult: (sessionId: string) => request<{ sentTo: string }>(
     `/api/v1/interviewer/submissions/${sessionId}/email-result`, { method: 'POST' }),
   draftCoaching: (sessionId: string) => request<CoachingResponse>(
