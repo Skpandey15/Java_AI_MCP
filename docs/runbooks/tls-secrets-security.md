@@ -31,7 +31,13 @@ The external payload must provide:
 `DATABASE_PASSWORD`, `KEYCLOAK_DB_PASSWORD`, `KEYCLOAK_ADMIN_USERNAME`,
 `KEYCLOAK_ADMIN_PASSWORD`, `LITELLM_MASTER_KEY`, `LITELLM_API_KEY`,
 `AI_SERVICE_TOKEN`, `MCP_AUTHORIZATION_SECRET`, `REDIS_PASSWORD`,
-`MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, and `OPENAI_API_KEY`.
+`MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `KEYCLOAK_ADMIN_CLIENT_SECRET`, and
+`OPENAI_API_KEY`.
+
+Provision a confidential Keycloak client named `interview-provisioner`, enable service
+accounts, and grant its service account only the realm-management roles required to query,
+create and update users and assign realm roles. Store its generated secret as
+`KEYCLOAK_ADMIN_CLIENT_SECRET`; never use the bootstrap administrator from the application.
 
 `LITELLM_MASTER_KEY` is admin-only and is injected **only** into the LiteLLM pod.
 `LITELLM_API_KEY` is the scoped gateway key the AI service uses and must be a

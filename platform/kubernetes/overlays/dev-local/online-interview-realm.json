@@ -5,6 +5,26 @@
     "registrationEmailAsUsername":  true,
     "loginWithEmailAllowed":  true,
     "verifyEmail":  false,
+    "bruteForceProtected": true,
+    "failureFactor": 5,
+    "waitIncrementSeconds": 30,
+    "maxFailureWaitSeconds": 300,
+    "accessTokenLifespan": 300,
+    "ssoSessionIdleTimeout": 1800,
+    "revokeRefreshToken": true,
+    "refreshTokenMaxReuse": 0,
+    "smtpServer": {
+        "host": "smtp.gmail.com",
+        "port": "587",
+        "from": "sunil4.java.ai.expert@gmail.com",
+        "fromDisplayName": "Online Interview Platform",
+        "replyTo": "sunil4.java.ai.expert@gmail.com",
+        "auth": "true",
+        "user": "sunil4.java.ai.expert@gmail.com",
+        "password": "${KEYCLOAK_SMTP_PASSWORD}",
+        "starttls": "true",
+        "ssl": "false"
+    },
     "roles":  {
                   "realm":  [
                                 {
@@ -14,6 +34,10 @@
                                 {
                                     "name":  "interviewer",
                                     "description":  "Administratively assigned interviewer access"
+                                },
+                                {
+                                    "name":  "platform_admin",
+                                    "description":  "Restricted identity provisioning administration"
                                 }
                             ]
               },
@@ -36,13 +60,13 @@
                         "publicClient":  true,
                         "standardFlowEnabled":  true,
                         "directAccessGrantsEnabled":  false,
-                        "rootUrl":  "http://dev.interview.localhost:8081",
-                        "baseUrl":  "http://dev.interview.localhost:8081",
+                        "rootUrl":  "https://dev.interview.localhost:8443",
+                        "baseUrl":  "https://dev.interview.localhost:8443",
                         "redirectUris":  [
-                                             "http://dev.interview.localhost:8081/*"
+                                             "https://dev.interview.localhost:8443/*"
                                          ],
                         "webOrigins":  [
-                                           "http://dev.interview.localhost:8081"
+                                           "https://dev.interview.localhost:8443"
                                        ],
                         "attributes":  {
                                            "pkce.code.challenge.method":  "S256"
@@ -61,6 +85,17 @@
                                                                    "id.token.claim":  "true",
                                                                    "userinfo.token.claim":  "true"
                                                                }
+                                                },
+                                                {
+                                                    "name": "api-audience",
+                                                    "protocol": "openid-connect",
+                                                    "protocolMapper": "oidc-audience-mapper",
+                                                    "consentRequired": false,
+                                                    "config": {
+                                                        "included.client.audience": "online-interview-web",
+                                                        "access.token.claim": "true",
+                                                        "id.token.claim": "false"
+                                                    }
                                                 }
                                             ]
                     }

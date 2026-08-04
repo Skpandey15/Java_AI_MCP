@@ -46,7 +46,7 @@ class ProfileServiceTest {
 
         org.assertj.core.api.Assertions.assertThat(created.getTenantId()).isEqualTo("tenant-a");
         org.assertj.core.api.Assertions.assertThat(created.getIdentitySubject()).isEqualTo("subject");
-        org.assertj.core.api.Assertions.assertThat(created.getDisplayName()).isEqualTo(" Person ");
+        org.assertj.core.api.Assertions.assertThat(created.getDisplayName()).isEqualTo("Person");
         org.assertj.core.api.Assertions.assertThat(created.getRole().name()).isEqualTo("CANDIDATE");
         org.assertj.core.api.Assertions.assertThat(created.getStatus().name()).isEqualTo("ACTIVE");
     }

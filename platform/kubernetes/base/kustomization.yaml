@@ -24,6 +24,10 @@ configMapGenerator:
       - DATABASE_CONNECTION_TIMEOUT_MS=3000
       - KEYCLOAK_ISSUER_URI=http://auth.interview.localhost:8081/realms/online-interview
       - KEYCLOAK_JWK_SET_URI=http://keycloak:8080/realms/online-interview/protocol/openid-connect/certs
+      - KEYCLOAK_ADMIN_BASE_URL=http://keycloak:8080
+      - KEYCLOAK_ADMIN_REALM=online-interview
+      - KEYCLOAK_ADMIN_CLIENT_ID=interview-provisioner
+      - IDENTITY_RECONCILIATION_ENABLED=false
       - AI_SERVICE_BASE_URL=http://ai-service:8000
       - LITELLM_BASE_URL=http://litellm:4000
       - INTERVIEW_QUESTION_MODEL=interview-question-model

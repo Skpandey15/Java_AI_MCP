@@ -54,6 +54,16 @@ public class UserProfile {
 
     public static UserProfile registerCandidate(
             String tenantId, String subject, String email, String displayName) {
+        return register(tenantId, subject, email, displayName, UserRole.CANDIDATE);
+    }
+
+    public static UserProfile registerInterviewer(
+            String tenantId, String subject, String email, String displayName) {
+        return register(tenantId, subject, email, displayName, UserRole.INTERVIEWER);
+    }
+
+    private static UserProfile register(
+            String tenantId, String subject, String email, String displayName, UserRole role) {
         Instant now = Instant.now();
         UserProfile profile = new UserProfile();
         profile.id = UUID.randomUUID();
@@ -61,7 +71,7 @@ public class UserProfile {
         profile.identitySubject = subject;
         profile.email = email;
         profile.displayName = displayName;
-        profile.role = UserRole.CANDIDATE;
+        profile.role = role;
         profile.status = UserStatus.ACTIVE;
         profile.createdAt = now;
         profile.updatedAt = now;

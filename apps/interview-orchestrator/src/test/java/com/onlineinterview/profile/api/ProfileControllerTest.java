@@ -3,6 +3,7 @@ package com.onlineinterview.profile.api;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.security.core.authority.AuthorityUtils.createAuthorityList;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -19,9 +20,11 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import com.onlineinterview.shared.security.SecurityConfig;
+import org.springframework.test.context.TestPropertySource;
 
 @WebMvcTest(ProfileController.class)
 @Import(SecurityConfig.class)
+@TestPropertySource(properties = "app.identity.require-verified-email=true")
 class ProfileControllerTest {
     @Autowired
     private MockMvc mockMvc;
@@ -46,11 +49,42 @@ class ProfileControllerTest {
                         .with(jwt().jwt(token -> token
                                 .subject("subject-1")
                                 .claim("tenant_id", "demo")
-                                .claim("email", "candidate@example.com")))
+                                .claim("email", "candidate@example.com")
+                                .claim("email_verified", true))
+                                .authorities(createAuthorityList("ROLE_CANDIDATE")))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"displayName\":\"Candidate\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.role").value("CANDIDATE"));
+    }
+
+    @Test
+    void rejectsRegistrationWhenEmailIsNotVerified() throws Exception {
+        mockMvc.perform(post("/api/v1/profiles/registration-complete")
+                        .with(jwt().jwt(token -> token
+                                .subject("subject-1")
+                                .claim("tenant_id", "demo")
+                                .claim("email", "candidate@example.com")
+                                .claim("email_verified", false))
+                                .authorities(createAuthorityList("ROLE_CANDIDATE")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\":\"Candidate\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void rejectsInterviewerFromCandidateRegistration() throws Exception {
+        mockMvc.perform(post("/api/v1/profiles/registration-complete")
+                        .with(jwt().jwt(token -> token
+                                .subject("subject-1")
+                                .claim("tenant_id", "demo")
+                                .claim("email", "interviewer@example.com")
+                                .claim("email_verified", true))
+                                .authorities(createAuthorityList(
+                                        "ROLE_CANDIDATE", "ROLE_INTERVIEWER")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\":\"Interviewer\"}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

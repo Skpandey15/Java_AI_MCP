@@ -8,6 +8,8 @@ import com.onlineinterview.profile.infrastructure.UserProfileRepository;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class ProfileService {
@@ -39,13 +41,25 @@ public class ProfileService {
         return repository.findByIdentitySubject(subject)
                 .map(existing -> {
                     if (!existing.getTenantId().equals(tenantId)) {
-                        throw new org.springframework.web.server.ResponseStatusException(
-                                org.springframework.http.HttpStatus.CONFLICT,
+                        throw new ResponseStatusException(
+                                HttpStatus.CONFLICT,
                                 "Identity is already registered to another tenant");
+                    }
+                    if (existing.getRole() != UserRole.CANDIDATE) {
+                        throw new ResponseStatusException(
+                                HttpStatus.CONFLICT,
+                                "Identity is already registered with a different application role");
+                    }
+                    if (!existing.getEmail().equalsIgnoreCase(email.strip())) {
+                        throw new ResponseStatusException(
+                                HttpStatus.CONFLICT,
+                                "Identity email does not match the registered application profile");
                     }
                     return existing;
                 })
                 .orElseGet(() -> repository.save(
-                        UserProfile.registerCandidate(tenantId, subject, email, displayName)));
+                        UserProfile.registerCandidate(
+                                tenantId, subject, email.strip().toLowerCase(java.util.Locale.ROOT),
+                                displayName.strip())));
     }
 }

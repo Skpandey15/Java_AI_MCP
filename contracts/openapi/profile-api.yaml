@@ -19,6 +19,37 @@ paths:
       responses:
         '201':
           description: Candidate profile created
+        '400':
+          description: The token does not contain a verified email
+        '403':
+          description: The identity is not exclusively a candidate
+        '409':
+          description: The identity is already bound to another tenant, email, or role
+  /api/v1/admin/interviewers:
+    post:
+      summary: Idempotently provision an interviewer identity and application profile
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string, maxLength: 100 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tenantId, email, displayName]
+              properties:
+                tenantId: { type: string, pattern: '^[a-z0-9][a-z0-9_-]{0,79}$' }
+                email: { type: string, format: email, maxLength: 320 }
+                displayName: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        '201': { description: Provisioning completed or resumed idempotently }
+        '403': { description: PLATFORM_ADMIN role required }
+        '409': { description: Identity, role, tenant, or idempotency conflict }
+        '503': { description: Identity provider administration is unavailable }
 components:
   securitySchemes:
     bearerAuth:

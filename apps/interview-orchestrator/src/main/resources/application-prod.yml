@@ -47,3 +47,12 @@ app:
     service-token: ${AI_SERVICE_TOKEN}
   mcp:
     authorization-secret: ${MCP_AUTHORIZATION_SECRET}
+  identity:
+    reconciliation:
+      enabled: ${IDENTITY_RECONCILIATION_ENABLED:true}
+      interval-ms: ${IDENTITY_RECONCILIATION_INTERVAL_MS:300000}
+    keycloak-admin:
+      base-url: ${KEYCLOAK_ADMIN_BASE_URL}
+      realm: ${KEYCLOAK_ADMIN_REALM:online-interview}
+      client-id: ${KEYCLOAK_ADMIN_CLIENT_ID}
+      client-secret: ${KEYCLOAK_ADMIN_CLIENT_SECRET}

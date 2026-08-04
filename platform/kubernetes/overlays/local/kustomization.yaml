@@ -25,6 +25,7 @@ secretGenerator:
       - LITELLM_API_KEY=local-litellm-key
       - AI_SERVICE_TOKEN=local-ai-service-token
       - MCP_AUTHORIZATION_SECRET=local-mcp-authorization-secret-change-me
+      - KEYCLOAK_ADMIN_CLIENT_SECRET=local-interview-provisioner-secret
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - REDIS_PASSWORD=local-redis-password
       - MINIO_ACCESS_KEY=interview
