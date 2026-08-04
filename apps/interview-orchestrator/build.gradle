@@ -9,8 +9,11 @@ plugins {
 group = 'com.onlineinterview'
 version = '0.1.0-SNAPSHOT'
 
-// Version pins removed: Spring Boot 4.0's BOM manages Tomcat 11 / Jackson / PostgreSQL for
-// Jakarta EE 11. Overriding them (e.g. Tomcat 10.1) would break the EE-version alignment.
+// Spring Boot 4.0's BOM manages Tomcat 11 / Jackson / PostgreSQL for Jakarta EE 11; do not
+// override those for their own sake (it would break EE-version alignment). The one exception
+// is a patched-CVE version bump: the BOM ships PostgreSQL 42.7.11, which Trivy flags for
+// CVE-2026-54291 (fixed in 42.7.12). Override just that BOM property.
+ext['postgresql.version'] = '42.7.12'
 
 java {
     toolchain {
@@ -40,8 +43,10 @@ dependencies {
     implementation 'io.opentelemetry:opentelemetry-exporter-otlp'
     implementation 'net.logstash.logback:logstash-logback-encoder:8.0'
     implementation 'io.minio:minio:8.6.0'
-    implementation 'org.apache.tika:tika-core:2.9.2'
-    implementation 'org.apache.tika:tika-parsers-standard-package:2.9.2'
+    // Tika 3.2.2 clears CVE-2025-66516 / CVE-2025-54988 (PDF-parser XXE) in 2.9.2. The
+    // Tika facade API used here (new Tika(), setMaxStringLength, parseToString) is unchanged.
+    implementation 'org.apache.tika:tika-core:3.2.2'
+    implementation 'org.apache.tika:tika-parsers-standard-package:3.2.2'
     // Boot 4 modularized Flyway auto-configuration behind this starter.
     implementation 'org.springframework.boot:spring-boot-starter-flyway'
     implementation 'org.flywaydb:flyway-database-postgresql'
