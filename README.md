@@ -78,7 +78,7 @@ See the [implementation plan](docs/implementation-plan.md).
 ### Build tools
 
 - Web UI: Vite + npm
-- Interview orchestrator: Gradle 8.12 Wrapper with Groovy DSL
+- Interview orchestrator: Gradle 9.6.1 Wrapper with Groovy DSL (JDK 25 toolchain)
 - AI service: uv with a committed dependency lockfile
 
 ### Local startup
@@ -86,3 +86,8 @@ See the [implementation plan](docs/implementation-plan.md).
 ```bash
 docker compose -f platform/docker/docker-compose.yml up --build
 ```
+
+### Deployment
+
+CI/CD, cloud-pipeline triggers, and the step-by-step local k3d deploy procedure (including how
+to run a database migration and roll back) are in the [deployment runbook](docs/runbooks/deployment.md).
