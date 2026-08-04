@@ -342,7 +342,37 @@ HTTPS and 404 through the HTTP ingress.
 
 ---
 
-## 8. Pipeline review — findings (2026-08)
+## 8. Code scanning — CodeQL & SonarCloud
+
+Two static-analysis layers on top of Trivy (dependencies/config) and ruff (basic Python lint),
+both unlocked by the repo being public.
+
+### CodeQL (`.github/workflows/codeql.yml`) — active, zero setup
+GitHub-native SAST on our own source (Java, TypeScript, Python) plus the workflow files. Runs on
+push/PR to `main` and weekly; findings land in the repo's **Security → Code scanning** tab. No
+account, token, or server. To widen it, change `queries: security-extended` to
+`security-and-quality` (adds maintainability findings).
+
+### SonarCloud (`.github/workflows/sonarcloud.yml` + `sonar-project.properties`) — needs onboarding
+Adds the maintainability / duplication / tech-debt dashboard and a "clean as you code" quality
+gate with PR decoration, plus coverage import (JaCoCo + pytest). The workflow is a **green no-op
+until `SONAR_TOKEN` is set**, so it cannot break CI. To activate:
+
+1. Sign in at **https://sonarcloud.io** with GitHub and **import** `Skpandey15/Java_AI_MCP`
+   (free for public repos). Note the **organization** and **project key** it creates.
+2. If they differ from the guesses in `sonar-project.properties`
+   (`organization=skpandey15`, `projectKey=Skpandey15_Java_AI_MCP`), update that file.
+3. In SonarCloud project settings, **turn off Automatic Analysis** (we drive it from CI so Java
+   binaries + coverage are included), generate a token, and add it as the repo secret
+   **`SONAR_TOKEN`** (GitHub → Settings → Secrets and variables → Actions).
+
+Next push then runs the real analysis. If the `SonarSource/sonarqube-scan-action` version needs
+bumping for your account, that's the one line to adjust — CI stays green regardless because of
+the token gate.
+
+---
+
+## 9. Pipeline review — findings (2026-08)
 
 **Strengths.** Coverage + AI-quality gates block merges; images are vulnerability-scanned,
 SBOM'd, Cosign-signed and deployed by immutable digest; migrations are strictly gated and

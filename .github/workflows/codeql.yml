@@ -1,0 +1,55 @@
+name: codeql
+
+# Static application security testing (SAST) on our own source — the analysis that Trivy
+# (dependencies/config only) and ruff (basic Python lint) do not do. Free with GitHub code
+# scanning now that the repo is public; results appear in the repo's Security tab.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "23 5 * * 1"  # weekly, so newly published rules catch old code too
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write  # required to upload results to code scanning
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze ${{ matrix.language }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: java-kotlin           # interview-orchestrator
+            build-mode: none
+          - language: javascript-typescript # web-ui
+            build-mode: none
+          - language: python                # ai-service
+            build-mode: none
+          - language: actions               # scan the workflow files themselves
+            build-mode: none
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          # security-extended adds higher-signal security queries beyond the default suite.
+          # Switch to security-and-quality to also surface maintainability findings.
+          queries: security-extended
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
