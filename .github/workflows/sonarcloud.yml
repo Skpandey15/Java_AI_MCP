@@ -1,0 +1,73 @@
+name: sonarcloud
+
+# SonarQube Cloud analysis: maintainability, code smells, duplication, security hotspots, and a
+# "clean as you code" quality gate across Java / TypeScript / Python — with coverage imported
+# from the existing test suites. Complements CodeQL (SAST) and Trivy (dependencies/config).
+#
+# This job is a green no-op until the SONAR_TOKEN secret is set (see docs/runbooks/deployment.md
+# §7a), so adding it can never re-break the pipeline. Once configured it runs the real analysis.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  sonar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gate on SonarCloud configuration
+        id: cfg
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -z "${SONAR_TOKEN}" ]; then
+            echo "::notice title=SonarCloud not configured::Set the SONAR_TOKEN repo secret to enable analysis (the "Code scanning" section of docs/runbooks/deployment.md). Skipping."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.cfg.outputs.run == 'true'
+        with:
+          fetch-depth: 0  # full history so SonarCloud can attribute new code and blame accurately
+
+      - uses: actions/setup-java@v4
+        if: steps.cfg.outputs.run == 'true'
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - name: Build orchestrator classes + JaCoCo coverage (Java needs compiled binaries)
+        if: steps.cfg.outputs.run == 'true'
+        working-directory: apps/interview-orchestrator
+        run: |
+          chmod +x gradlew
+          ./gradlew test jacocoTestReport --no-daemon
+
+      - uses: actions/setup-python@v5
+        if: steps.cfg.outputs.run == 'true'
+        with:
+          python-version: "3.13"
+
+      - name: Produce ai-service coverage.xml
+        if: steps.cfg.outputs.run == 'true'
+        working-directory: apps/ai-service
+        run: |
+          python -m pip install uv==0.8.22
+          uv sync --frozen --extra dev
+          uv run --extra dev pytest --cov=app --cov-report=xml
+
+      - name: SonarQube Cloud scan
+        if: steps.cfg.outputs.run == 'true'
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
