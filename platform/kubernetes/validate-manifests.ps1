@@ -52,6 +52,20 @@ foreach ($environment in @('dev', 'uat', 'prod')) {
     if ($manifest -match '(?m)^kind: Secret\s*$') {
         throw "$environment contains a deployable plaintext Kubernetes Secret"
     }
+    if ($manifest -notmatch '(?m)^kind: SecretStore\s*$' -or
+        $manifest -notmatch '(?m)^\s+name: external-secrets-vault\s*$' -or
+        $manifest -notmatch "(?m)^\s+role: online-interview-$environment\s*$" -or
+        $manifest -notmatch '(?m)^\s+audiences:\s*$' -or
+        $manifest -notmatch '(?m)^\s+- vault\s*$') {
+        throw "$environment does not use its dedicated Vault Kubernetes identity"
+    }
+    if ($manifest -match '(?m)^kind: ClusterSecretStore\s*$') {
+        throw "$environment uses a cluster-wide secret store instead of an environment-isolated Vault store"
+    }
+    if ($manifest -notmatch '(?m)^\s+server: https://vault\.vault\.svc:8200\s*$' -or
+        $manifest -notmatch '(?m)^\s+caProvider:\s*$') {
+        throw "$environment does not require TLS verification for Vault"
+    }
     if ($manifest -notmatch '(?m)^\s+refreshPolicy: Periodic\s*$' -or
         $manifest -notmatch '(?m)^\s+refreshInterval: 15m\s*$' -or
         $manifest -notmatch '(?m)^\s+deletionPolicy: Retain\s*$') {

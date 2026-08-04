@@ -27,6 +27,10 @@ configMapGenerator:
     files:
       - online-interview-realm.json
 patches:
+  - target: {group: external-secrets.io, version: v1, kind: SecretStore, name: platform-secret-store}
+    patch: |-
+      - {op: replace, path: /spec/provider/vault/server, value: 'http://vault.vault.svc:8200'}
+      - {op: remove, path: /spec/provider/vault/caProvider}
   - target: {kind: Certificate, name: online-interview-tls}
     patch: |-
       $patch: delete

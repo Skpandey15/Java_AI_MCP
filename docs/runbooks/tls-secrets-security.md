@@ -20,7 +20,8 @@ ACME account, challenge solver and DNS credentials are infrastructure-specific.
 
 Non-local overlays never contain a Kubernetes `Secret` or a Kustomize
 `secretGenerator`. External Secrets Operator reads the environment payload from
-`ClusterSecretStore/platform-secret-store`:
+the namespaced `SecretStore/platform-secret-store`, backed by HashiCorp Vault KV
+v2 at `https://vault.vault.svc:8200`:
 
 - `online-interview/dev`
 - `online-interview/uat`
@@ -32,7 +33,14 @@ The external payload must provide:
 `KEYCLOAK_ADMIN_PASSWORD`, `LITELLM_MASTER_KEY`, `LITELLM_API_KEY`,
 `AI_SERVICE_TOKEN`, `MCP_AUTHORIZATION_SECRET`, `REDIS_PASSWORD`,
 `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `KEYCLOAK_ADMIN_CLIENT_SECRET`, and
-`OPENAI_API_KEY`.
+`OPENAI_API_KEY`, `MAIL_USERNAME`, `MAIL_PASSWORD`, and
+`KEYCLOAK_SMTP_PASSWORD`.
+
+Each environment has its own `external-secrets-vault` service account, Vault
+role, and read-only policy. The role is bound to the exact service-account name
+and namespace, requests a short-lived token with audience `vault`, and can read
+only its environment path. Do not replace these stores with a shared
+`ClusterSecretStore`.
 
 Provision a confidential Keycloak client named `interview-provisioner`, enable service
 accounts, and grant its service account only the realm-management roles required to query,
@@ -67,8 +75,48 @@ Before applying a remote overlay, confirm:
 1. NGINX Ingress Controller is installed and publishes an external address.
 2. cert-manager is installed.
 3. `letsencrypt-staging` or `letsencrypt-prod` exists and is Ready.
-4. External Secrets Operator and `platform-secret-store` are Ready.
+4. External Secrets Operator and `SecretStore/platform-secret-store` are Ready.
 5. Public DNS for the three environment hosts resolves to the ingress address.
+
+## HashiCorp Vault bootstrap
+
+For local development, the bootstrap script installs pinned official Helm
+charts, configures Kubernetes authentication and the least-privilege development
+policy, migrates the existing `platform-secrets` payload without printing it,
+and verifies synchronization:
+
+```powershell
+./scripts/setup-local-vault.ps1
+```
+
+The script deliberately runs Vault in ephemeral **dev mode**. It is only for the
+local k3d cluster; losing the Vault pod loses its data. Never expose its service
+outside the cluster or use its root token from an application.
+
+The local bootstrap also enables the Vault UI/API at
+`https://vault.dev.interview.localhost:8443`. Traefik terminates TLS with a
+30-day, hostname-specific self-signed certificate and an IP allowlist restricts
+requests to loopback and RFC 1918 private networks. The certificate is expected
+to require local browser trust. This ingress is a development convenience and
+must not be copied to a remotely reachable environment.
+
+For UAT and production, operate Vault in HA mode with integrated Raft or use a
+managed Vault cluster. Configure TLS using an internal CA, auto-unseal through a
+cloud KMS/HSM, persistent encrypted storage, pod anti-affinity, snapshots,
+resource limits, NetworkPolicies, and a file or socket audit device. Create the
+following policies from `platform/vault/policies`, then bind each role exactly:
+
+| Vault role | Kubernetes namespace | Policy |
+|---|---|---|
+| `online-interview-dev` | `online-interview-dev` | `online-interview-dev` |
+| `online-interview-uat` | `online-interview-uat` | `online-interview-uat` |
+| `online-interview-prod` | `online-interview-prod` | `online-interview-prod` |
+
+The Kubernetes auth role must bind only `external-secrets-vault`, set audience
+`vault`, use batch tokens, and keep token TTLs short. Put a `ConfigMap/vault-ca`
+containing only the issuing CA certificate in each application namespace. Seed
+the KV paths listed above through an audited administrative workflow; never use
+the Vault root token for routine operations.
 
 Render and enforce repository policies:
 

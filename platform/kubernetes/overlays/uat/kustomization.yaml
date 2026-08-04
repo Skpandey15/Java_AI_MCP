@@ -3,6 +3,7 @@ kind: Kustomization
 namespace: online-interview-uat
 resources:
   - ../../base
+  - vault-secret-store.yaml
   - external-secret.yaml
   - tls-ingress.yaml
 images:
