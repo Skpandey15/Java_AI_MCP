@@ -135,7 +135,19 @@ spec:
   try {
     Invoke-Checked { kubectl -n $Namespace wait --for=condition=complete "job/$job" --timeout=180s } "migration wait"
     Ok "Migration applied"
-    kubectl -n $Namespace logs "job/$job" 2>$null | Select-String 'now at version|Successfully applied' | ForEach-Object { Ok $_.ToString().Trim() }
+    # kubectl may write a benign "Defaulted container" message to stderr. Capture native
+    # output without allowing PowerShell's ErrorActionPreference=Stop to abort a successful
+    # deployment, then fail only when kubectl itself returns a non-zero exit code.
+    $previousErrorAction = $ErrorActionPreference
+    try {
+      $ErrorActionPreference = 'Continue'
+      $migrationLogs = kubectl -n $Namespace logs "job/$job" 2>&1
+      $logsExitCode = $LASTEXITCODE
+    } finally {
+      $ErrorActionPreference = $previousErrorAction
+    }
+    if ($logsExitCode -ne 0) { throw "migration logs failed (exit $logsExitCode)" }
+    $migrationLogs | Select-String 'now at version|Successfully applied' | ForEach-Object { Ok $_.ToString().Trim() }
   } finally {
     kubectl -n $Namespace delete "job/$job" --ignore-not-found | Out-Null
   }

@@ -73,7 +73,8 @@ flowchart TB
 
   subgraph local[Local k3d development path]
     direction LR
-    localSource[Local source checkout] --> deployScript[scripts/deploy-local.ps1]
+    localSource[Local source checkout] --> watcher[scripts/local-ci-cd.ps1<br/>change detection and focused CI]
+    watcher --> deployScript[scripts/deploy-local.ps1]
     deployScript --> localBuild[Containerized builds]
     localBuild --> import[k3d image import]
     import --> localMigration[One-off Flyway Job when required]
@@ -92,6 +93,33 @@ flowchart TB
 5. Promotion changes only the target Kustomize overlay, validates the rendered manifests, and opens a pull request. Dev promotions enable automatic merge after required checks; UAT and production remain review- and environment-approval-gated.
 6. Argo CD continuously reconciles merged desired state into each Kubernetes environment. The database migration Job advances the schema before application pods become ready.
 
+## Automated local CI/CD
+
+The local pipeline can run once for current application changes or remain active as a watcher:
+
+```powershell
+# Validate and deploy application changes relative to HEAD once.
+./scripts/local-ci-cd.ps1
+
+# Continuously detect, validate, and deploy affected services.
+./scripts/local-ci-cd.ps1 -Watch
+
+# Deploy all services immediately, then continue watching.
+./scripts/local-ci-cd.ps1 -Watch -Service all -RunInitial
+```
+
+The watcher:
+
+- maps file changes to `web-ui`, `ai-service`, and `interview-orchestrator`;
+- runs each affected service's lint, tests, coverage, build, and AI quality gates;
+- generates one unique image tag for the change batch and uses `deploy-local.ps1` to build, import, and roll out images;
+- detects changed Flyway files and runs the migration before the orchestrator rollout;
+- temporarily starts PostgreSQL for a migration when it was scaled to zero, then restores its original stopped state;
+- verifies rollout readiness for running deployments and reports image-only updates for deployments intentionally scaled to zero; and
+- ignores generated dependency, build, virtual-environment, and cache directories to avoid deployment loops.
+
+The automation never deletes namespaces, StatefulSets, persistent volume claims, or persistent volumes. Stop watch mode with <kbd>Ctrl</kbd>+<kbd>C</kbd>.
+
 ## Sources of truth
 
 | Concern | Repository location |
@@ -105,5 +133,6 @@ flowchart TB
 | Kubernetes desired state | `platform/kubernetes/overlays/{dev,uat,prod}` |
 | Argo CD applications and project | `platform/gitops/argocd` |
 | Local k3d deployment | `scripts/deploy-local.ps1` |
+| Automated local CI/CD | `scripts/local-ci-cd.ps1` |
 
 The operational commands, migration procedure, rollback guidance, and local Argo CD setup are documented in [`docs/runbooks/deployment.md`](../runbooks/deployment.md).
