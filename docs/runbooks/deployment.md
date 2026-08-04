@@ -109,6 +109,19 @@ follow when you can't delegate it.
   unless a `cd` is shown. Pick a unique `TAG` per deploy (e.g. `fix-login`, `r7`) so the
   rollout actually restarts.
 
+### 3.0 One-command shortcut
+
+`scripts/deploy-local.ps1` automates all of §3a–§3c (build → k3d import → rollout), including the
+§4 migration Job:
+
+```powershell
+./scripts/deploy-local.ps1 -Service ai-service            # one service
+./scripts/deploy-local.ps1 -Service interview-orchestrator -Migrate   # + run a new migration first
+./scripts/deploy-local.ps1 -Service all -Tag r7           # all three at a fixed tag
+```
+
+The manual steps below are the same thing spelled out — useful for one-offs or debugging.
+
 ### 3a. ai-service (Python) — no build tricks needed
 ```bash
 cd apps/ai-service
@@ -288,8 +301,7 @@ production-grade supply chain.
 3. **`main` tag is mutable and also pushed.** uat/prod correctly use digests, but the floating
    `main` tag invites accidental use in a manifest — keep it for dev convenience only and lint
    against digest-less image refs in uat/prod overlays (partly covered by validate-gitops).
-4. **Local iterative deploys bypass the migration Job** (this runbook's §3c/§4 is the workaround).
-   A tiny `scripts/deploy-local.ps1 <service> <tag> [-Migrate]` wrapper would remove the footgun
-   entirely — worth adding.
+4. **Local iterative deploys bypass the migration Job.** Solved: `scripts/deploy-local.ps1`
+   (§3.0) runs the migration Job automatically when passed `-Migrate`.
 5. **Private-repo provenance attestation is skipped** (GitHub limitation, already noted in the
    workflow). Digest + Cosign signature remain authoritative; revisit if the repo goes public.
