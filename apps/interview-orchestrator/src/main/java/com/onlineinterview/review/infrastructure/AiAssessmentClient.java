@@ -46,6 +46,13 @@ public class AiAssessmentClient {
         return response == null || response.answers() == null ? List.of() : response.answers();
     }
 
+    /** Candidate-answer-aware detailed explanation for a single wrong/partial answer. */
+    public ExplainResponse explainAnswer(ExplainRequest request) {
+        return client.post().uri("/internal/v1/answers:explain")
+                .contentType(MediaType.APPLICATION_JSON).header("X-Service-Token", serviceToken)
+                .body(request).retrieve().body(ExplainResponse.class);
+    }
+
     public record EvalItem(UUID answerId, String questionPrompt, int maxScore,
             String answerText, String topic) {}
     public record EvalRequest(UUID sessionId, List<EvalItem> items) {}
@@ -63,4 +70,8 @@ public class AiAssessmentClient {
     public record ModelRequest(List<ModelItem> items) {}
     public record ModelAnswer(String content) {}
     public record ModelResponse(List<ModelAnswer> answers) {}
+
+    public record ExplainRequest(String questionPrompt, String type, List<String> options,
+            List<String> correctAnswers, String candidateAnswer, int maxScore, int awardedScore) {}
+    public record ExplainResponse(String content) {}
 }

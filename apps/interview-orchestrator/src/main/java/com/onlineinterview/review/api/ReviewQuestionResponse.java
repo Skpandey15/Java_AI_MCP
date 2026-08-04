@@ -8,5 +8,5 @@ public record ReviewQuestionResponse(
         UUID questionId, UUID answerId, int order, String type, String prompt,
         List<String> options, List<String> correctAnswers, String content,
         int maxScore, Integer awardedScore, String feedback, boolean autoScored,
-        List<QuestionCitationResponse> citations, String modelAnswer) {
+        List<QuestionCitationResponse> citations, String modelAnswer, String detailedAnswer) {
 }

@@ -150,6 +150,9 @@ button:disabled, textarea:disabled { cursor: not-allowed; opacity: .55; }
 
 .answer-panel { margin: 1rem 0; padding: 1rem; border-left: 4px solid #1769d2; background: #f5f8fc; }
 .ai-detailed-answer { margin-top: .5rem; }
+.detailed-answer { border-color: #e6c384; border-left-color: #b8791b; background: #fdf6ea; }
+.detailed-answer > strong { color: #8a5a10; }
+.detailed-answer .model-answer-content { color: #4a3612; }
 .model-answer { margin: 1rem 0; padding: 1rem 1.15rem; border: 1px solid #bfe3c9; border-left: 4px solid #17643a; border-radius: 10px; background: #f2fbf5; }
 .model-answer > strong { display: block; margin-bottom: .5rem; color: #17643a; letter-spacing: .01em; }
 .model-answer-content { border: 0; padding: 0; background: transparent; color: #234a36; line-height: 1.6; }

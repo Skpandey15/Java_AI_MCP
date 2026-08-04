@@ -122,9 +122,9 @@ export function SubmissionReviewPage() {
     catch (error) { setFinalizeNotice({ kind: 'error', text: error instanceof Error ? error.message : 'Answer key generation failed' }) }
     finally { setAiBusy('') }
   }
-  async function detailedAnswer(questionId: string) {
-    setDetailBusy(questionId)
-    try { setSubmission(await interviewApi.generateQuestionAnswerKey(sessionId, questionId)) }
+  async function loadDetailedAnswer(answerId: string) {
+    setDetailBusy(answerId)
+    try { setSubmission(await interviewApi.explainAnswer(sessionId, answerId)) }
     catch (error) { setFinalizeNotice({ kind: 'error', text: error instanceof Error ? error.message : 'Detailed answer failed' }) }
     finally { setDetailBusy('') }
   }
@@ -182,11 +182,15 @@ export function SubmissionReviewPage() {
         <strong>✓ Correct answer</strong>
         <Markdown className="model-answer-content" content={question.modelAnswer} />
       </div>}
-      {!question.modelAnswer && (question.awardedScore ?? 0) < question.maxScore && <button
-        className="secondary-button ai-detailed-answer" disabled={detailBusy === question.questionId}
-        onClick={() => void detailedAnswer(question.questionId)}
-        title="Fetch a detailed model answer for this question from the AI (correct answer + why + example).">
-        {detailBusy === question.questionId ? 'Fetching detailed answer…' : '🤖 Detailed answer'}</button>}
+      {question.detailedAnswer && <div className="model-answer detailed-answer">
+        <strong>🔍 Detailed answer — why this answer fell short</strong>
+        <Markdown className="model-answer-content" content={question.detailedAnswer} />
+      </div>}
+      {question.answerId && !question.detailedAnswer && (question.awardedScore ?? 0) < question.maxScore && <button
+        className="secondary-button ai-detailed-answer" disabled={detailBusy === question.answerId}
+        onClick={() => void loadDetailedAnswer(question.answerId!)}
+        title="Ask the AI to explain, for this candidate's specific answer, why it is wrong and what the correct answer is.">
+        {detailBusy === question.answerId ? 'Analyzing this answer…' : '🔍 Detailed answer'}</button>}
       {question.answerId && suggestions[question.answerId] && <p className="ai-suggestion">
         🤖 AI suggests {suggestions[question.answerId].suggestedScore}/{question.maxScore} (confidence{' '}
         {Math.round(suggestions[question.answerId].confidence * 100)}%): {suggestions[question.answerId].justification}</p>}

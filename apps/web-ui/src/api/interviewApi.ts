@@ -73,7 +73,7 @@ export type ReviewQuestion = {
   questionId: string; answerId?: string; order: number; type: QuestionType; prompt: string
   options: string[]; correctAnswers: string[]; content: string; maxScore: number
   awardedScore?: number; feedback?: string; autoScored: boolean; citations: QuestionCitation[]
-  modelAnswer?: string
+  modelAnswer?: string; detailedAnswer?: string
 }
 export type SubmissionDetail = {
   sessionId: string; interviewTitle: string; candidateName: string; candidateEmail: string
@@ -259,8 +259,8 @@ export const interviewApi = {
     `/api/v1/interviewer/submissions/${sessionId}/ai-suggest`, { method: 'POST' }),
   generateAnswerKey: (sessionId: string) => request<SubmissionDetail>(
     `/api/v1/interviewer/submissions/${sessionId}/answer-key`, { method: 'POST' }),
-  generateQuestionAnswerKey: (sessionId: string, questionId: string) => request<SubmissionDetail>(
-    `/api/v1/interviewer/submissions/${sessionId}/questions/${questionId}/answer-key`, { method: 'POST' }),
+  explainAnswer: (sessionId: string, answerId: string) => request<SubmissionDetail>(
+    `/api/v1/interviewer/submissions/${sessionId}/answers/${answerId}/explain`, { method: 'POST' }),
   emailResult: (sessionId: string) => request<{ sentTo: string }>(
     `/api/v1/interviewer/submissions/${sessionId}/email-result`, { method: 'POST' }),
   draftCoaching: (sessionId: string) => request<CoachingResponse>(
