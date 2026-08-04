@@ -59,3 +59,7 @@ secretGenerator:
       - OPENAI_API_KEY=replace-before-apply
 generatorOptions:
   disableNameSuffixHash: true
+  # Create the Secret before postgres (wave -1) and the apps — matching the sync-wave the
+  # ExternalSecret it replaces used, so nothing starts before its credentials exist.
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2"
