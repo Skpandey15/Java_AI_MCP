@@ -120,6 +120,19 @@ follow when you can't delegate it.
 ./scripts/deploy-local.ps1 -Service all -Tag r7           # all three at a fixed tag
 ```
 
+For automated local CI/CD, run the change-aware wrapper. It executes the affected service's
+quality gates, delegates deployment to `deploy-local.ps1`, detects Flyway changes, preserves
+the original PostgreSQL replica count, and verifies readiness without deleting PVCs:
+
+```powershell
+./scripts/local-ci-cd.ps1                    # one run for application changes vs HEAD
+./scripts/local-ci-cd.ps1 -Watch             # continuous change detection + CI + deploy
+./scripts/local-ci-cd.ps1 -Watch -Service all -RunInitial
+```
+
+Generated build, dependency, cache, and virtual-environment directories are excluded from watch
+snapshots so a deployment does not trigger itself. Press `Ctrl+C` to stop watch mode.
+
 The manual steps below are the same thing spelled out — useful for one-offs or debugging.
 
 ### 3a. ai-service (Python) — no build tricks needed
