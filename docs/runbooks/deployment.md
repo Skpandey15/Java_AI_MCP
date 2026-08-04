@@ -284,7 +284,65 @@ forward migration.
 
 ---
 
-## 7. Pipeline review — findings (2026-08)
+## 7. Argo CD — the deploy UI and push-to-deploy (local)
+
+Argo CD gives you the "Blue Ocean"-style visualization for **delivery** (app health, the live
+resource tree, sync/diff), and is what makes *push-to-`main` → cluster updates* real. It is
+installed in the local `dev` cluster (namespace `argocd`).
+
+**Access.**
+- UI: **http://argocd.localhost:8081** (Traefik ingress; served over plain HTTP because
+  `argocd-cmd-params-cm` sets `server.insecure: true`).
+- User `admin`; get the initial password:
+  ```bash
+  kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d; echo
+  ```
+  (Change it in **User Info → Update Password**, then delete that secret.)
+
+**What's registered.** An Application `online-interview-dev` (project `online-interview`) that
+syncs `platform/kubernetes/overlays/dev-local` from GitHub `main` into a **separate**
+`online-interview-dev` namespace — so it never touches the stack you run in `online-interview`.
+It is registered with **manual sync** locally (the repo's `application-dev-local.yaml` enables
+auto-sync; manual avoids auto-spinning a full second stack that could exhaust an 8 GB node).
+
+**Three things you must do (they need YOUR credentials — an assistant must not enter tokens):**
+1. **Connect the private repo** so Argo CD can read the manifests (until then the app shows
+   `sync=Unknown`, *"authentication required"*): UI → **Settings → Repositories → Connect Repo**
+   → HTTPS → `https://github.com/Skpandey15/Java_AI_MCP.git` → username + a GitHub PAT with
+   `repo` read.
+2. **Add the image pull secret** so the private GHCR images can be pulled into the new namespace:
+   ```bash
+   kubectl create namespace online-interview-dev --dry-run=client -o yaml | kubectl apply -f -
+   kubectl -n online-interview-dev create secret docker-registry ghcr-pull \
+     --docker-server=ghcr.io --docker-username=Skpandey15 --docker-password="$GHCR_TOKEN"
+   ```
+3. **Publish images**: merge the CVE fix (and any change) to `main`; once `release-images` is
+   green and `promote-gitops` updates the `dev` overlay digests, the manifests Argo CD reads
+   will point at pullable images.
+
+**Then deploy:** in the UI click **Sync** (or `kubectl -n argocd patch app online-interview-dev
+--type merge -p '{"operation":{"sync":{}}}'`). To make it fully automatic (true push-to-deploy),
+re-enable auto-sync once you're happy with the resource load:
+```bash
+kubectl -n argocd patch app online-interview-dev --type merge \
+  -p '{"spec":{"syncPolicy":{"automated":{"prune":true,"selfHeal":true}}}}'
+```
+
+> ⚠️ **Resource note.** Syncing spins up a full parallel stack (Keycloak, Kafka, Postgres, MinIO,
+> LiteLLM, all three apps) in `online-interview-dev` — roughly 3–4 GB on top of your running
+> stack. On an 8 GB node, watch for memory pressure; scale replicas down or stop the local stack
+> first if needed.
+
+**Gotcha.** Re-running the upstream `install.yaml` with `--server-side` resets
+`argocd-cmd-params-cm`, so re-apply `platform/gitops/local-access/argocd-cmd-params.yaml` and
+`kubectl -n argocd rollout restart deploy/argocd-server` afterward, or the UI will bounce to
+HTTPS and 404 through the HTTP ingress.
+
+**Teardown** (frees all Argo CD memory): `kubectl delete namespace argocd online-interview-dev`.
+
+---
+
+## 8. Pipeline review — findings (2026-08)
 
 **Strengths.** Coverage + AI-quality gates block merges; images are vulnerability-scanned,
 SBOM'd, Cosign-signed and deployed by immutable digest; migrations are strictly gated and
