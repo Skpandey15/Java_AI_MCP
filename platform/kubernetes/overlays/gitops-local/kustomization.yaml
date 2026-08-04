@@ -1,0 +1,61 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: online-interview-dev
+
+# Lightweight GitOps overlay for a local k3d cluster driven by Argo CD. It reuses dev-local
+# (which inherits the promote-updated registry image digests, so a push that promotes new
+# images redeploys here), but strips the three resources that need cluster operators we do not
+# run locally, and supplies platform-secrets as a plain Secret instead:
+#   - ExternalSecret  (needs the External Secrets Operator + a live secret backend)
+#   - Certificate     (needs cert-manager + a real issuer; letsencrypt can't sign *.localhost)
+#   - the TLS Ingress (online-interview) — dev-local already adds an HTTP ingress
+#                       (online-interview-dev) that Traefik serves on :8081
+resources:
+  - ../dev-local
+
+patches:
+  - target: {group: external-secrets.io, kind: ExternalSecret, name: platform-secrets}
+    patch: |
+      $patch: delete
+      apiVersion: external-secrets.io/v1
+      kind: ExternalSecret
+      metadata:
+        name: platform-secrets
+        namespace: online-interview-dev
+  - target: {group: cert-manager.io, kind: Certificate, name: online-interview-tls}
+    patch: |
+      $patch: delete
+      apiVersion: cert-manager.io/v1
+      kind: Certificate
+      metadata:
+        name: online-interview-tls
+        namespace: online-interview-dev
+  - target: {kind: Ingress, name: online-interview}
+    patch: |
+      $patch: delete
+      apiVersion: networking.k8s.io/v1
+      kind: Ingress
+      metadata:
+        name: online-interview
+        namespace: online-interview-dev
+
+# Plain replacement for the ExternalSecret-provided platform-secrets (local-dev values only —
+# never real production credentials).
+secretGenerator:
+  - name: platform-secrets
+    literals:
+      - DATABASE_PASSWORD=interview
+      - KEYCLOAK_DB_PASSWORD=keycloak
+      - KEYCLOAK_ADMIN_USERNAME=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - LITELLM_MASTER_KEY=local-litellm-key
+      - LITELLM_API_KEY=local-litellm-key
+      - AI_SERVICE_TOKEN=local-ai-service-token
+      - MCP_AUTHORIZATION_SECRET=local-mcp-authorization-secret-change-me
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - REDIS_PASSWORD=local-redis-password
+      - MINIO_ACCESS_KEY=interview
+      - MINIO_SECRET_KEY=local-minio-secret-change-me
+      - OPENAI_API_KEY=replace-before-apply
+generatorOptions:
+  disableNameSuffixHash: true
