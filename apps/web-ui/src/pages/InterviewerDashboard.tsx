@@ -6,14 +6,14 @@ import {
 } from '../api/interviewApi'
 import { useAuth } from '../auth/AuthProvider'
 
-const ecosystemTechnologies = {
+export const ecosystemTechnologies = {
   JAVA: [
     'Java', 'Spring Boot', 'Spring Framework', 'Spring MVC', 'Spring Security',
     'Spring Data JPA', 'Hibernate', 'Jakarta EE', 'Quarkus', 'Micronaut',
     'Maven', 'Gradle', 'JUnit', 'Mockito', 'Apache Kafka',
   ],
   PYTHON: [
-    'Python', 'Django', 'Flask', 'FastAPI', 'Pydantic', 'SQLAlchemy',
+    'Python', 'Django', 'GraphQL', 'Strawberry GraphQL', 'Flask', 'FastAPI', 'Pydantic', 'SQLAlchemy',
     'Celery', 'pytest', 'NumPy', 'pandas', 'scikit-learn', 'PyTorch',
     'TensorFlow', 'LangChain', 'Jupyter',
   ],
@@ -189,9 +189,9 @@ const ecosystemTechnologies = {
   ],
 } as const
 
-type Ecosystem = keyof typeof ecosystemTechnologies
+export type Ecosystem = keyof typeof ecosystemTechnologies
 
-const ecosystemLabels: Record<Ecosystem, string> = {
+export const ecosystemLabels: Record<Ecosystem, string> = {
   JAVA: 'Java', PYTHON: 'Python', UI: 'UI', DATABASE: 'Database', AI: 'AI',
   SYSTEM_DESIGN: 'System Design', CI_CD: 'CI/CD', DESIGN_PRINCIPLES: 'Software Design Principles',
   DESIGN_PATTERNS: 'Design Patterns', LEADERSHIP: 'Leadership Quality',
@@ -227,6 +227,7 @@ const technologyDescriptions: Record<string, string> = {
   'Apache Kafka': 'A distributed event-streaming platform for high-throughput messaging and data pipelines.',
   Python: 'A general-purpose language popular for web development, automation, data science, and AI.',
   Django: 'A batteries-included Python web framework with ORM, routing, forms, and administration features.',
+  'Strawberry GraphQL': 'A Python GraphQL library using type annotations, with integrations for Django, FastAPI, Flask, and ASGI.',
   Flask: 'A lightweight Python web framework suited to small services and flexible application architectures.',
   FastAPI: 'A typed Python API framework with automatic validation and OpenAPI documentation.',
   Pydantic: 'A Python library for typed data validation, parsing, and application settings.',
@@ -1195,6 +1196,9 @@ export function InterviewerDashboard() {
           </button>
           <button onClick={() => navigate('/interviewer/submissions')}>
             <span>5</span>Review submissions
+          </button>
+          <button onClick={() => navigate('/interviewer/education')}>
+            <span>6</span>Educate Yourself
           </button>
         </nav>
 

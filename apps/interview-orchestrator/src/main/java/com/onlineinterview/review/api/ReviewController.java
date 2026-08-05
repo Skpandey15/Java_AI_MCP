@@ -94,6 +94,15 @@ public class ReviewController {
         return service.draftCoaching(jwt.getSubject(), sessionId);
     }
 
+    @GetMapping("/interviewer/submissions/{sessionId}/coaching")
+    @PreAuthorize("hasRole('INTERVIEWER')")
+    public org.springframework.http.ResponseEntity<AssessmentResponses.CoachingResponse>
+            currentCoaching(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID sessionId) {
+        return service.currentCoaching(jwt.getSubject(), sessionId)
+                .map(org.springframework.http.ResponseEntity::ok)
+                .orElseGet(() -> org.springframework.http.ResponseEntity.noContent().build());
+    }
+
     @PostMapping("/interviewer/submissions/{sessionId}/coaching:approve")
     @PreAuthorize("hasRole('INTERVIEWER')")
     public AssessmentResponses.CoachingResponse approveCoaching(

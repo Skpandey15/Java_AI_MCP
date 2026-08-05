@@ -154,6 +154,16 @@ public class AiQuestionService {
         return client.suggestTopics(technologies, difficulty == null ? "MEDIUM" : difficulty);
     }
 
+    public AiQuestionClient.TopicDetailsResponse topicDetails(
+            String ecosystem, String technology, String topic) {
+        if (ecosystem == null || ecosystem.isBlank() || technology == null || technology.isBlank()
+                || topic == null || topic.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Ecosystem, technology and topic are required");
+        }
+        return client.topicDetails(ecosystem.strip(), technology.strip(), topic.strip());
+    }
+
     @Transactional
     public ComposeOutcome compose(String ownerSubject, UUID interviewId, UUID requestId) {
         var existing = questions.findByGenerationRequestIdOrderByOrderAsc(requestId);

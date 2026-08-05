@@ -67,4 +67,13 @@ public class AiQuestionController {
 
     public record SuggestTopicsRequest(List<String> technologies, String difficulty) {}
     public record TopicsResponse(List<String> topics) {}
+
+    @PostMapping("/education/details")
+    @PreAuthorize("hasRole('INTERVIEWER')")
+    public AiQuestionClient.TopicDetailsResponse topicDetails(
+            @org.springframework.web.bind.annotation.RequestBody TopicDetailsRequest request) {
+        return service.topicDetails(request.ecosystem(), request.technology(), request.topic());
+    }
+
+    public record TopicDetailsRequest(String ecosystem, String technology, String topic) {}
 }
