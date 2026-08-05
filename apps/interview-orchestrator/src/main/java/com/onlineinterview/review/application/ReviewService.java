@@ -192,6 +192,16 @@ public class ReviewService {
     }
 
     @Transactional(readOnly = true)
+    public java.util.Optional<com.onlineinterview.review.api.AssessmentResponses.CoachingResponse>
+            currentCoaching(String ownerSubject, UUID sessionId) {
+        ownedSubmission(ownerSubject, sessionId);
+        return coaching.find(sessionId).map(current ->
+                new com.onlineinterview.review.api.AssessmentResponses.CoachingResponse(
+                        current.status(), current.leakageSafe(), current.flags(),
+                        current.content()));
+    }
+
+    @Transactional(readOnly = true)
     public PageResponse<SubmissionSummaryResponse> queue(
             String ownerSubject, UUID candidateId, int page, int size) {
         var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "submittedAt"));

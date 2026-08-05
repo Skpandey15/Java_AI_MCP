@@ -91,6 +91,7 @@ export type CandidateResult = {
 }
 export type AnswerSuggestion = { answerId: string; suggestedScore: number; confidence: number; justification: string }
 export type CoachingResponse = { status: string; leakageSafe: boolean; leakageFlags: string[]; content: string }
+export type TopicDetails = { title: string; content: string }
 
 export type Assignment = {
   id: string
@@ -227,6 +228,10 @@ export const interviewApi = {
     '/api/v1/topics:suggest',
     { method: 'POST', body: JSON.stringify({ technologies, difficulty }) },
   ),
+  topicDetails: (ecosystem: string, technology: string, topic: string) => request<TopicDetails>(
+    '/api/v1/education/details',
+    { method: 'POST', body: JSON.stringify({ ecosystem, technology, topic }) },
+  ),
   generateQuestions: (interviewId: string) => request<Question[]>(
     `/api/v1/interviews/${interviewId}/questions:generate`,
     { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() } },
@@ -282,7 +287,9 @@ export const interviewApi = {
   emailResult: (sessionId: string) => request<{ sentTo: string }>(
     `/api/v1/interviewer/submissions/${sessionId}/email-result`, { method: 'POST' }),
   draftCoaching: (sessionId: string) => request<CoachingResponse>(
-    `/api/v1/interviewer/submissions/${sessionId}/coaching`, { method: 'POST' }),
+      `/api/v1/interviewer/submissions/${sessionId}/coaching`, { method: 'POST' }),
+  currentCoaching: (sessionId: string) => request<CoachingResponse | undefined>(
+      `/api/v1/interviewer/submissions/${sessionId}/coaching`),
   approveCoaching: (sessionId: string) => request<CoachingResponse>(
     `/api/v1/interviewer/submissions/${sessionId}/coaching:approve`, { method: 'POST' }),
   candidateResult: (sessionId: string) => request<CandidateResult>(

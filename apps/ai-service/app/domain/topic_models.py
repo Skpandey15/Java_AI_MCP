@@ -12,3 +12,15 @@ class SuggestTopicsRequest(ApiModel):
 class SuggestTopicsResponse(ApiModel):
     topics: list[str]
     usage: GenerationUsage | None = None
+
+
+class TopicDetailsRequest(ApiModel):
+    ecosystem: str = Field(min_length=1, max_length=100)
+    technology: str = Field(min_length=1, max_length=100)
+    topic: str = Field(min_length=1, max_length=200)
+
+
+class TopicDetailsResponse(ApiModel):
+    title: str
+    content: str
+    usage: GenerationUsage | None = None

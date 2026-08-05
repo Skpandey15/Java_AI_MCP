@@ -37,6 +37,16 @@ export function SubmissionReviewPage() {
     return () => window.clearTimeout(timer)
   }, [finalizeNotice])
 
+  useEffect(() => {
+    if (submission?.reviewStatus !== 'REVIEWED') return
+    interviewApi.currentCoaching(sessionId)
+      .then(setCoaching)
+      .catch((error: unknown) => setFinalizeNotice({
+        kind: 'error',
+        text: error instanceof Error ? error.message : 'Unable to load coaching feedback',
+      }))
+  }, [sessionId, submission?.reviewStatus])
+
   async function save(answerId: string) {
     const question = submission?.questions.find((item) => item.answerId === answerId)
     const score = scores[answerId]
@@ -234,7 +244,9 @@ export function SubmissionReviewPage() {
           onClick={() => setFinalizeNotice(undefined)}>×</button>
       </div>}
       {!pending && <div className="compact-actions">
-        <button className="secondary-button" disabled={aiBusy === 'email'} onClick={() => void emailResult()}
+        <button className="secondary-button"
+          disabled={aiBusy === 'email' || coaching?.status !== 'APPROVED'}
+          onClick={() => void emailResult()}
           title="Email the candidate their outcome, score, and the approved coaching plan (needs coaching approved first).">
           {aiBusy === 'email' ? 'Sending…' : '📧 Email result to candidate'}</button>
       </div>}
