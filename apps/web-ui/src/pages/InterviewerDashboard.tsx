@@ -187,6 +187,15 @@ export const ecosystemTechnologies = {
     'Technical Debt Management', 'Linting Gates in CI', 'Null-Safety and Optional',
     'Immutability Conventions', 'Error-Handling and Logging Standards',
   ],
+  MISCELLANEOUS: [
+    'GraphQL', 'Jolt', 'HashiCorp Vault', 'Keycloak', 'Apache Camel',
+    'RabbitMQ', 'NGINX', 'Postman', 'OpenAPI and Swagger', 'Webhooks',
+  ],
+  WORKFLOW: [
+    'Temporal', 'Camunda', 'Netflix Conductor', 'AWS Step Functions',
+    'Azure Durable Functions', 'Argo Workflows', 'Apache Airflow',
+    'Prefect', 'Dagster', 'n8n',
+  ],
 } as const
 
 export type Ecosystem = keyof typeof ecosystemTechnologies
@@ -203,7 +212,8 @@ export const ecosystemLabels: Record<Ecosystem, string> = {
   PERFORMANCE: 'Performance Engineering', TESTING: 'Testing & Quality Engineering',
   API_DESIGN: 'API Design & Integration', OS_LINUX: 'Operating Systems & Linux',
   NETWORKING: 'Networking & Protocols', MACHINE_LEARNING: 'Machine Learning (Classical & MLOps)',
-  CODE_QUALITY: 'Code Quality & Standards',
+  CODE_QUALITY: 'Code Quality & Standards', MISCELLANEOUS: 'Miscellaneous',
+  WORKFLOW: 'Workflow Automation & Orchestration',
 }
 
 const sortedEcosystems = (Object.keys(ecosystemLabels) as Ecosystem[])
@@ -228,6 +238,13 @@ const technologyDescriptions: Record<string, string> = {
   Python: 'A general-purpose language popular for web development, automation, data science, and AI.',
   Django: 'A batteries-included Python web framework with ORM, routing, forms, and administration features.',
   'Strawberry GraphQL': 'A Python GraphQL library using type annotations, with integrations for Django, FastAPI, Flask, and ASGI.',
+  Jolt: 'A Java library for declaratively transforming JSON documents with chainable specifications.',
+  'HashiCorp Vault': 'A secrets-management platform for credentials, encryption, dynamic secrets, and access auditing.',
+  Keycloak: 'An identity and access-management platform supporting SSO, OAuth 2.0, and OpenID Connect.',
+  'Apache Camel': 'An integration framework implementing enterprise integration patterns through routes and connectors.',
+  RabbitMQ: 'A message broker supporting reliable queues, routing, acknowledgements, and asynchronous workloads.',
+  NGINX: 'A high-performance web server, reverse proxy, load balancer, and API gateway building block.',
+  Postman: 'An API development platform for designing, testing, documenting, and automating API workflows.',
   Flask: 'A lightweight Python web framework suited to small services and flexible application architectures.',
   FastAPI: 'A typed Python API framework with automatic validation and OpenAPI documentation.',
   Pydantic: 'A Python library for typed data validation, parsing, and application settings.',
@@ -636,6 +653,15 @@ const technologyDescriptions: Record<string, string> = {
   'Pagination and Filtering': 'Returning large result sets efficiently with limits, cursors, and queries.',
   HATEOAS: 'Hypermedia links that let clients navigate an API dynamically.',
   Webhooks: 'Server-to-server callbacks that push events to subscribers.',
+  Temporal: 'A durable-execution platform for reliable, long-running application workflows and activities.',
+  Camunda: 'A process-orchestration platform for BPMN workflows, decisions, tasks, and human approvals.',
+  'Netflix Conductor': 'A distributed orchestration engine for defining and operating service workflows.',
+  'AWS Step Functions': 'A managed AWS service for orchestrating applications with state-machine workflows.',
+  'Azure Durable Functions': 'An Azure Functions extension for stateful, reliable serverless orchestration.',
+  'Argo Workflows': 'A Kubernetes-native engine for orchestrating container-based parallel jobs and pipelines.',
+  Prefect: 'A Python workflow orchestration platform emphasizing observable and resilient data flows.',
+  Dagster: 'A data orchestrator built around software-defined assets, lineage, testing, and observability.',
+  n8n: 'A low-code automation platform for connecting APIs, applications, events, and human workflows.',
   'API Error Handling': 'Consistent, informative error responses and status-code semantics.',
   'Authentication for APIs': 'Securing APIs with tokens, keys, OAuth, and mTLS.',
   'API Rate Limiting': 'Throttling clients to protect capacity and ensure fair use.',

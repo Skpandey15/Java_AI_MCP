@@ -20,6 +20,106 @@ const curatedTopics: Record<string, string[]> = {
     'Django REST Framework', 'Strawberry GraphQL Integration', 'Authentication and Permissions',
     'Caching and Performance', 'Testing Django Applications', 'Production Deployment',
   ],
+  Jolt: [
+    'Jolt Fundamentals', 'Shift Transformations', 'Default and Remove Operations',
+    'Cardinality and Modify Operations', 'Wildcards and Ampersands', 'Chained Transformations',
+    'Writing Jolt Specifications', 'Testing Transformations', 'Performance and Troubleshooting',
+  ],
+  'HashiCorp Vault': [
+    'Vault Architecture', 'Initialization, Sealing, and Unsealing', 'Tokens and Policies',
+    'KV Secrets Engine', 'Dynamic Database Credentials', 'Kubernetes Authentication',
+    'AppRole Authentication', 'Transit Encryption', 'Secret Rotation and Leases',
+    'High Availability and Disaster Recovery', 'Audit Devices and Production Hardening',
+  ],
+  Keycloak: [
+    'Realms, Clients, and Users', 'OAuth 2.0 and OpenID Connect Flows', 'Roles and Groups',
+    'Client Scopes and Claims', 'Service Accounts', 'MFA and Required Actions',
+    'Identity Brokering', 'Authorization Services', 'Token Lifecycles',
+    'Clustering and Production Hardening',
+  ],
+  'Apache Camel': [
+    'Routes and Endpoints', 'Enterprise Integration Patterns', 'Components and URIs',
+    'Processors and Beans', 'Data Formats and Type Conversion', 'Error Handling and Redelivery',
+    'Testing Camel Routes', 'Spring Boot Integration', 'Observability and Production Deployment',
+  ],
+  RabbitMQ: [
+    'Exchanges, Queues, and Bindings', 'Routing Keys and Exchange Types',
+    'Publish Confirms and Consumer Acknowledgements', 'Dead-Letter Exchanges',
+    'Retries and Idempotent Consumers', 'Ordering and Prefetch', 'Quorum Queues',
+    'Security and Access Control', 'Monitoring and Production Operations',
+  ],
+  NGINX: [
+    'Server and Location Blocks', 'Reverse Proxying', 'Load-Balancing Algorithms',
+    'TLS Termination', 'Caching and Compression', 'Rate Limiting', 'Headers and CORS',
+    'Health Checks', 'Logging and Observability', 'Security Hardening',
+  ],
+  Postman: [
+    'Collections and Environments', 'Variables and Secret Handling', 'Request Scripting',
+    'Response Tests', 'Authentication', 'Collection Runner', 'Mock Servers',
+    'Contract Testing', 'Newman in CI/CD', 'Team Workspaces and Governance',
+  ],
+  'OpenAPI and Swagger': [
+    'OpenAPI Document Structure', 'Paths and Operations', 'Schemas and Composition',
+    'Parameters and Request Bodies', 'Responses and Error Models', 'Security Schemes',
+    'Examples and Documentation', 'Validation and Linting', 'Code Generation',
+    'API-First Development and Versioning',
+  ],
+  Webhooks: [
+    'Webhook Design Fundamentals', 'Event Payloads and Versioning', 'Signature Verification',
+    'Retries and Exponential Backoff', 'Idempotency and Deduplication', 'Ordering',
+    'Delivery Logs and Replay', 'Testing Webhooks', 'Security and Production Reliability',
+  ],
+  Temporal: [
+    'Durable Execution Fundamentals', 'Workflows and Activities', 'Workers and Task Queues',
+    'Retries, Timeouts, and Heartbeats', 'Signals, Queries, and Updates', 'Workflow Versioning',
+    'Child Workflows and Sagas', 'Testing and Replay Safety', 'Observability and Production Operations',
+  ],
+  Camunda: [
+    'BPMN Fundamentals', 'Process Models and Instances', 'Service and User Tasks',
+    'Gateways and Events', 'Job Workers', 'DMN Decisions', 'Forms and Human Workflows',
+    'Error Handling and Incidents', 'Testing, Operate, and Production Deployment',
+  ],
+  'Netflix Conductor': [
+    'Workflow and Task Definitions', 'Workers and Task Polling', 'Fork, Join, and Decisions',
+    'Sub-Workflows', 'Retries, Timeouts, and Failure Handling', 'Event Tasks',
+    'State Persistence', 'Testing and Observability', 'Scaling and Production Operations',
+  ],
+  'AWS Step Functions': [
+    'Amazon States Language', 'Task, Choice, Map, and Parallel States',
+    'Standard vs Express Workflows', 'Service Integrations', 'Retries and Catchers',
+    'Callback and Human Approval Patterns', 'IAM and Security',
+    'Testing, Observability, and Cost Optimization',
+  ],
+  'Azure Durable Functions': [
+    'Orchestrator, Activity, and Client Functions', 'Deterministic Orchestrators',
+    'Function Chaining and Fan-Out/Fan-In', 'Async HTTP APIs', 'Human Interaction',
+    'Timers and External Events', 'Entities', 'Versioning, Testing, and Production Operations',
+  ],
+  'Argo Workflows': [
+    'Workflow Specifications', 'Steps and DAG Templates', 'Parameters and Artifacts',
+    'Loops and Conditionals', 'Retries and Synchronization', 'Workflow Templates',
+    'Secrets and Service Accounts', 'Artifact Repositories', 'Scaling and Troubleshooting',
+  ],
+  'Apache Airflow': [
+    'DAGs, Tasks, and Operators', 'Scheduling and Data Intervals', 'TaskFlow API',
+    'XComs and Dependencies', 'Sensors and Deferrable Operators', 'Retries and Backfills',
+    'Executors', 'Testing DAGs', 'Security, Monitoring, and Production Deployment',
+  ],
+  Prefect: [
+    'Flows and Tasks', 'Deployments and Work Pools', 'Parameters and Results',
+    'Retries, Caching, and Concurrency', 'State and Events', 'Blocks and Integrations',
+    'Testing Flows', 'Observability and Production Operations',
+  ],
+  Dagster: [
+    'Software-Defined Assets', 'Ops, Jobs, and Graphs', 'Resources and Configuration',
+    'Partitions and Backfills', 'Sensors and Schedules', 'Asset Checks and Lineage',
+    'Testing', 'Dagster Daemon and Production Deployment',
+  ],
+  n8n: [
+    'Nodes, Triggers, and Connections', 'Expressions and Data Mapping', 'Credentials',
+    'Webhooks and API Integrations', 'Branching and Loops', 'Error Workflows and Retries',
+    'Sub-Workflows', 'Queue Mode and Scaling', 'Security and Production Deployment',
+  ],
 }
 
 export function EducationPage() {
