@@ -141,8 +141,10 @@ describe('InterviewerDashboard question editing', () => {
     })
     fireEvent.click(screen.getByText('1 selected'))
 
-    expect(screen.getByRole('checkbox', {name: 'Workflow'})).toBeInTheDocument()
     expect(screen.getByRole('checkbox', {name: 'Activiti'})).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', {name: 'Flowable'})).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', {name: 'jBPM'})).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', {name: 'Bonita'})).toBeInTheDocument()
     expect(screen.getByRole('checkbox', {name: 'Temporal'})).toBeInTheDocument()
     expect(screen.getByRole('checkbox', {name: 'Camunda'})).toBeInTheDocument()
     expect(screen.getByRole('checkbox', {name: 'AWS Step Functions'})).toBeInTheDocument()
