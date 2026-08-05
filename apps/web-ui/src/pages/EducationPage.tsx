@@ -69,6 +69,76 @@ const curatedTopics: Record<string, string[]> = {
     'Retries and Exponential Backoff', 'Idempotency and Deduplication', 'Ordering',
     'Delivery Logs and Replay', 'Testing Webhooks', 'Security and Production Reliability',
   ],
+  Activiti: [
+    'Activiti Architecture', 'BPMN 2.0 Process Modeling', 'Process Definitions and Instances',
+    'User Tasks and Service Tasks', 'Gateways, Events, and Subprocesses',
+    'Java and Spring Boot Integration', 'Variables and Forms', 'Listeners and Delegates',
+    'Job Executor, Timers, and Async Work', 'Error Handling and Compensation',
+    'REST APIs, Testing, and Production Operations',
+  ],
+  Flowable: [
+    'Flowable Architecture and Engines', 'BPMN 2.0 Process Modeling',
+    'Process Definitions and Instances', 'User Tasks and Service Tasks',
+    'Gateways, Events, and Subprocesses', 'Java and Spring Boot Integration',
+    'Variables, Expressions, and Forms', 'Listeners and Service Delegates',
+    'Async Executor, Jobs, and Timers', 'CMMN and DMN Integration',
+    'REST APIs, Testing, Migration, and Production Operations',
+  ],
+  jBPM: [
+    'jBPM and KIE Architecture', 'BPMN 2.0 Modeling', 'Processes and Human Tasks',
+    'Work Items and Service Tasks', 'Rules and Drools Integration', 'Persistence and Transactions',
+    'KIE Server APIs', 'Testing, Monitoring, and Production Deployment',
+  ],
+  Kogito: [
+    'Cloud-Native Process Automation', 'BPMN 2.0 Support', 'Process Services',
+    'Quarkus and Spring Boot Integration', 'User Tasks', 'Decisions with DMN and Drools',
+    'Events and Messaging', 'Persistence, Testing, and Kubernetes Deployment',
+  ],
+  Bonita: [
+    'Bonita Architecture', 'BPMN Process Design', 'Human and Service Tasks',
+    'Business Data Model', 'Forms and UI Designer', 'Connectors and REST APIs',
+    'Organization and Permissions', 'Testing, Monitoring, and Deployment',
+  ],
+  ProcessMaker: [
+    'BPMN Process Modeling', 'Tasks, Events, and Gateways', 'Forms and Screens',
+    'Users, Groups, and Assignments', 'Scripts and Connectors', 'API Integration',
+    'Process Versioning', 'Monitoring, Security, and Production Administration',
+  ],
+  Operaton: [
+    'Operaton Architecture', 'BPMN 2.0 Execution', 'Java and Spring Integration',
+    'External Tasks', 'Human Tasks and Forms', 'DMN Decisions',
+    'Migration from Camunda 7', 'Testing and Production Operations',
+  ],
+  'CIB seven': [
+    'CIB seven Architecture', 'BPMN and DMN Execution', 'Camunda 7 Compatibility',
+    'Task and Cockpit Applications', 'Spring Boot Integration', 'Process Migration',
+    'Testing, Security, and Production Operations',
+  ],
+  'Imixs-Workflow': [
+    'Imixs Architecture', 'BPMN Model Design', 'Workflow Tasks and Events',
+    'Jakarta EE Integration', 'Workitems and Data', 'Security and Access Control',
+    'REST APIs', 'Testing and Production Deployment',
+  ],
+  'Oracle BPM Suite': [
+    'Oracle BPM Architecture', 'BPMN 2.0 Modeling', 'Human and Service Tasks',
+    'Business Rules', 'Process Composer and BPM Studio', 'SOA Integration',
+    'Monitoring, Administration, and High Availability',
+  ],
+  'IBM Business Automation Workflow': [
+    'BAW Architecture', 'BPMN Process Applications', 'Human Services and Coaches',
+    'Integration Services', 'Business Objects and Variables', 'Case Management',
+    'Governance, Monitoring, and Production Administration',
+  ],
+  Bizagi: [
+    'Bizagi Process Modeler', 'BPMN 2.0 Modeling', 'Process Automation',
+    'Data Models and Forms', 'Business Rules', 'Assignments and Work Portals',
+    'Integration, Deployment, and Administration',
+  ],
+  'SAP Signavio': [
+    'Process Manager and Collaboration Hub', 'BPMN 2.0 Modeling',
+    'Process Governance', 'Workflow Accelerator', 'Process Intelligence',
+    'Dictionary and Conventions', 'Integration, Governance, and Transformation',
+  ],
   Temporal: [
     'Durable Execution Fundamentals', 'Workflows and Activities', 'Workers and Task Queues',
     'Retries, Timeouts, and Heartbeats', 'Signals, Queries, and Updates', 'Workflow Versioning',
