@@ -192,7 +192,7 @@ export const ecosystemTechnologies = {
     'RabbitMQ', 'NGINX', 'Postman', 'OpenAPI and Swagger', 'Webhooks',
   ],
   WORKFLOW: [
-    'Temporal', 'Camunda', 'Netflix Conductor', 'AWS Step Functions',
+    'Workflow', 'Activiti', 'Temporal', 'Camunda', 'Netflix Conductor', 'AWS Step Functions',
     'Azure Durable Functions', 'Argo Workflows', 'Apache Airflow',
     'Prefect', 'Dagster', 'n8n',
   ],
@@ -653,6 +653,8 @@ const technologyDescriptions: Record<string, string> = {
   'Pagination and Filtering': 'Returning large result sets efficiently with limits, cursors, and queries.',
   HATEOAS: 'Hypermedia links that let clients navigate an API dynamically.',
   Webhooks: 'Server-to-server callbacks that push events to subscribers.',
+  Workflow: 'The foundational concepts and patterns for modeling, executing, and governing business processes.',
+  Activiti: 'A lightweight Java BPMN workflow and business-process management engine.',
   Temporal: 'A durable-execution platform for reliable, long-running application workflows and activities.',
   Camunda: 'A process-orchestration platform for BPMN workflows, decisions, tasks, and human approvals.',
   'Netflix Conductor': 'A distributed orchestration engine for defining and operating service workflows.',

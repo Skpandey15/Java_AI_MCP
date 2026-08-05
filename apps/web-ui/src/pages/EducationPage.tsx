@@ -69,6 +69,19 @@ const curatedTopics: Record<string, string[]> = {
     'Retries and Exponential Backoff', 'Idempotency and Deduplication', 'Ordering',
     'Delivery Logs and Replay', 'Testing Webhooks', 'Security and Production Reliability',
   ],
+  Workflow: [
+    'Workflow Fundamentals', 'States, Transitions, and Tasks', 'Sequential and Parallel Flow',
+    'Human and Automated Tasks', 'Approvals and Escalations', 'Retries, Timeouts, and Compensation',
+    'Workflow State and Persistence', 'Versioning and Migration', 'Observability and Governance',
+    'Choosing Orchestration vs Choreography',
+  ],
+  Activiti: [
+    'Activiti Architecture', 'BPMN 2.0 Process Modeling', 'Process Definitions and Instances',
+    'User Tasks and Service Tasks', 'Gateways, Events, and Subprocesses',
+    'Java and Spring Boot Integration', 'Variables and Forms', 'Listeners and Delegates',
+    'Job Executor, Timers, and Async Work', 'Error Handling and Compensation',
+    'REST APIs, Testing, and Production Operations',
+  ],
   Temporal: [
     'Durable Execution Fundamentals', 'Workflows and Activities', 'Workers and Task Queues',
     'Retries, Timeouts, and Heartbeats', 'Signals, Queries, and Updates', 'Workflow Versioning',
