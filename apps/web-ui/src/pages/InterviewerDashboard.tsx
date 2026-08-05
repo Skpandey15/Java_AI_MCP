@@ -187,6 +187,10 @@ export const ecosystemTechnologies = {
     'Technical Debt Management', 'Linting Gates in CI', 'Null-Safety and Optional',
     'Immutability Conventions', 'Error-Handling and Logging Standards',
   ],
+  MISCELLANEOUS: [
+    'GraphQL', 'Jolt', 'HashiCorp Vault', 'Keycloak', 'Apache Camel',
+    'RabbitMQ', 'NGINX', 'Postman', 'OpenAPI and Swagger', 'Webhooks',
+  ],
 } as const
 
 export type Ecosystem = keyof typeof ecosystemTechnologies
@@ -203,7 +207,7 @@ export const ecosystemLabels: Record<Ecosystem, string> = {
   PERFORMANCE: 'Performance Engineering', TESTING: 'Testing & Quality Engineering',
   API_DESIGN: 'API Design & Integration', OS_LINUX: 'Operating Systems & Linux',
   NETWORKING: 'Networking & Protocols', MACHINE_LEARNING: 'Machine Learning (Classical & MLOps)',
-  CODE_QUALITY: 'Code Quality & Standards',
+  CODE_QUALITY: 'Code Quality & Standards', MISCELLANEOUS: 'Miscellaneous',
 }
 
 const sortedEcosystems = (Object.keys(ecosystemLabels) as Ecosystem[])
@@ -228,6 +232,13 @@ const technologyDescriptions: Record<string, string> = {
   Python: 'A general-purpose language popular for web development, automation, data science, and AI.',
   Django: 'A batteries-included Python web framework with ORM, routing, forms, and administration features.',
   'Strawberry GraphQL': 'A Python GraphQL library using type annotations, with integrations for Django, FastAPI, Flask, and ASGI.',
+  Jolt: 'A Java library for declaratively transforming JSON documents with chainable specifications.',
+  'HashiCorp Vault': 'A secrets-management platform for credentials, encryption, dynamic secrets, and access auditing.',
+  Keycloak: 'An identity and access-management platform supporting SSO, OAuth 2.0, and OpenID Connect.',
+  'Apache Camel': 'An integration framework implementing enterprise integration patterns through routes and connectors.',
+  RabbitMQ: 'A message broker supporting reliable queues, routing, acknowledgements, and asynchronous workloads.',
+  NGINX: 'A high-performance web server, reverse proxy, load balancer, and API gateway building block.',
+  Postman: 'An API development platform for designing, testing, documenting, and automating API workflows.',
   Flask: 'A lightweight Python web framework suited to small services and flexible application architectures.',
   FastAPI: 'A typed Python API framework with automatic validation and OpenAPI documentation.',
   Pydantic: 'A Python library for typed data validation, parsing, and application settings.',

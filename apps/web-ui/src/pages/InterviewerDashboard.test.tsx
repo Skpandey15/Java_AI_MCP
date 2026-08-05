@@ -109,4 +109,22 @@ describe('InterviewerDashboard question editing', () => {
     expect(screen.getByText(/general-purpose JVM language widely used for enterprise/)).toBeInTheDocument()
     expect(screen.getByText(/batteries-included Python web framework/)).toBeInTheDocument()
   })
+
+  it('offers cross-platform technologies in the miscellaneous ecosystem', async () => {
+    render(
+      <MemoryRouter>
+        <InterviewerDashboard />
+      </MemoryRouter>,
+    )
+    await waitFor(() => expect(interviewApi.listOwned).toHaveBeenCalled())
+
+    fireEvent.change(screen.getByRole('combobox', {name: 'Ecosystem'}), {
+      target: {value: 'MISCELLANEOUS'},
+    })
+    fireEvent.click(screen.getByText('1 selected'))
+
+    expect(screen.getByRole('checkbox', {name: 'GraphQL'})).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', {name: 'Jolt'})).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', {name: 'HashiCorp Vault'})).toBeInTheDocument()
+  })
 })

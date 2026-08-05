@@ -20,6 +20,55 @@ const curatedTopics: Record<string, string[]> = {
     'Django REST Framework', 'Strawberry GraphQL Integration', 'Authentication and Permissions',
     'Caching and Performance', 'Testing Django Applications', 'Production Deployment',
   ],
+  Jolt: [
+    'Jolt Fundamentals', 'Shift Transformations', 'Default and Remove Operations',
+    'Cardinality and Modify Operations', 'Wildcards and Ampersands', 'Chained Transformations',
+    'Writing Jolt Specifications', 'Testing Transformations', 'Performance and Troubleshooting',
+  ],
+  'HashiCorp Vault': [
+    'Vault Architecture', 'Initialization, Sealing, and Unsealing', 'Tokens and Policies',
+    'KV Secrets Engine', 'Dynamic Database Credentials', 'Kubernetes Authentication',
+    'AppRole Authentication', 'Transit Encryption', 'Secret Rotation and Leases',
+    'High Availability and Disaster Recovery', 'Audit Devices and Production Hardening',
+  ],
+  Keycloak: [
+    'Realms, Clients, and Users', 'OAuth 2.0 and OpenID Connect Flows', 'Roles and Groups',
+    'Client Scopes and Claims', 'Service Accounts', 'MFA and Required Actions',
+    'Identity Brokering', 'Authorization Services', 'Token Lifecycles',
+    'Clustering and Production Hardening',
+  ],
+  'Apache Camel': [
+    'Routes and Endpoints', 'Enterprise Integration Patterns', 'Components and URIs',
+    'Processors and Beans', 'Data Formats and Type Conversion', 'Error Handling and Redelivery',
+    'Testing Camel Routes', 'Spring Boot Integration', 'Observability and Production Deployment',
+  ],
+  RabbitMQ: [
+    'Exchanges, Queues, and Bindings', 'Routing Keys and Exchange Types',
+    'Publish Confirms and Consumer Acknowledgements', 'Dead-Letter Exchanges',
+    'Retries and Idempotent Consumers', 'Ordering and Prefetch', 'Quorum Queues',
+    'Security and Access Control', 'Monitoring and Production Operations',
+  ],
+  NGINX: [
+    'Server and Location Blocks', 'Reverse Proxying', 'Load-Balancing Algorithms',
+    'TLS Termination', 'Caching and Compression', 'Rate Limiting', 'Headers and CORS',
+    'Health Checks', 'Logging and Observability', 'Security Hardening',
+  ],
+  Postman: [
+    'Collections and Environments', 'Variables and Secret Handling', 'Request Scripting',
+    'Response Tests', 'Authentication', 'Collection Runner', 'Mock Servers',
+    'Contract Testing', 'Newman in CI/CD', 'Team Workspaces and Governance',
+  ],
+  'OpenAPI and Swagger': [
+    'OpenAPI Document Structure', 'Paths and Operations', 'Schemas and Composition',
+    'Parameters and Request Bodies', 'Responses and Error Models', 'Security Schemes',
+    'Examples and Documentation', 'Validation and Linting', 'Code Generation',
+    'API-First Development and Versioning',
+  ],
+  Webhooks: [
+    'Webhook Design Fundamentals', 'Event Payloads and Versioning', 'Signature Verification',
+    'Retries and Exponential Backoff', 'Idempotency and Deduplication', 'Ordering',
+    'Delivery Logs and Replay', 'Testing Webhooks', 'Security and Production Reliability',
+  ],
 }
 
 export function EducationPage() {
