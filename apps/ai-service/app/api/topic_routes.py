@@ -5,8 +5,12 @@ from fastapi import APIRouter, Header, HTTPException, status
 
 from app.application.topic_agent import TopicAgent
 from app.config import settings
-from app.domain.topic_models import (SuggestTopicsRequest, SuggestTopicsResponse,
-                                     TopicDetailsRequest, TopicDetailsResponse)
+from app.domain.topic_models import (
+    SuggestTopicsRequest,
+    SuggestTopicsResponse,
+    TopicDetailsRequest,
+    TopicDetailsResponse,
+)
 from app.llm.litellm_client import ModelGatewayError
 
 router = APIRouter(prefix="/internal/v1", tags=["topics"])

@@ -2,8 +2,12 @@
 sub-topics the interviewer can pick from to focus question generation."""
 
 from app.domain.question_models import GenerationUsage
-from app.domain.topic_models import (SuggestTopicsRequest, SuggestTopicsResponse,
-                                     TopicDetailsRequest, TopicDetailsResponse)
+from app.domain.topic_models import (
+    SuggestTopicsRequest,
+    SuggestTopicsResponse,
+    TopicDetailsRequest,
+    TopicDetailsResponse,
+)
 from app.llm.chat_client import ChatClient
 
 _SCHEMA = {
@@ -69,8 +73,9 @@ class TopicAgent:
             "examples and code fences where relevant. Make it easy to scan: begin with a short "
             "overview and learning outcomes, use ## sections and ### subsections, keep paragraphs "
             "under four sentences, use bullets for steps and checklists, tables only for genuine "
-            "comparisons, and label every code fence with its language. Present concepts in beginner, "
-            "intermediate, advanced, and production order. Never claim the guide is literally exhaustive."
+            "comparisons, and label every code fence with its language. Present concepts in "
+            "beginner, intermediate, advanced, and production order. Never claim the guide is "
+            "literally exhaustive."
         )
         user = (f"Ecosystem: {request.ecosystem}\nTechnology: {request.technology}\n"
                 f"Topic: {request.topic}\nCreate the complete guided learning path.")
