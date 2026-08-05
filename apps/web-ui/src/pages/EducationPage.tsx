@@ -69,6 +69,57 @@ const curatedTopics: Record<string, string[]> = {
     'Retries and Exponential Backoff', 'Idempotency and Deduplication', 'Ordering',
     'Delivery Logs and Replay', 'Testing Webhooks', 'Security and Production Reliability',
   ],
+  Temporal: [
+    'Durable Execution Fundamentals', 'Workflows and Activities', 'Workers and Task Queues',
+    'Retries, Timeouts, and Heartbeats', 'Signals, Queries, and Updates', 'Workflow Versioning',
+    'Child Workflows and Sagas', 'Testing and Replay Safety', 'Observability and Production Operations',
+  ],
+  Camunda: [
+    'BPMN Fundamentals', 'Process Models and Instances', 'Service and User Tasks',
+    'Gateways and Events', 'Job Workers', 'DMN Decisions', 'Forms and Human Workflows',
+    'Error Handling and Incidents', 'Testing, Operate, and Production Deployment',
+  ],
+  'Netflix Conductor': [
+    'Workflow and Task Definitions', 'Workers and Task Polling', 'Fork, Join, and Decisions',
+    'Sub-Workflows', 'Retries, Timeouts, and Failure Handling', 'Event Tasks',
+    'State Persistence', 'Testing and Observability', 'Scaling and Production Operations',
+  ],
+  'AWS Step Functions': [
+    'Amazon States Language', 'Task, Choice, Map, and Parallel States',
+    'Standard vs Express Workflows', 'Service Integrations', 'Retries and Catchers',
+    'Callback and Human Approval Patterns', 'IAM and Security',
+    'Testing, Observability, and Cost Optimization',
+  ],
+  'Azure Durable Functions': [
+    'Orchestrator, Activity, and Client Functions', 'Deterministic Orchestrators',
+    'Function Chaining and Fan-Out/Fan-In', 'Async HTTP APIs', 'Human Interaction',
+    'Timers and External Events', 'Entities', 'Versioning, Testing, and Production Operations',
+  ],
+  'Argo Workflows': [
+    'Workflow Specifications', 'Steps and DAG Templates', 'Parameters and Artifacts',
+    'Loops and Conditionals', 'Retries and Synchronization', 'Workflow Templates',
+    'Secrets and Service Accounts', 'Artifact Repositories', 'Scaling and Troubleshooting',
+  ],
+  'Apache Airflow': [
+    'DAGs, Tasks, and Operators', 'Scheduling and Data Intervals', 'TaskFlow API',
+    'XComs and Dependencies', 'Sensors and Deferrable Operators', 'Retries and Backfills',
+    'Executors', 'Testing DAGs', 'Security, Monitoring, and Production Deployment',
+  ],
+  Prefect: [
+    'Flows and Tasks', 'Deployments and Work Pools', 'Parameters and Results',
+    'Retries, Caching, and Concurrency', 'State and Events', 'Blocks and Integrations',
+    'Testing Flows', 'Observability and Production Operations',
+  ],
+  Dagster: [
+    'Software-Defined Assets', 'Ops, Jobs, and Graphs', 'Resources and Configuration',
+    'Partitions and Backfills', 'Sensors and Schedules', 'Asset Checks and Lineage',
+    'Testing', 'Dagster Daemon and Production Deployment',
+  ],
+  n8n: [
+    'Nodes, Triggers, and Connections', 'Expressions and Data Mapping', 'Credentials',
+    'Webhooks and API Integrations', 'Branching and Loops', 'Error Workflows and Retries',
+    'Sub-Workflows', 'Queue Mode and Scaling', 'Security and Production Deployment',
+  ],
 }
 
 export function EducationPage() {

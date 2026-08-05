@@ -127,4 +127,22 @@ describe('InterviewerDashboard question editing', () => {
     expect(screen.getByRole('checkbox', {name: 'Jolt'})).toBeInTheDocument()
     expect(screen.getByRole('checkbox', {name: 'HashiCorp Vault'})).toBeInTheDocument()
   })
+
+  it('offers orchestration technologies in the workflow ecosystem', async () => {
+    render(
+      <MemoryRouter>
+        <InterviewerDashboard />
+      </MemoryRouter>,
+    )
+    await waitFor(() => expect(interviewApi.listOwned).toHaveBeenCalled())
+
+    fireEvent.change(screen.getByRole('combobox', {name: 'Ecosystem'}), {
+      target: {value: 'WORKFLOW'},
+    })
+    fireEvent.click(screen.getByText('1 selected'))
+
+    expect(screen.getByRole('checkbox', {name: 'Temporal'})).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', {name: 'Camunda'})).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', {name: 'AWS Step Functions'})).toBeInTheDocument()
+  })
 })

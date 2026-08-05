@@ -191,6 +191,11 @@ export const ecosystemTechnologies = {
     'GraphQL', 'Jolt', 'HashiCorp Vault', 'Keycloak', 'Apache Camel',
     'RabbitMQ', 'NGINX', 'Postman', 'OpenAPI and Swagger', 'Webhooks',
   ],
+  WORKFLOW: [
+    'Temporal', 'Camunda', 'Netflix Conductor', 'AWS Step Functions',
+    'Azure Durable Functions', 'Argo Workflows', 'Apache Airflow',
+    'Prefect', 'Dagster', 'n8n',
+  ],
 } as const
 
 export type Ecosystem = keyof typeof ecosystemTechnologies
@@ -208,6 +213,7 @@ export const ecosystemLabels: Record<Ecosystem, string> = {
   API_DESIGN: 'API Design & Integration', OS_LINUX: 'Operating Systems & Linux',
   NETWORKING: 'Networking & Protocols', MACHINE_LEARNING: 'Machine Learning (Classical & MLOps)',
   CODE_QUALITY: 'Code Quality & Standards', MISCELLANEOUS: 'Miscellaneous',
+  WORKFLOW: 'Workflow Automation & Orchestration',
 }
 
 const sortedEcosystems = (Object.keys(ecosystemLabels) as Ecosystem[])
@@ -647,6 +653,15 @@ const technologyDescriptions: Record<string, string> = {
   'Pagination and Filtering': 'Returning large result sets efficiently with limits, cursors, and queries.',
   HATEOAS: 'Hypermedia links that let clients navigate an API dynamically.',
   Webhooks: 'Server-to-server callbacks that push events to subscribers.',
+  Temporal: 'A durable-execution platform for reliable, long-running application workflows and activities.',
+  Camunda: 'A process-orchestration platform for BPMN workflows, decisions, tasks, and human approvals.',
+  'Netflix Conductor': 'A distributed orchestration engine for defining and operating service workflows.',
+  'AWS Step Functions': 'A managed AWS service for orchestrating applications with state-machine workflows.',
+  'Azure Durable Functions': 'An Azure Functions extension for stateful, reliable serverless orchestration.',
+  'Argo Workflows': 'A Kubernetes-native engine for orchestrating container-based parallel jobs and pipelines.',
+  Prefect: 'A Python workflow orchestration platform emphasizing observable and resilient data flows.',
+  Dagster: 'A data orchestrator built around software-defined assets, lineage, testing, and observability.',
+  n8n: 'A low-code automation platform for connecting APIs, applications, events, and human workflows.',
   'API Error Handling': 'Consistent, informative error responses and status-code semantics.',
   'Authentication for APIs': 'Securing APIs with tokens, keys, OAuth, and mTLS.',
   'API Rate Limiting': 'Throttling clients to protect capacity and ensure fair use.',
