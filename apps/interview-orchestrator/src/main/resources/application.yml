@@ -124,6 +124,15 @@ app:
     enabled: ${MAIL_ENABLED:false}
     from: ${MAIL_FROM:}
     from-name: ${MAIL_FROM_NAME:Interview Team}
+  chat:
+    # Team chat notifications (posted when an interview result is finalized). Disabled unless
+    # 'enabled' is true; each provider activates only when its webhook URL is supplied.
+    enabled: ${CHAT_NOTIFICATIONS_ENABLED:false}
+    slack-webhook-url: ${SLACK_WEBHOOK_URL:}
+    teams-webhook-url: ${TEAMS_WEBHOOK_URL:}
+    discord-webhook-url: ${DISCORD_WEBHOOK_URL:}
+    google-chat-webhook-url: ${GOOGLE_CHAT_WEBHOOK_URL:}
+    webhook-url: ${CHAT_GENERIC_WEBHOOK_URL:}
   ai-service:
     base-url: ${AI_SERVICE_BASE_URL:http://localhost:8000}
     service-token: ${AI_SERVICE_TOKEN:local-ai-service-token}
