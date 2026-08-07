@@ -181,4 +181,57 @@ if ($sourceSecret) {
     }
 }
 
+# --- Self-healing reseed -------------------------------------------------------------
+# Dev-mode Vault is in-memory: a Vault or cluster restart wipes its auth method, policy,
+# role, and KV data, breaking External Secrets until this script is re-run by hand. Persist
+# a recovery seed (root token + secret payload) into a Kubernetes Secret (etcd survives
+# restarts) and install a CronJob that reconciles Vault from it automatically. See
+# platform/vault/local/autoreseed/reseed.sh. Local development only.
+$autoReseedDir = Join-Path $PSScriptRoot '../platform/vault/local/autoreseed'
+$devRootTokenForSeed = (helm get values vault --namespace $VaultNamespace -o json | ConvertFrom-Json).server.dev.devRootToken
+if ([string]::IsNullOrWhiteSpace($devRootTokenForSeed)) {
+    throw 'Could not resolve the Vault dev root token needed for the auto-reseed seed.'
+}
+
+$syncedForSeed = kubectl -n $ApplicationNamespace get secret platform-secrets -o json | ConvertFrom-Json
+if ($LASTEXITCODE -ne 0 -or -not $syncedForSeed) { throw 'Unable to read the synchronized secret for the auto-reseed payload.' }
+$seedPayload = @{}
+foreach ($entry in $syncedForSeed.data.PSObject.Properties) {
+    $seedPayload[$entry.Name] = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String([string]$entry.Value))
+}
+
+$payloadFile = New-TemporaryFile
+try {
+    # UTF-8 WITHOUT a BOM — a BOM would corrupt the JSON that `vault kv put @payload.json` reads.
+    [IO.File]::WriteAllText($payloadFile, ($seedPayload | ConvertTo-Json -Compress), (New-Object System.Text.UTF8Encoding($false)))
+
+    kubectl -n $VaultNamespace create secret generic vault-seed `
+        --from-literal=root-token=$devRootTokenForSeed `
+        --from-file=payload.json=$payloadFile `
+        --dry-run=client -o yaml | kubectl apply -f - | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Unable to persist the Vault reseed seed secret.' }
+}
+finally {
+    Remove-Item -LiteralPath $payloadFile -Force -ErrorAction SilentlyContinue
+    $seedPayload.Clear()
+    $devRootTokenForSeed = $null
+}
+
+kubectl -n $VaultNamespace create configmap vault-bootstrap `
+    --from-file=reseed.sh=(Join-Path $autoReseedDir 'reseed.sh') `
+    --from-file=policy.hcl=(Join-Path $PSScriptRoot '../platform/vault/policies/online-interview-dev.hcl') `
+    --dry-run=client -o yaml | kubectl apply -f - | Out-Null
+if ($LASTEXITCODE -ne 0) { throw 'Unable to install the Vault bootstrap ConfigMap.' }
+
+Invoke-Native {
+    kubectl apply -f (Join-Path $autoReseedDir 'reseed-cronjob.yaml')
+} 'Unable to install the Vault auto-reseed CronJob.'
+
+# Prove it works now instead of waiting for the first scheduled tick.
+kubectl -n $VaultNamespace delete job vault-autoreseed-initial --ignore-not-found | Out-Null
+Invoke-Native {
+    kubectl -n $VaultNamespace create job vault-autoreseed-initial --from=cronjob/vault-autoreseed
+} 'Unable to launch the initial Vault reseed verification job.'
+
 Write-Output 'HashiCorp Vault integration is ready. Application secret values were not printed or written to disk.'
+Write-Output 'Self-healing reseed installed (CronJob vault/vault-autoreseed) — a restart now recovers automatically.'
