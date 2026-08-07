@@ -4,6 +4,52 @@ import { interviewApi } from '../api/interviewApi'
 import { ecosystemLabels, ecosystemTechnologies, type Ecosystem } from './InterviewerDashboard'
 
 const curatedTopics: Record<string, string[]> = {
+  Slack: [
+    'Slack Platform Fundamentals', 'Workspaces, Channels, and Messages',
+    'Incoming Webhooks', 'Slack Apps, Bot Users, and OAuth Scopes',
+    'Block Kit Message Formatting', 'Slash Commands and Interactivity',
+    'Web API and Events API', 'ChatOps and CI/CD Deploy Notifications',
+    'Integrating with GitHub Actions and Argo CD', 'Security: Signing Secrets and Token Handling',
+    'Rate Limits, Retries, and Best Practices',
+  ],
+  'Microsoft Teams': [
+    'Teams Platform Fundamentals', 'Teams, Channels, and Chats',
+    'Incoming Webhooks and Connectors', 'Adaptive Cards and Message Formatting',
+    'Bots with the Bot Framework', 'Message Extensions and Tabs',
+    'Power Automate (Workflows) Integration', 'ChatOps and CI/CD Notifications',
+    'Microsoft Graph API and Permissions', 'Security and Compliance',
+    'Rate Limits and Best Practices',
+  ],
+  Discord: [
+    'Discord Platform Fundamentals', 'Servers, Channels, and Roles',
+    'Incoming Webhooks', 'Bots and the Gateway', 'Slash Commands and Interactions',
+    'Embeds and Message Formatting', 'OAuth2 and Permissions',
+    'ChatOps and CI/CD Alerts', 'Rate Limits and Sharding',
+    'Security and Token Handling', 'Best Practices',
+  ],
+  'Google Chat': [
+    'Google Chat Fundamentals', 'Spaces, Threads, and Messages',
+    'Incoming Webhooks', 'Chat Apps and Bots', 'Cards v2 Message Formatting',
+    'Slash Commands and Dialogs', 'Events and the Chat API',
+    'ChatOps and CI/CD Notifications', 'Google Workspace Auth and Scopes',
+    'Security and Best Practices', 'Rate Limits',
+  ],
+  Mattermost: [
+    'Mattermost Fundamentals', 'Teams, Channels, and Messages',
+    'Incoming Webhooks', 'Outgoing Webhooks and Slash Commands',
+    'Interactive Message Buttons', 'Bot Accounts and the REST API',
+    'Plugins and Integrations', 'ChatOps and CI/CD Notifications',
+    'Self-Hosting and Deployment', 'Authentication and Access Control',
+    'High Availability and Scaling',
+  ],
+  'Rocket.Chat': [
+    'Rocket.Chat Fundamentals', 'Channels, Groups, and Messages',
+    'Incoming Webhooks', 'Outgoing Webhooks and Slash Commands',
+    'Bots and the Realtime/REST API', 'Message Attachments and Formatting',
+    'Apps and Integrations', 'ChatOps and CI/CD Notifications',
+    'Self-Hosting and Deployment', 'Authentication and Permissions',
+    'Scaling and Administration',
+  ],
   GraphQL: [
     'Schema and Type System', 'Queries and Variables', 'Mutations and Input Types',
     'Resolvers and Context', 'Strawberry GraphQL Fundamentals', 'Strawberry with Django',

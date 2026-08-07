@@ -48,8 +48,8 @@ data:
         }]
 
   trigger.on-deployed: |
-    - description: Application is synced and healthy
-      oncePer: app.status.sync.revision
+    - description: A new set of images is running and healthy (real deployment, not a no-op re-sync)
+      oncePer: app.status.summary.images
       send: [app-deployed]
       when: app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy' and app.status.sync.status == 'Synced'
 

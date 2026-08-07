@@ -8,8 +8,11 @@ import com.onlineinterview.session.domain.SessionState;
 import com.onlineinterview.session.infrastructure.InterviewSessionRepository;
 import com.onlineinterview.session.infrastructure.ManualQuestionRepository;
 import com.onlineinterview.profile.infrastructure.UserProfileRepository;
+import com.onlineinterview.notification.chat.ChatMessage;
+import com.onlineinterview.notification.chat.TeamChatNotifier;
 import jakarta.mail.internet.MimeMessage;
 import java.io.UnsupportedEncodingException;
+import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +37,7 @@ public class CandidateResultMailService {
     private final UserProfileRepository profiles;
     private final ManualQuestionRepository questions;
     private final CoachingFeedbackStore coaching;
+    private final ObjectProvider<TeamChatNotifier> teamChat;
     private final boolean enabled;
     private final String from;
     private final String fromName;
@@ -42,6 +46,7 @@ public class CandidateResultMailService {
     public CandidateResultMailService(ObjectProvider<JavaMailSender> mailSender,
             InterviewSessionRepository sessions, UserProfileRepository profiles,
             ManualQuestionRepository questions, CoachingFeedbackStore coaching,
+            ObjectProvider<TeamChatNotifier> teamChat,
             @Value("${app.mail.enabled:false}") boolean enabled,
             @Value("${app.mail.from:}") String from,
             @Value("${app.mail.from-name:Interview Team}") String fromName,
@@ -51,6 +56,7 @@ public class CandidateResultMailService {
         this.profiles = profiles;
         this.questions = questions;
         this.coaching = coaching;
+        this.teamChat = teamChat;
         this.enabled = enabled;
         this.from = from;
         this.fromName = fromName;
@@ -119,7 +125,37 @@ public class CandidateResultMailService {
                 .addKeyValue("sessionId", sessionId)
                 .addKeyValue("outcome", passed ? "PASSED" : "NOT_SELECTED")
                 .log("Result emailed to candidate");
+
+        notifyTeam(candidate.getDisplayName(), definition.getTitle(), passed,
+                total == null ? 0 : total, maxScore, percentage);
         return candidate.getEmail();
+    }
+
+    /** Posts the finalized result to any configured team chat providers. Best-effort:
+     *  never affects the candidate email that already succeeded. */
+    private void notifyTeam(String candidateName, String interviewTitle, boolean passed,
+            int score, int maxScore, int percentage) {
+        var notifier = teamChat.getIfAvailable();
+        if (notifier == null) {
+            return;
+        }
+        var message = new ChatMessage(
+                "Interview result finalized",
+                candidateName + (passed ? " was selected." : " was not selected."),
+                passed,
+                List.of(
+                        new ChatMessage.Field("Candidate", candidateName),
+                        new ChatMessage.Field("Interview", interviewTitle),
+                        new ChatMessage.Field("Outcome", passed ? "PASSED" : "NOT SELECTED"),
+                        new ChatMessage.Field("Score",
+                                score + " / " + maxScore + " (" + percentage + "%)")),
+                null, null);
+        try {
+            notifier.notify(message);
+        } catch (RuntimeException exception) {
+            log.atWarn().addKeyValue("event", "result.team_notify_failed")
+                    .setCause(exception).log("Team chat notification failed (ignored)");
+        }
     }
 
     private String buildHtml(String name, String title, boolean passed, int score, int maxScore,
