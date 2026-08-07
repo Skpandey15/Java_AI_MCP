@@ -4,6 +4,14 @@ import { interviewApi } from '../api/interviewApi'
 import { ecosystemLabels, ecosystemTechnologies, type Ecosystem } from './InterviewerDashboard'
 
 const curatedTopics: Record<string, string[]> = {
+  Slack: [
+    'Slack Platform Fundamentals', 'Workspaces, Channels, and Messages',
+    'Incoming Webhooks', 'Slack Apps, Bot Users, and OAuth Scopes',
+    'Block Kit Message Formatting', 'Slash Commands and Interactivity',
+    'Web API and Events API', 'ChatOps and CI/CD Deploy Notifications',
+    'Integrating with GitHub Actions and Argo CD', 'Security: Signing Secrets and Token Handling',
+    'Rate Limits, Retries, and Best Practices',
+  ],
   GraphQL: [
     'Schema and Type System', 'Queries and Variables', 'Mutations and Input Types',
     'Resolvers and Context', 'Strawberry GraphQL Fundamentals', 'Strawberry with Django',

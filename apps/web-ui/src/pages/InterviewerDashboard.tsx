@@ -46,7 +46,7 @@ export const ecosystemTechnologies = {
     'Azure DevOps Pipelines', 'Argo CD', 'Flux CD', 'Tekton', 'Spinnaker',
     'Docker', 'Kubernetes', 'Helm', 'Kustomize', 'Terraform', 'Ansible',
     'SonarQube', 'Trivy', 'JFrog Artifactory', 'GitOps',
-    'Blue-Green Deployment', 'Canary Deployment', 'Pipeline as Code',
+    'Blue-Green Deployment', 'Canary Deployment', 'Pipeline as Code', 'Slack',
   ],
   DESIGN_PRINCIPLES: [
     'Single Responsibility Principle', 'Open/Closed Principle', 'Liskov Substitution Principle',
@@ -248,6 +248,7 @@ const technologyDescriptions: Record<string, string> = {
   RabbitMQ: 'A message broker supporting reliable queues, routing, acknowledgements, and asynchronous workloads.',
   NGINX: 'A high-performance web server, reverse proxy, load balancer, and API gateway building block.',
   Postman: 'An API development platform for designing, testing, documenting, and automating API workflows.',
+  Slack: 'A team messaging platform with incoming webhooks, bot apps, and Block Kit — widely used for ChatOps and CI/CD deploy notifications.',
   Flask: 'A lightweight Python web framework suited to small services and flexible application architectures.',
   FastAPI: 'A typed Python API framework with automatic validation and OpenAPI documentation.',
   Pydantic: 'A Python library for typed data validation, parsing, and application settings.',
