@@ -1,0 +1,77 @@
+# Self-healing reseed for the local dev-mode Vault. See reseed.sh for the rationale.
+# The vault-seed Secret (root-token + payload.json) and the vault-bootstrap ConfigMap
+# (reseed.sh + policy.hcl) are provisioned by scripts/setup-local-vault.ps1 from live
+# cluster state; this manifest only defines the schedule that runs the reconcile.
+#
+# LOCAL DEVELOPMENT ONLY. This relies on dev-mode Vault and stores the dev root token in
+# a Kubernetes Secret. Never apply to UAT or production.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: vault-autoreseed
+  namespace: vault
+  labels:
+    app.kubernetes.io/name: vault-autoreseed
+    app.kubernetes.io/part-of: online-interview
+spec:
+  schedule: "*/3 * * * *"        # reconcile every 3 minutes; recovers within one tick of a restart
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 120
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 120
+      ttlSecondsAfterFinished: 300
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: vault-autoreseed
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 100          # the vault image's built-in 'vault' user
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: reseed
+              image: hashicorp/vault:2.0.3
+              imagePullPolicy: IfNotPresent
+              command: ["/bin/sh", "/bootstrap/reseed.sh"]
+              env:
+                - name: HOME
+                  value: /home/vault    # writable dir so the vault CLI never touches the read-only root
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: "10m"
+                  memory: "32Mi"
+                limits:
+                  cpu: "200m"
+                  memory: "128Mi"
+              volumeMounts:
+                - name: seed
+                  mountPath: /seed
+                  readOnly: true
+                - name: bootstrap
+                  mountPath: /bootstrap
+                  readOnly: true
+                - name: home
+                  mountPath: /home/vault
+          volumes:
+            - name: seed
+              secret:
+                secretName: vault-seed
+            - name: bootstrap
+              configMap:
+                name: vault-bootstrap
+            - name: home
+              emptyDir: {}

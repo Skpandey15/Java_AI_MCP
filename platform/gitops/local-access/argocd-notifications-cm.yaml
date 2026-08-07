@@ -1,0 +1,59 @@
+# Argo CD Notifications configuration for the LOCAL dev-local stack.
+# Sends a Slack message when online-interview-dev finishes syncing and is Healthy
+# ("deployed successfully"), and a warning if it goes Degraded.
+#
+# The Slack bot token is NOT stored here — it lives in Secret argocd-notifications-secret
+# under key `slack-token` (see docs/runbooks/deployment.md §7b for how to create it).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-notifications-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: argocd
+data:
+  service.slack: |
+    token: $slack-token
+
+  template.app-deployed: |
+    message: |
+      :white_check_mark: *{{.app.metadata.name}}* deployed successfully to *dev-local*
+      Revision: `{{.app.status.sync.revision | trunc 7}}`  ·  Sync: {{.app.status.sync.status}}  ·  Health: {{.app.status.health.status}}
+    slack:
+      attachments: |
+        [{
+          "title": "{{ .app.metadata.name }} — deployed",
+          "title_link": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
+          "color": "#18be52",
+          "fields": [
+            {"title": "Sync Status", "value": "{{.app.status.sync.status}}", "short": true},
+            {"title": "Health", "value": "{{.app.status.health.status}}", "short": true},
+            {"title": "Revision", "value": "{{.app.status.sync.revision}}", "short": false}
+          ]
+        }]
+
+  template.app-health-degraded: |
+    message: |
+      :warning: *{{.app.metadata.name}}* is *{{.app.status.health.status}}* in dev-local
+    slack:
+      attachments: |
+        [{
+          "title": "{{ .app.metadata.name }} — {{.app.status.health.status}}",
+          "title_link": "{{.context.argocdUrl}}/applications/{{.app.metadata.name}}",
+          "color": "#e96d76",
+          "fields": [
+            {"title": "Sync Status", "value": "{{.app.status.sync.status}}", "short": true},
+            {"title": "Health", "value": "{{.app.status.health.status}}", "short": true}
+          ]
+        }]
+
+  trigger.on-deployed: |
+    - description: Application is synced and healthy
+      oncePer: app.status.sync.revision
+      send: [app-deployed]
+      when: app.status.operationState.phase in ['Succeeded'] and app.status.health.status == 'Healthy' and app.status.sync.status == 'Synced'
+
+  trigger.on-health-degraded: |
+    - description: Application has degraded
+      send: [app-health-degraded]
+      when: app.status.health.status == 'Degraded'

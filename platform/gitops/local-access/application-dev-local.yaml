@@ -3,6 +3,11 @@ kind: Application
 metadata:
   name: online-interview-dev
   namespace: argocd
+  annotations:
+    # Slack notifications (see platform/gitops/local-access/argocd-notifications-cm.yaml).
+    # Adjust the channel name to one your Slack bot has been invited to.
+    notifications.argoproj.io/subscribe.on-deployed.slack: deployments
+    notifications.argoproj.io/subscribe.on-health-degraded.slack: deployments
 spec:
   project: online-interview
   source:

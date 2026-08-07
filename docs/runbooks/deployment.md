@@ -294,6 +294,7 @@ forward migration.
 | `Failed to fetch` in the browser | A backend pod is down/not Ready | Check `kubectl get pods`; the UI now shows a friendly "service unavailable" message for this |
 | AI calls fail after `apply -k overlays/local` | `apply -k` reset `OPENAI_API_KEY` to the placeholder | Restore it (see §4 alternative); prefer the one-off migration Job to avoid this |
 | `PodSecurity "restricted:latest"` warning | Audit-level warning only | Ignore — the namespace enforces the looser *baseline* level; workloads still run |
+| Argo CD shows the app **Degraded** after a machine/cluster restart (pods still Running); `SecretStore platform-secret-store` = `InvalidProviderConfig` — *"unable to log in with Kubernetes auth"* | Dev-mode Vault is **in-memory**; the restart wiped its Kubernetes auth method, policy, role, and KV data, so External Secrets can no longer log in | **Self-heals within ~2 min** via the `vault/vault-autoreseed` CronJob (§7a). To force recovery immediately: `kubectl -n vault create job vault-reseed-now --from=cronjob/vault-autoreseed`. If the recovery seed itself is missing (e.g. the `vault` namespace was recreated), re-run `scripts/setup-local-vault.ps1` |
 
 ---
 
@@ -352,6 +353,88 @@ kubectl -n argocd patch app online-interview-dev --type merge \
 HTTPS and 404 through the HTTP ingress.
 
 **Teardown** (frees all Argo CD memory): `kubectl delete namespace argocd online-interview-dev`.
+
+---
+
+## 7a. Vault secrets are ephemeral — the self-healing reseed
+
+The local Vault runs in **dev mode** (`server.dev.enabled: true`), which forces **in-memory
+storage** and ignores any persistent volume. That keeps local setup simple (auto-unsealed, one
+root token) but means **every Vault or cluster/laptop restart wipes Vault completely** — KV data,
+the Kubernetes auth method, the policy, and the role. External Secrets can then no longer log in
+(`SecretStore … InvalidProviderConfig`), the generated `platform-secrets` Secret goes stale, and
+Argo CD marks the app **Degraded**. The pods keep running on the last-generated Secret, so it's a
+broken *secret pipeline*, not an outage.
+
+> Leaving dev mode to get persistent storage is **worse** for local dev: a real storage backend
+> makes Vault come back **sealed** on every restart, requiring unseal-key management. So we keep
+> dev mode and make the *reseed* automatic instead.
+
+**How it self-heals.** `scripts/setup-local-vault.ps1` installs, alongside Vault:
+- **Secret `vault/vault-seed`** — the recovery seed: the dev root token + `payload.json` (the full
+  application secret). It lives in etcd, which **survives** Vault restarts.
+- **ConfigMap `vault/vault-bootstrap`** — the idempotent reconcile script
+  (`platform/vault/local/autoreseed/reseed.sh`) + the Vault policy.
+- **CronJob `vault/vault-autoreseed`** (every 3 min) — re-enables KV v2 + Kubernetes auth, rewrites
+  the policy/role/auth-config, and re-puts the secret **only if Vault is missing it** (so a live
+  Vault edit is never clobbered). It talks to Vault over the network and never touches the Vault
+  pod spec, so it cannot crash-loop Vault.
+
+After a restart, recovery is **hands-off in ~2 min** (one CronJob tick + External Secrets
+re-validation), then Argo CD returns to Healthy on its own. Verified by deleting `vault-0` and
+watching the app recover with no manual action.
+
+**Operate it:**
+```bash
+# force an immediate reconcile instead of waiting for the next 3-min tick
+kubectl -n vault create job vault-reseed-now --from=cronjob/vault-autoreseed
+kubectl -n vault logs job/vault-reseed-now
+
+# rotate a secret value: update Vault, then let the CronJob leave it alone (it only seeds when absent)
+#   the seed in vault-seed is the RECOVERY baseline — refresh it by re-running setup-local-vault.ps1
+```
+
+If the `vault` namespace itself was deleted (seed gone), re-run `scripts/setup-local-vault.ps1` —
+it rebuilds Vault, the seed, and the CronJob from live cluster state.
+
+---
+
+## 7b. "Deployed successfully" Slack notifications
+
+Argo CD's notifications controller sends a Slack message when `online-interview-dev` finishes
+syncing and is Healthy (`:white_check_mark: deployed successfully`) and a warning when it goes
+Degraded. The templates, triggers, and the app subscription are committed:
+- `platform/gitops/local-access/argocd-notifications-cm.yaml` — Slack service, templates, triggers
+- `platform/gitops/local-access/application-dev-local.yaml` — `subscribe.on-deployed.slack` /
+  `subscribe.on-health-degraded.slack` annotations (channel: `deployments`)
+
+Everything is wired **except the Slack bot token**, which must be created by a human (an assistant
+must not create Slack apps or enter tokens). One-time setup:
+
+1. **Create a Slack app** → <https://api.slack.com/apps> → *Create New App* → *From scratch* →
+   pick your workspace.
+2. **Add a bot scope** → *OAuth & Permissions* → *Scopes → Bot Token Scopes* → add `chat:write`.
+3. **Install** → *Install to Workspace* → copy the *Bot User OAuth Token* (`xoxb-…`).
+4. **Create/choose a channel** (e.g. `#deployments`) and invite the bot: in that channel type
+   `/invite @YourAppName`. (The channel must match the annotation value `deployments`.)
+5. **Store the token** in the notifications secret (do this yourself — never paste tokens into an
+   assistant):
+   ```bash
+   kubectl -n argocd patch secret argocd-notifications-secret \
+     --type merge -p '{"stringData":{"slack-token":"xoxb-REPLACE-ME"}}'
+   kubectl -n argocd rollout restart deploy/argocd-notifications-controller
+   ```
+
+**Test without waiting for a deploy:**
+```bash
+kubectl -n argocd exec deploy/argocd-notifications-controller -- \
+  /app/argocd-notifications trigger run on-deployed online-interview-dev
+# or send a template straight to the channel:
+kubectl -n argocd exec deploy/argocd-notifications-controller -- \
+  /app/argocd-notifications template notify app-deployed online-interview-dev --recipient slack:deployments
+```
+Until the token is set, the controller logs a send error on each event (harmless). To change the
+channel, edit the two `subscribe.*.slack` annotations (repo file + `kubectl annotate`).
 
 ---
 
