@@ -143,7 +143,7 @@ feature is their first consumer.
 
 ### 3.1 Data model
 
-New/extended persistence in the orchestrator (Flyway migration `V17__adaptive_interview.sql`):
+New/extended persistence in the orchestrator (Flyway migration `V26__adaptive_session_state.sql`):
 
 ```mermaid
 erDiagram

@@ -17,7 +17,7 @@ user-visible until Phase 3.
 | **3** | Dark-launch → GA (flag on, dashboards, pilot) | 2 | ✅ user-facing | — |
 
 **Sequencing rule:** each phase's PR must be green and merged before the next starts (Phases build on
-each other's classes/migrations). Migrations are strictly additive and ordered (`V17`, `V18`).
+each other's classes/migrations). Migrations are strictly additive and ordered (`V25`, `V26`).
 
 ---
 
@@ -31,7 +31,7 @@ Closes the "missing second tool per server" gap; gives the agent its hands. No a
 - [ ] `CitationToolHandler` — `knowledge` / `get_citation` → `{documentId,fileName,chunkIndex,content,sourceUri?}`
 
 **Supporting changes:**
-- [ ] `V17__adaptive_mcp_tools.sql` — register the 3 tools in the MCP registry + default `McpToolPolicy` rows (mirror `V12`–`V15`)
+- [ ] `V25__adaptive_mcp_tools.sql` — register the 3 tools in the MCP registry + default `McpToolPolicy` rows (mirror `V12`–`V15`)
 - [ ] Input JSON-schemas wired through `McpSchemaValidator`
 - [ ] Reuse-lookup query in `question-bank` domain (has a prompt/question been asked in this session?)
 - [ ] Unit tests for each handler (happy path, authz failure, bad args) — **`mcp/**` is coverage-gated at 95%**
@@ -53,7 +53,7 @@ The durable outer loop + the agentic inner loop. Wired end-to-end but `ADAPTIVE_
 
 **orchestrator (`.../session/adaptive/`):**
 - [ ] `AdaptiveSessionState`, `AdaptiveTurn` JPA entities + repositories
-- [ ] `V18__adaptive_session_state.sql` — the two tables (ER in LLD §3.1); add `ADAPTIVE` to `question_mode`
+- [ ] `V26__adaptive_session_state.sql` — the two tables (ER in LLD §3.1); add `ADAPTIVE` to `question_mode`
 - [ ] `AdaptiveInterviewClient` — `RestClient` → ai-service `next-turn` (mirror `AiAssessmentClient`: `X-Service-Token`, `DownstreamCallExecutor`)
 - [ ] `AdaptiveSessionService` — durable turn loop: persist answer → build request → call agent → apply (persist turn / conclude via approval-gated `submit_ai_evaluation`); enforce budgets
 - [ ] `AdaptiveSessionController` — start / answer / resume (candidate-scoped), **guarded by `ADAPTIVE_ENABLED`**
