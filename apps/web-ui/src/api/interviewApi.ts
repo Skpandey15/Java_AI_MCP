@@ -32,6 +32,10 @@ export type KnowledgeCollection = {
   id: string; name: string; description: string; createdAt: string
 }
 export type KnowledgeDocument = { id: string; fileName: string; status: string }
+export type KnowledgeCitation = {
+  chunkId: string; documentId: string; fileName: string; chunkIndex: number
+  content: string; score: number
+}
 export type QuestionCitation = {
   chunkId: string; documentId: string; fileName: string; chunkIndex: number
   excerpt: string; score: number
@@ -199,6 +203,10 @@ export const interviewApi = {
     }
     return res.json() as Promise<KnowledgeDocument>
   },
+  searchCollection: (collectionId: string, query: string, limit = 8) =>
+    request<{ citations: KnowledgeCitation[] }>(
+      `/api/v1/knowledge/collections/${collectionId}:search`,
+      { method: 'POST', body: JSON.stringify({ query, limit }) }),
   candidates: () => request<Profile[]>('/api/v1/candidates'),
   create: (body: object) => request<Interview>('/api/v1/interviews', {
     method: 'POST', body: JSON.stringify(body),

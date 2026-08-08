@@ -18,6 +18,8 @@ vi.mock('../api/interviewApi', async (importOriginal) => {
       listOwned: vi.fn(),
       candidates: vi.fn(),
       listKnowledgeCollections: vi.fn(),
+      listCollectionDocuments: vi.fn(),
+      searchCollection: vi.fn(),
       create: vi.fn(),
     },
   }
@@ -148,5 +150,47 @@ describe('InterviewerDashboard question editing', () => {
     expect(screen.getByRole('checkbox', {name: 'Temporal'})).toBeInTheDocument()
     expect(screen.getByRole('checkbox', {name: 'Camunda'})).toBeInTheDocument()
     expect(screen.getByRole('checkbox', {name: 'AWS Step Functions'})).toBeInTheDocument()
+  })
+})
+
+describe('InterviewerDashboard knowledge base retrieval search', () => {
+  beforeEach(() => {
+    cleanup()
+    vi.mocked(interviewApi.listOwned).mockResolvedValue([])
+    vi.mocked(interviewApi.candidates).mockResolvedValue([])
+    vi.mocked(interviewApi.listQuestions).mockResolvedValue([])
+    vi.mocked(interviewApi.listKnowledgeCollections).mockResolvedValue([
+      {id: 'col-1', name: 'Java KB', description: '', createdAt: '2026-08-01T00:00:00Z'},
+    ])
+    vi.mocked(interviewApi.listCollectionDocuments).mockResolvedValue([])
+  })
+
+  it('searches a selected collection and shows ranked retrieval hits', async () => {
+    vi.mocked(interviewApi.searchCollection).mockResolvedValue({
+      citations: [{
+        chunkId: 'chunk-1', documentId: 'doc-1', fileName: 'gc-notes.md',
+        chunkIndex: 2, content: 'G1 garbage collector tuning tips.', score: 0.871,
+      }],
+    })
+
+    render(
+      <MemoryRouter>
+        <InterviewerDashboard />
+      </MemoryRouter>,
+    )
+    await waitFor(() => expect(interviewApi.listOwned).toHaveBeenCalled())
+
+    fireEvent.click(screen.getByRole('button', {name: /Knowledge base/}))
+    const select = await screen.findByRole('combobox', {name: 'Collection'})
+    fireEvent.change(select, {target: {value: 'col-1'}})
+
+    const input = await screen.findByRole('textbox', {name: /Test retrieval/})
+    fireEvent.change(input, {target: {value: 'garbage collection tuning'}})
+    fireEvent.click(screen.getByRole('button', {name: 'Search'}))
+
+    await waitFor(() => expect(interviewApi.searchCollection)
+      .toHaveBeenCalledWith('col-1', 'garbage collection tuning'))
+    expect(await screen.findByText(/gc-notes\.md/)).toBeInTheDocument()
+    expect(screen.getByText(/G1 garbage collector tuning tips/)).toBeInTheDocument()
   })
 })
