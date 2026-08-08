@@ -436,6 +436,45 @@ channel, edit the two `subscribe.*.slack` annotations (repo file + `kubectl anno
 
 ---
 
+## 7c. Operating the Adaptive AI Interviewer
+
+The Adaptive AI Interviewer (an agent that conducts a live, adaptive interview) is gated by a
+single flag, **`ADAPTIVE_ENABLED`** (default `false`), which is also the kill-switch. Design and
+build detail: `docs/design/adaptive-ai-interviewer.md`.
+
+**Rollout state.** Dark-launched in **dev only** — `overlays/dev/kustomization.yaml` sets
+`ADAPTIVE_ENABLED=true`. **uat and prod stay off** until the pre-GA checklist below is signed off.
+
+**How it runs.** An interview created in **ADAPTIVE** question mode routes the candidate to
+`/candidate/adaptive/:assignmentId`. The orchestrator (`AdaptiveSessionService`) runs a durable
+turn loop: broker the blueprint + reuse-checked bank questions → call the ai-service agent
+(`/internal/v1/interview:next-turn`) → persist the turn. On conclude it **submits the session**
+into the normal interviewer review queue. Everything is bounded (`ADAPTIVE_MAX_TURNS`,
+`ADAPTIVE_TOKEN_BUDGET`) and all model traffic goes through the LiteLLM scoped key.
+
+**Kill-switch.** Set `ADAPTIVE_ENABLED=false` (env in the overlay) and let Argo CD re-sync — the
+candidate endpoints return 404 and the mode disappears. No redeploy of logic needed.
+
+**Monitor during the pilot.**
+- **Cost / tokens**: the agent's usage flows through LiteLLM — watch cost per interview in the
+  LiteLLM/Grafana dashboards; a runaway loop would show as high tokens/interview (bounded by the
+  turn + token budgets, so this should stay flat).
+- **Session outcomes**: adaptive sessions land in the interviewer submissions queue like any other.
+
+**Known gap (pre-GA).** Adaptive answers are stored as `adaptive_turn` rows, not `interview_answer`
+rows, so the **standard review page does not yet show the adaptive transcript** — the interviewer
+transcript/approval view is a pending follow-up. Until it ships, treat the dev flag as a
+candidate-experience pilot only.
+
+**Pre-GA checklist (before enabling in uat/prod):**
+1. Interviewer transcript + approval view (reads `adaptive_turn`; approves the proposed evaluation).
+2. Fairness review — adaptive scoring is comparable/explainable vs the fixed modes (blueprint +
+   audit trail make each path auditable).
+3. Per-interview cost + latency within budget on the dev pilot.
+4. Then promote with `ADAPTIVE_ENABLED=true` added to `overlays/uat` → `overlays/prod`.
+
+---
+
 ## 8. Code scanning — CodeQL & SonarCloud
 
 Two static-analysis layers on top of Trivy (dependencies/config) and ruff (basic Python lint),
