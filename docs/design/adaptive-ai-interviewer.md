@@ -125,6 +125,14 @@ sequenceDiagram
 The 3 new tools are exactly the "missing" second-tool-per-server gap in the architecture spec — this
 feature is their first consumer.
 
+> **Implementation note (Phase 1):** MCP authorization tokens are issued *per tool + resource + short
+> TTL* (`McpAuthorizationTokenService`), so the ai-service does not hold or manage tool tokens.
+> Instead the **orchestrator brokers the tools** — it executes them (it is the MCP server and owns
+> the repositories) and passes the results (blueprint, reuse-checked bank questions, grounding
+> snippets) into the agent's `next-turn` request. The agent reasons over that brokered context and
+> returns the next move; the orchestrator applies it. This keeps the agent autonomous and adaptive
+> while all authorization, reuse-checking, and auditing stay on the trusted server side.
+
 ### 2.5 Governance & guardrails (reuse existing)
 
 - **Bounded:** `maxTurns`, wall-clock deadline (session `expiresAt`), per-turn `maxToolCalls`, and the
