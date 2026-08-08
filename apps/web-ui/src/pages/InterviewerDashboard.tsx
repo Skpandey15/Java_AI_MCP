@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   interviewApi, type AdminQuestion, type Assignment, type ComposeJob, type Interview,
-  type KnowledgeCollection, type KnowledgeDocument, type Profile, type QuestionType,
+  type KnowledgeCollection, type KnowledgeCitation, type KnowledgeDocument, type Profile, type QuestionType,
 } from '../api/interviewApi'
 import { useAuth } from '../auth/AuthProvider'
 
@@ -1413,6 +1413,8 @@ function KnowledgeBaseView({ notify }: { notify: (message: string, error?: boole
   const [source, setSource] = useState<'manual' | 'upload' | 'github'>('manual')
   const [repoUrl, setRepoUrl] = useState('')
   const [file, setFile] = useState<File>()
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<KnowledgeCitation[] | null>(null)
 
   async function loadCollections() {
     try { setCollections(await interviewApi.listKnowledgeCollections()) }
@@ -1424,7 +1426,7 @@ function KnowledgeBaseView({ notify }: { notify: (message: string, error?: boole
     catch (error) { notify(messageOf(error), true) }
   }
   useEffect(() => { void loadCollections() }, [])
-  useEffect(() => { void loadDocuments(selected) }, [selected])
+  useEffect(() => { void loadDocuments(selected); setResults(null); setQuery('') }, [selected])
 
   async function createCollection(event: FormEvent) {
     event.preventDefault()
@@ -1480,6 +1482,17 @@ function KnowledgeBaseView({ notify }: { notify: (message: string, error?: boole
       notify('GitHub docs imported and ingested — ready for RAG.')
     } catch (error) { notify(messageOf(error), true) } finally { setBusy('') }
   }
+  async function search(event: FormEvent) {
+    event.preventDefault()
+    setBusy('search')
+    try {
+      const { citations } = await interviewApi.searchCollection(selected, query)
+      setResults(citations)
+      notify(citations.length
+        ? `Found ${citations.length} matching chunk(s).`
+        : 'No matches — try different wording or ingest more documents.')
+    } catch (error) { notify(messageOf(error), true) } finally { setBusy('') }
+  }
 
   return <>
     <div className="section-heading"><h2>Knowledge base (RAG)</h2>
@@ -1504,6 +1517,20 @@ function KnowledgeBaseView({ notify }: { notify: (message: string, error?: boole
             {busy === d.id ? 'Ingesting…' : 'Ingest'}</button>}
         </div>)}
       </div>
+      <form className="form-grid" onSubmit={(e) => void search(e)}>
+        <label>Test retrieval (RAG search)<input required value={query} onChange={(e) => setQuery(e.target.value)}
+          placeholder="What a RAG interview would retrieve, e.g. 'garbage collection tuning'" /></label>
+        <button type="submit" disabled={busy === 'search' || !query.trim()}>
+          {busy === 'search' ? 'Searching…' : 'Search'}</button>
+      </form>
+      {results !== null && <div className="assignment-list">
+        <strong>Top matches</strong>
+        {results.length === 0 && <p className="empty-state">No matches for this query.</p>}
+        {results.map((c) => <div className="assignment-row" key={c.chunkId}>
+          <span>{c.fileName} · #{c.chunkIndex} · score {c.score.toFixed(3)}
+            <br /><small>{c.content.slice(0, 200)}{c.content.length > 200 ? '…' : ''}</small></span>
+        </div>)}
+      </div>}
       <label>RAG Source<select value={source} onChange={(e) => setSource(e.target.value as 'manual' | 'upload' | 'github')}>
         <option value="manual">Manual entry</option>
         <option value="upload">Upload document (.txt .md .pdf .doc .ppt .xls)</option>
