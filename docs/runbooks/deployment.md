@@ -13,36 +13,34 @@ Companion docs: [phase-4a-artifact-ci](../phase-4a-artifact-ci.md) (CI), [phase-
 
 ## 1. Pipeline at a glance
 
-Four GitHub Actions workflows form a **build → publish → promote** chain. Delivery is
-**GitOps**: nothing is `kubectl apply`-ed to shared clusters directly — instead the desired
-image **digests** are written into `platform/kubernetes/overlays/<env>/kustomization.yaml`,
+Delivery runs as a **single GitHub Actions pipeline** (`pipeline.yml`): on every push to `main`
+it runs **build/test → publish images → promote to dev** as **one run** with a visual job graph
+and live per-step logs. Manual **uat/prod** promotion is a separate workflow (`promote-gitops.yml`).
+Delivery is **GitOps**: nothing is `kubectl apply`-ed to shared clusters directly — instead the
+desired image **digests** are written into `platform/kubernetes/overlays/<env>/kustomization.yaml`,
 and **Argo CD** syncs each cluster to match Git.
 
 ```
- git push (main)                     ┌─────────────────────────────────────────────┐
-        │                            │  Argo CD watches main and syncs each env's   │
-        ▼                            │  overlay to the cluster (self-healing)       │
-┌───────────────┐  success   ┌───────────────┐  success   ┌────────────────┐        │
-│  platform-ci  │──────────▶ │ release-images│──────────▶ │ promote-gitops │        │
-│  (ci.yml)     │            │               │            │                │        │
-│ test+build+   │            │ build, Trivy  │            │ dev: auto PR   │──┐     │
-│ smoke+manifest│            │ scan, SBOM,   │            │  + auto-merge  │  │ PR  │
-│ validation    │            │ push sha-<sha>│            │ uat/prod:      │  ├────▶│
-└───────────────┘            │ + main, Cosign│            │  manual dispatch│  │     │
-                             │ sign, attest  │            │  → PR (review) │  │     │
-        ▲                    └───────────────┘            └────────────────┘  │     │
-        │ also runs on PRs and manual dispatch                                 ▼     │
-┌───────────────┐                                        merge to main ─────────────┘
-│   security    │  Trivy fs (vuln+secret) + config scan; on push/PR + weekly cron
-│ (security.yml)│
-└───────────────┘
+ git push (main) ─▶ pipeline.yml ── one run, live logs ─────────────────────┐
+   ┌───────────────────────────────────────────────────────────────────┐   │
+   │ CI:  web-ui · interview-orchestrator · ai-service ·                │   │
+   │      docker-images · kubernetes-manifests    (also the only jobs   │   │
+   │        │ (all pass)                            that run on a PR)    │   │
+   │        ▼                                                           │   │
+   │ detect ─▶ publish ──────────────▶ promote-dev                      │   │
+   │ (skip     (per image: Trivy gate, (open dev digest PR ─────────────┼───┤ PR
+   │  digest-   SBOM, push sha-<sha>    + auto-merge)                    │   │ merges
+   │  only)     + main, Cosign, attest)                                 │   ▼
+   └───────────────────────────────────────────────────────────────────┘  Argo CD
+                                                                            syncs dev
+ manual uat/prod: promote-gitops.yml (dispatch) → health-gated PR (review + Env approval)
+ security.yml: Trivy fs (vuln+secret) + config scan; on push/PR + weekly cron
 ```
 
 | Workflow | File | Triggers | What it does |
 |---|---|---|---|
-| **platform-ci** | `.github/workflows/ci.yml` | push `main`, **every PR**, manual | `web-ui` (npm test+build), `interview-orchestrator` (gradle `test jacocoTestCoverageVerification bootJar`, JDK 25), `ai-service` (uv sync + ruff + pytest ≥95% + AI-quality eval gate), `docker-images` (build all three + live health smoke against Postgres/Redis), `kubernetes-manifests` (render all overlays + kubeconform + policy scripts) |
-| **release-images** | `.github/workflows/release-images.yml` | after **platform-ci success** on `main`, or manual | Per image: build, **Trivy HIGH/CRITICAL gate**, SBOM, push immutable `sha-<sha>` **and** `main`, resolve digest, **Cosign sign**, provenance attest. Skips digest-only GitOps commits. |
-| **promote-gitops** | `.github/workflows/promote-gitops.yml` | after **release-images success** on `main` → **dev**; or manual dispatch → **uat/prod** | Resolves immutable digests, (uat/prod) waits for source env to be **healthy in Argo CD**, writes digests into the target overlay, renders+validates, opens a **promotion PR**. Dev auto-merges; uat/prod wait for your review + the `*-promotion` GitHub Environment approval. |
+| **pipeline** | `.github/workflows/pipeline.yml` | push `main`, **every PR**, manual | **CI** on push+PR: `web-ui` (npm test+build), `interview-orchestrator` (gradle `test jacocoTestCoverageVerification bootJar`, JDK 25), `ai-service` (uv + ruff + pytest ≥95% + AI-quality gate), `docker-images` (build all three + live health smoke), `kubernetes-manifests` (render overlays + kubeconform + policy). Then on `main` only: `detect` (skip digest-only commits) → `publish` (per image: **Trivy HIGH/CRITICAL gate**, SBOM, push `sha-<sha>`+`main`, **Cosign sign**, attest) → `promote-dev` (open dev digest PR + **auto-merge**). One run, live logs. |
+| **promote-gitops** | `.github/workflows/promote-gitops.yml` | manual dispatch → **uat/prod** | Resolves immutable digests, waits for the source env to be **healthy in Argo CD** and to already run the requested release, writes digests into the target overlay, renders+validates, opens a **promotion PR** (your review + the `*-promotion` GitHub Environment approval, then merge). |
 | **security** | `.github/workflows/security.yml` | push `main`, PR, weekly cron, manual | Trivy filesystem scan (vuln + secret) and infra-config scan; fails on HIGH/CRITICAL. |
 
 **Key properties**
@@ -60,19 +58,19 @@ and **Argo CD** syncs each cluster to match Git.
 Requires the [`gh` CLI](https://cli.github.com/) authenticated to `Skpandey15/Java_AI_MCP`,
 or use the GitHub UI (**Actions → pick workflow → Run workflow**).
 
-### 2a. Rebuild & publish images from current `main`
+### 2a. Run the full pipeline on `main`
 ```bash
-gh workflow run release-images.yml --repo Skpandey15/Java_AI_MCP --ref main
+gh workflow run pipeline.yml --repo Skpandey15/Java_AI_MCP --ref main
 ```
-On success this auto-chains into `promote-gitops` → opens & auto-merges the **dev** promotion PR
-→ Argo CD deploys dev.
+Runs build/test → publish → `promote-dev` as **one run**; the dev digest PR auto-merges → Argo CD
+deploys dev. Watch the whole thing (steps + live logs) in **Actions → pipeline → the run**.
 
-### 2b. Full pipeline from a branch (build, test, then release)
+### 2b. From a branch / PR (CI only)
 ```bash
-gh workflow run ci.yml --repo Skpandey15/Java_AI_MCP --ref <branch-or-main>
+gh workflow run pipeline.yml --repo Skpandey15/Java_AI_MCP --ref <branch>
 ```
-`release-images`/`promote-gitops` only chain automatically for `main`. For a feature branch, CI
-runs but publishing does not — merge to `main` to release.
+On a branch or PR only the CI jobs run; `publish`/`promote-dev` run on `main` only — merge to
+`main` to release.
 
 ### 2c. Promote an existing release to uat or prod
 ```bash

@@ -1,0 +1,456 @@
+name: pipeline
+
+# Single end-to-end delivery pipeline so the whole flow — build/test -> publish images ->
+# promote to dev — is ONE run with a visual job graph and live per-step logs (no more
+# chasing three chained workflows). Manual uat/prod promotion lives in promote-gitops.yml.
+#
+# On a pull request only the CI jobs run. On push to main the full pipeline runs, except the
+# digest-only commit produced by an auto-merged promotion PR, which the `detect` job skips so
+# the pipeline does not loop.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pipeline-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # CI — build, test, and verify each component (runs on push and pull_request).
+  # Job ids are the contexts required by the ci-required ruleset; keep them stable.
+  # ---------------------------------------------------------------------------
+  web-ui:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web-ui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web-ui/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  interview-orchestrator:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/interview-orchestrator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@v4
+      - run: chmod +x gradlew
+      - name: Build, test, and verify coverage with bounded dependency-download retry
+        run: |
+          for attempt in 1 2 3; do
+            if ./gradlew clean test jacocoTestCoverageVerification bootJar --no-daemon; then
+              exit 0
+            fi
+            if [ "$attempt" -eq 3 ]; then
+              exit 1
+            fi
+            sleep $((attempt * 15))
+          done
+
+  ai-service:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/ai-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python -m pip install uv==0.8.22
+      - run: uv sync --frozen --extra dev
+      - run: uv run --extra dev ruff check .
+      - run: uv run --extra dev pytest --cov=app --cov-fail-under=95
+      - name: Enforce deterministic AI quality release gates
+        run: uv run python -m evaluation.evaluator evaluation/release-dataset.jsonl --output ai-quality-report.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ai-quality-report
+          path: apps/ai-service/ai-quality-report.json
+
+  docker-images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Docker Compose including observability profile
+        env:
+          OPENAI_API_KEY: ci-placeholder
+        run: docker compose -f platform/docker/docker-compose.yml --profile observability config --quiet
+      - run: docker build -t online-interview-web-ui:ci apps/web-ui
+      - run: docker build -t online-interview-orchestrator:ci apps/interview-orchestrator
+      - name: Start orchestrator with PostgreSQL and Redis and verify health
+        run: |
+          docker network create orchestrator-smoke
+          docker run --detach --name orchestrator-postgres --network orchestrator-smoke \
+            --env POSTGRES_DB=online_interview \
+            --env POSTGRES_USER=interview \
+            --env POSTGRES_PASSWORD=interview \
+            pgvector/pgvector:0.8.5-pg17-bookworm
+          docker run --detach --name orchestrator-redis --network orchestrator-smoke \
+            redis:7.4.2-alpine redis-server --requirepass interview-redis
+          for attempt in $(seq 1 30); do
+            if docker exec orchestrator-postgres pg_isready -U interview -d online_interview; then
+              break
+            fi
+            sleep 1
+          done
+          for attempt in $(seq 1 30); do
+            if docker exec orchestrator-redis redis-cli -a interview-redis ping | grep --quiet PONG; then
+              break
+            fi
+            sleep 1
+          done
+          docker run --detach --name orchestrator-smoke --network orchestrator-smoke \
+            --publish 18080:8080 \
+            --env DATABASE_URL=jdbc:postgresql://orchestrator-postgres:5432/online_interview \
+            --env DATABASE_USERNAME=interview \
+            --env DATABASE_PASSWORD=interview \
+            --env REDIS_HOST=orchestrator-redis \
+            --env REDIS_PORT=6379 \
+            --env REDIS_PASSWORD=interview-redis \
+            --env KEYCLOAK_ISSUER_URI=http://localhost:8090/realms/online-interview \
+            --env KEYCLOAK_JWK_SET_URI=http://localhost:8090/realms/online-interview/protocol/openid-connect/certs \
+            online-interview-orchestrator:ci
+          for attempt in $(seq 1 40); do
+            if curl --fail --silent http://127.0.0.1:18080/actuator/health; then
+              curl --fail --silent http://127.0.0.1:18080/actuator/prometheus > /dev/null
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs orchestrator-smoke
+          exit 1
+      - name: Stop orchestrator smoke environment
+        if: always()
+        run: |
+          docker rm --force orchestrator-smoke orchestrator-postgres orchestrator-redis || true
+          docker network rm orchestrator-smoke || true
+      - run: docker build -t online-interview-ai-service:ci apps/ai-service
+      - name: Start AI service container and verify health
+        run: |
+          docker run --detach --name ai-service-smoke --publish 18000:8000 online-interview-ai-service:ci
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:18000/api/v1/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs ai-service-smoke
+          exit 1
+      - name: Stop AI service smoke container
+        if: always()
+        run: docker rm --force ai-service-smoke || true
+
+  kubernetes-manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-kubectl@v4
+        with:
+          version: v1.33.3
+      - name: Render every Kustomize overlay
+        run: |
+          set -euo pipefail
+          for environment in local dev uat prod; do
+            kubectl kustomize "platform/kubernetes/overlays/$environment" > "/tmp/$environment.yaml"
+            test -s "/tmp/$environment.yaml"
+          done
+          kubectl kustomize platform/gitops/argocd > /tmp/argocd.yaml
+          test -s /tmp/argocd.yaml
+      - name: Validate rendered Kubernetes schemas
+        run: |
+          set -euo pipefail
+          docker run --rm -v /tmp:/manifests:ro \
+            ghcr.io/yannh/kubeconform:v0.7.0 \
+            -strict -summary -ignore-missing-schemas \
+            /manifests/local.yaml /manifests/dev.yaml /manifests/uat.yaml /manifests/prod.yaml
+      - name: Enforce Phase 4B manifest policies
+        shell: pwsh
+        run: ./platform/kubernetes/validate-manifests.ps1 -RenderedDirectory /tmp
+      - name: Enforce Phase 4C GitOps policies
+        shell: pwsh
+        run: ./platform/gitops/validate-gitops.ps1 -RenderedDirectory /tmp -GitOpsDirectory platform/gitops/argocd
+
+  # ---------------------------------------------------------------------------
+  # Gate: only past this point on main (or manual dispatch), and skip the
+  # digest-only commit an auto-merged promotion PR produces (prevents a loop).
+  # Depending on every CI job here means a failing build never publishes.
+  # ---------------------------------------------------------------------------
+  detect:
+    needs: [web-ui, interview-orchestrator, ai-service, docker-images, kubernetes-manifests]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.scope.outputs.publish }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Detect digest-only GitOps commits
+        id: scope
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed="$(git diff-tree --no-commit-id --name-only -r HEAD)"
+          if [[ -n "$changed" ]] &&
+             ! grep -Ev '^platform/kubernetes/overlays/(dev|uat|prod)/kustomization\.yaml$' <<< "$changed" | grep -q .; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  # ---------------------------------------------------------------------------
+  # Publish: build, scan, SBOM, push, sign, attest each image at sha-<commit>.
+  # ---------------------------------------------------------------------------
+  publish:
+    needs: [detect]
+    if: needs.detect.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: web-ui
+            context: apps/web-ui
+            image: ghcr.io/skpandey15/java-ai-mcp-web-ui
+          - component: interview-orchestrator
+            context: apps/interview-orchestrator
+            image: ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator
+          - component: ai-service
+            context: apps/ai-service
+            image: ghcr.io/skpandey15/java-ai-mcp-ai-service
+    steps:
+      - name: Resolve source revision
+        id: source
+        run: |
+          echo "sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+          echo "tag=sha-$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image for security verification
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          load: true
+          push: false
+          tags: ${{ matrix.image }}:${{ steps.source.outputs.tag }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ steps.source.outputs.sha }}
+            org.opencontainers.image.title=${{ matrix.component }}
+          cache-from: type=gha,scope=${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.component }}
+
+      - name: Scan image for high and critical vulnerabilities
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: ${{ matrix.image }}:${{ steps.source.outputs.tag }}
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: Generate SPDX SBOM
+        uses: anchore/sbom-action@v0.17.7
+        with:
+          image: ${{ matrix.image }}:${{ steps.source.outputs.tag }}
+          format: spdx-json
+          output-file: ${{ matrix.component }}-sbom.spdx.json
+          upload-artifact: false
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.component }}-sbom-${{ steps.source.outputs.sha }}
+          path: ${{ matrix.component }}-sbom.spdx.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Authenticate to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish immutable and main tags
+        env:
+          IMAGE: ${{ matrix.image }}
+          IMMUTABLE_TAG: ${{ steps.source.outputs.tag }}
+        run: |
+          docker tag "$IMAGE:$IMMUTABLE_TAG" "$IMAGE:main"
+          docker push "$IMAGE:$IMMUTABLE_TAG"
+          docker push "$IMAGE:main"
+
+      - name: Resolve published digest
+        id: published
+        env:
+          IMAGE: ${{ matrix.image }}
+          IMMUTABLE_TAG: ${{ steps.source.outputs.tag }}
+        run: |
+          digest="$(docker buildx imagetools inspect "$IMAGE:$IMMUTABLE_TAG" --format '{{json .Manifest.Digest}}' | tr -d '"')"
+          test -n "$digest"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.8.1
+
+      - name: Sign image with GitHub OIDC
+        env:
+          IMAGE: ${{ matrix.image }}
+          DIGEST: ${{ steps.published.outputs.digest }}
+        run: cosign sign --yes "$IMAGE@$DIGEST"
+
+      - name: Attest build provenance
+        if: github.event.repository.visibility == 'public'
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ matrix.image }}
+          subject-digest: ${{ steps.published.outputs.digest }}
+          push-to-registry: true
+
+      - name: Record private-repository attestation limitation
+        if: github.event.repository.visibility != 'public'
+        run: echo "GitHub artifact attestations are unavailable for user-owned private repositories; image digest and Cosign signature remain authoritative."
+
+  # ---------------------------------------------------------------------------
+  # Promote to dev: bump the dev overlay to the freshly published digests via an
+  # auto-merged pull request (so it still passes the required checks).
+  # ---------------------------------------------------------------------------
+  promote-dev:
+    needs: [detect, publish]
+    if: needs.detect.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      packages: read
+    environment:
+      name: dev-promotion
+    steps:
+      - name: Require GitOps bot credential
+        env:
+          GITOPS_BOT_TOKEN: ${{ secrets.GITOPS_BOT_TOKEN }}
+        run: |
+          test -n "$GITOPS_BOT_TOKEN" || {
+            echo "::error::Configure GITOPS_BOT_TOKEN so promotion pull requests trigger CI."
+            exit 1
+          }
+
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GITOPS_BOT_TOKEN }}
+          fetch-depth: 0
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Authenticate to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve immutable image digests
+        id: digests
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          tag="sha-$SOURCE_SHA"
+          resolve() {
+            docker buildx imagetools inspect "$1:$tag" \
+              --format '{{json .Manifest.Digest}}' | tr -d '"'
+          }
+          {
+            echo "web_ui=$(resolve ghcr.io/skpandey15/java-ai-mcp-web-ui)"
+            echo "orchestrator=$(resolve ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator)"
+            echo "ai_service=$(resolve ghcr.io/skpandey15/java-ai-mcp-ai-service)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Update desired state
+        shell: pwsh
+        run: |
+          ./platform/gitops/update-image-digests.ps1 `
+            -Environment 'dev' `
+            -WebUiDigest '${{ steps.digests.outputs.web_ui }}' `
+            -OrchestratorDigest '${{ steps.digests.outputs.orchestrator }}' `
+            -AiServiceDigest '${{ steps.digests.outputs.ai_service }}'
+
+      - uses: azure/setup-kubectl@v4
+        with:
+          version: v1.33.3
+
+      - name: Render and validate promoted environment
+        run: |
+          set -euo pipefail
+          mkdir rendered
+          kubectl kustomize platform/kubernetes/overlays/dev > rendered/dev.yaml
+          docker run --rm -v "$PWD/rendered:/manifests:ro" \
+            ghcr.io/yannh/kubeconform:v0.7.0 \
+            -strict -summary -ignore-missing-schemas /manifests/dev.yaml
+          pwsh ./platform/gitops/validate-gitops.ps1 \
+            -RenderedDirectory rendered \
+            -GitOpsDirectory platform/gitops/argocd
+
+      - name: Open promotion pull request
+        id: pull_request
+        env:
+          GH_TOKEN: ${{ secrets.GITOPS_BOT_TOKEN }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          short_sha="${SOURCE_SHA:0:12}"
+          branch="gitops/promote-dev-${short_sha}-${GITHUB_RUN_ID}"
+          git config user.name "online-interview-gitops"
+          git config user.email "online-interview-gitops@users.noreply.github.com"
+          git switch -c "$branch"
+          git add platform/kubernetes/overlays/dev/kustomization.yaml
+          git commit -m "promote dev images from ${short_sha}"
+          git push --set-upstream origin "$branch"
+          pr_url="$(gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "promote: dev images from ${short_sha}" \
+            --body "Promotes the three application images built from \`${SOURCE_SHA}\` to **dev** by immutable registry digest. Rendered-manifest validation passed.")"
+          echo "url=$pr_url" >> "$GITHUB_OUTPUT"
+
+      - name: Enable automatic merge after required checks
+        env:
+          GH_TOKEN: ${{ secrets.GITOPS_BOT_TOKEN }}
+          PR_URL: ${{ steps.pull_request.outputs.url }}
+        run: gh pr merge "$PR_URL" --auto --squash
