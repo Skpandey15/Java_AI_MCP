@@ -8,7 +8,7 @@ import java.util.UUID;
 public record AssignmentResponse(
         UUID id, UUID interviewId, String interviewTitle, UUID candidateId,
         Instant startsAt, Instant endsAt, int maxAttempts, String status,
-        UUID sessionId, String sessionState, String reviewStatus) {
+        UUID sessionId, String sessionState, String reviewStatus, String questionMode) {
     static AssignmentResponse from(InterviewAssignment assignment) {
         return from(assignment, null, null, null);
     }
@@ -35,6 +35,7 @@ public record AssignmentResponse(
                 assignment.getStatus().name(),
                 sessionId,
                 sessionState,
-                reviewStatus);
+                reviewStatus,
+                assignment.getInterviewDefinition().getQuestionMode().name());
     }
 }

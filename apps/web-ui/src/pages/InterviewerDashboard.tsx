@@ -1347,7 +1347,7 @@ export function InterviewerDashboard() {
             <label>Difficulty<select value={form.difficulty} onChange={(e) => setForm({...form, difficulty: e.target.value})}><option>EASY</option><option>MEDIUM</option><option>HARD</option><option>MIXED</option></select></label>
             <label>Question mode<select value={form.questionMode}
               onChange={(e) => setForm({...form, questionMode: e.target.value, knowledgeCollectionId: ''})}>
-              <option>MANUAL</option><option>DIRECT_LLM</option><option>RAG</option>
+              <option>MANUAL</option><option>DIRECT_LLM</option><option>RAG</option><option>ADAPTIVE</option>
             </select></label>
             {form.questionMode === 'RAG' && <label>Knowledge collection<select required
               value={form.knowledgeCollectionId}

@@ -30,10 +30,14 @@ export function CandidateDashboard() {
     void load()
   }, [])
 
-  async function start(assignmentId: string) {
-    setStarting(assignmentId)
+  async function start(assignment: Assignment) {
+    if (assignment.questionMode === 'ADAPTIVE') {
+      navigate(`/candidate/adaptive/${assignment.id}`)
+      return
+    }
+    setStarting(assignment.id)
     try {
-      const session = await interviewApi.startSession(assignmentId)
+      const session = await interviewApi.startSession(assignment.id)
       navigate(`/candidate/sessions/${session.id}`)
     } catch {
       setError('This interview cannot be started outside its scheduled window.')
@@ -63,7 +67,7 @@ export function CandidateDashboard() {
                   View result
                 </button>
                 : <button disabled>Awaiting review</button>
-              : <button disabled={starting === assignment.id} onClick={() => void start(assignment.id)}>
+              : <button disabled={starting === assignment.id} onClick={() => void start(assignment)}>
                 {starting === assignment.id
                   ? 'Starting…'
                   : assignment.sessionState === 'IN_PROGRESS' ? 'Resume interview' : 'Start interview'}
