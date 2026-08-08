@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from app.api.assessment_routes import router as assessment_router
 from app.api.composition_routes import router as composition_router
 from app.api.embedding_routes import router as embedding_router
+from app.api.interview_routes import router as interview_router
 from app.api.question_routes import router as question_router
 from app.api.topic_routes import router as topic_router
 from app.observability import configure_logging, request_context
@@ -34,6 +35,7 @@ app.include_router(embedding_router)
 app.include_router(assessment_router)
 app.include_router(composition_router)
 app.include_router(topic_router)
+app.include_router(interview_router)
 
 
 @app.get("/api/v1/health", response_model=HealthResponse, tags=["platform"])
