@@ -109,6 +109,15 @@ export type Assignment = {
   sessionId?: string
   sessionState?: string
   reviewStatus?: string
+  questionMode?: string
+}
+
+export type AdaptiveQuestion = {
+  ordinal: number; skill: string; difficulty: string; prompt: string
+}
+export type AdaptiveView = {
+  sessionId: string; phase: string; turnsUsed: number; maxTurns: number
+  done: boolean; currentQuestion: AdaptiveQuestion | null
 }
 
 export class ApiError extends Error {
@@ -264,6 +273,16 @@ export const interviewApi = {
     }),
   startSession: (assignmentId: string) => request<InterviewSession>(
     `/api/v1/candidate/assignments/${assignmentId}/sessions`, { method: 'POST' },
+  ),
+  startAdaptiveSession: (assignmentId: string) => request<AdaptiveView>(
+    `/api/v1/candidate/adaptive-sessions/${assignmentId}`, { method: 'POST' },
+  ),
+  getAdaptiveSession: (sessionId: string) => request<AdaptiveView>(
+    `/api/v1/candidate/adaptive-sessions/${sessionId}`,
+  ),
+  answerAdaptive: (sessionId: string, answer: string) => request<AdaptiveView>(
+    `/api/v1/candidate/adaptive-sessions/${sessionId}/answer`,
+    { method: 'POST', body: JSON.stringify({ answer }) },
   ),
   loadSession: (sessionId: string) => request<InterviewSession>(
     `/api/v1/candidate/sessions/${sessionId}`,
