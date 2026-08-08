@@ -1,10 +1,10 @@
 name: promote-gitops
 
+# Manual promotion to uat or prod. Dev promotion is automatic and lives in pipeline.yml.
+# Opens a digest-bump pull request (reviewed and merged by a human) after verifying the
+# source environment is synced and healthy and already runs the requested release.
+
 on:
-  workflow_run:
-    workflows: ["release-images"]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
     inputs:
       target_environment:
@@ -23,72 +23,39 @@ permissions:
   packages: read
 
 concurrency:
-  group: gitops-promotion-${{ github.event.inputs.target_environment || 'dev' }}
+  group: gitops-promotion-${{ github.event.inputs.target_environment }}
   cancel-in-progress: false
 
 jobs:
   prepare:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
       environment: ${{ steps.release.outputs.environment }}
       source_environment: ${{ steps.release.outputs.source_environment }}
       source_sha: ${{ steps.release.outputs.source_sha }}
-      promote: ${{ steps.scope.outputs.promote }}
     steps:
       - id: release
         env:
-          EVENT_NAME: ${{ github.event_name }}
           MANUAL_ENVIRONMENT: ${{ inputs.target_environment }}
           MANUAL_SHA: ${{ inputs.source_sha }}
-          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
-          if [[ "$EVENT_NAME" == "workflow_run" ]]; then
-            environment=dev
-            source_environment=
-            source_sha="$RELEASE_SHA"
+          environment="$MANUAL_ENVIRONMENT"
+          source_sha="$MANUAL_SHA"
+          [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]]
+          if [[ "$environment" == "uat" ]]; then
+            source_environment=dev
           else
-            environment="$MANUAL_ENVIRONMENT"
-            source_sha="$MANUAL_SHA"
-            [[ "$source_sha" =~ ^[0-9a-f]{40}$ ]]
-            if [[ "$environment" == "uat" ]]; then
-              source_environment=dev
-            else
-              source_environment=uat
-            fi
+            source_environment=uat
           fi
           {
             echo "environment=$environment"
             echo "source_environment=$source_environment"
             echo "source_sha=$source_sha"
           } >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v4
-        if: github.event_name == 'workflow_run'
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          fetch-depth: 2
-      - name: Ignore digest-only GitOps commits
-        id: scope
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-        run: |
-          set -euo pipefail
-          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
-            echo "promote=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          changed="$(git diff-tree --no-commit-id --name-only -r HEAD)"
-          if [[ -n "$changed" ]] &&
-             ! grep -Ev '^platform/kubernetes/overlays/(dev|uat|prod)/kustomization\.yaml$' <<< "$changed" | grep -q .; then
-            echo "promote=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "promote=true" >> "$GITHUB_OUTPUT"
-          fi
 
   promote:
     needs: prepare
-    if: needs.prepare.outputs.promote == 'true'
     runs-on: ubuntu-latest
     environment:
       name: ${{ format('{0}-promotion', needs.prepare.outputs.environment) }}
@@ -103,7 +70,6 @@ jobs:
           }
 
       - name: Verify source environment is healthy
-        if: needs.prepare.outputs.source_environment != ''
         env:
           ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
           ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
@@ -127,16 +93,16 @@ jobs:
             --grpc-web \
             --sync --health --timeout 600
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: main
           token: ${{ secrets.GITOPS_BOT_TOKEN }}
           fetch-depth: 0
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Authenticate to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -160,7 +126,6 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Verify source environment uses the requested release
-        if: needs.prepare.outputs.source_environment != ''
         shell: pwsh
         run: |
           $sourcePath = 'platform/kubernetes/overlays/${{ needs.prepare.outputs.source_environment }}/kustomization.yaml'
@@ -184,7 +149,7 @@ jobs:
             -OrchestratorDigest '${{ steps.digests.outputs.orchestrator }}' `
             -AiServiceDigest '${{ steps.digests.outputs.ai_service }}'
 
-      - uses: azure/setup-kubectl@v4
+      - uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4
         with:
           version: v1.33.3
 
@@ -224,10 +189,3 @@ jobs:
             --title "promote: ${ENVIRONMENT} images from ${short_sha}" \
             --body "Promotes the three application images built from \`${SOURCE_SHA}\` to **${ENVIRONMENT}** by immutable registry digest. The source-environment health gate and rendered-manifest validation passed.")"
           echo "url=$pr_url" >> "$GITHUB_OUTPUT"
-
-      - name: Enable automatic dev merge after required checks
-        if: needs.prepare.outputs.environment == 'dev'
-        env:
-          GH_TOKEN: ${{ secrets.GITOPS_BOT_TOKEN }}
-          PR_URL: ${{ steps.pull_request.outputs.url }}
-        run: gh pr merge "$PR_URL" --auto --squash
