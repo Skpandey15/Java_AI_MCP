@@ -7,8 +7,13 @@ import static org.mockito.Mockito.*;
 import tools.jackson.databind.ObjectMapper;
 import com.onlineinterview.interview.domain.InterviewDefinition;
 import com.onlineinterview.interview.domain.InterviewAssignment;
+import com.onlineinterview.interview.domain.InterviewDifficulty;
 import com.onlineinterview.interview.infrastructure.InterviewDefinitionRepository;
 import com.onlineinterview.knowledge.application.KnowledgeService;
+import com.onlineinterview.knowledge.domain.KnowledgeChunk;
+import com.onlineinterview.knowledge.domain.KnowledgeCollection;
+import com.onlineinterview.knowledge.domain.KnowledgeDocument;
+import com.onlineinterview.knowledge.infrastructure.KnowledgeChunkRepository;
 import com.onlineinterview.knowledge.infrastructure.KnowledgeVectorStore;
 import com.onlineinterview.mcp.application.McpAuthorizationContext;
 import com.onlineinterview.mcp.domain.*;
@@ -144,6 +149,119 @@ class McpInternalToolHandlersTest {
                 .put("sessionId", sessionId.toString()).put("score", 11)))
                 .isInstanceOf(McpProtocolException.class)
                 .hasMessageContaining("maximum");
+    }
+
+    @Test
+    void returnsSkillBlueprintForBoundOwnedInterview() {
+        var definition = mock(InterviewDefinition.class);
+        var id = UUID.randomUUID();
+        when(definition.getOwnerSubject()).thenReturn("owner");
+        when(definition.getSkills()).thenReturn(List.of("Concurrency"));
+        when(definition.getDifficulty()).thenReturn(InterviewDifficulty.HARD);
+        when(definition.getPassingPercentage()).thenReturn(70);
+        when(definition.getQuestionCount()).thenReturn(6);
+        when(interviews.findById(id)).thenReturn(Optional.of(definition));
+        var handler = new SkillBlueprintToolHandler(interviews, mapper);
+        var args = mapper.createObjectNode().put("interviewId", id.toString());
+
+        var result = handler.execute(context("interview", "get_skill_blueprint",
+                "INTERVIEW", id, "owner"), args);
+        assertThat(result.path("targetDifficulty").asText()).isEqualTo("HARD");
+        assertThat(result.path("passingPercentage").asInt()).isEqualTo(70);
+        assertThat(result.path("questionCount").asInt()).isEqualTo(6);
+        assertThat(result.path("skills").get(0).path("name").asText()).isEqualTo("Concurrency");
+        assertThat(result.path("skills").get(0).path("targetDifficulty").asText()).isEqualTo("HARD");
+        // resource-binding mismatch (different bound id)
+        assertThatThrownBy(() -> handler.execute(context("interview", "get_skill_blueprint",
+                "INTERVIEW", UUID.randomUUID(), "owner"), args))
+                .isInstanceOf(McpProtocolException.class);
+        // right interview, wrong owner
+        assertThatThrownBy(() -> handler.execute(context("interview", "get_skill_blueprint",
+                "INTERVIEW", id, "intruder"), args))
+                .isInstanceOf(McpProtocolException.class);
+    }
+
+    @Test
+    void reportsQuestionReuseWithinAuthorizedSession() {
+        var answers = mock(InterviewAnswerRepository.class);
+        var answer = mock(InterviewAnswer.class);
+        var sessionId = UUID.randomUUID();
+        var askedQuestion = UUID.randomUUID();
+        var freshQuestion = UUID.randomUUID();
+        var askedAt = Instant.parse("2026-07-30T09:00:00Z");
+        when(answer.getUpdatedAt()).thenReturn(askedAt);
+        when(answers.findBySession_IdAndQuestion_Id(sessionId, askedQuestion))
+                .thenReturn(Optional.of(answer));
+        when(answers.findBySession_IdAndQuestion_Id(sessionId, freshQuestion))
+                .thenReturn(Optional.empty());
+        var handler = new QuestionReuseToolHandler(answers, mapper);
+
+        var reused = handler.execute(context("question-bank", "check_question_reuse",
+                "SESSION", sessionId, "service"), mapper.createObjectNode()
+                .put("sessionId", sessionId.toString()).put("questionId", askedQuestion.toString()));
+        assertThat(reused.path("reused").asBoolean()).isTrue();
+        assertThat(reused.path("previouslyAskedAt").asText()).isEqualTo(askedAt.toString());
+
+        var fresh = handler.execute(context("question-bank", "check_question_reuse",
+                "SESSION", sessionId, "service"), mapper.createObjectNode()
+                .put("sessionId", sessionId.toString()).put("questionId", freshQuestion.toString()));
+        assertThat(fresh.path("reused").asBoolean()).isFalse();
+
+        assertThatThrownBy(() -> handler.execute(context("question-bank", "check_question_reuse",
+                "SESSION", UUID.randomUUID(), "service"), mapper.createObjectNode()
+                .put("sessionId", sessionId.toString()).put("questionId", askedQuestion.toString())))
+                .isInstanceOf(McpProtocolException.class);
+    }
+
+    @Test
+    void returnsCitationOnlyFromCollectionBoundToInterview() {
+        var chunks = mock(KnowledgeChunkRepository.class);
+        var definition = mock(InterviewDefinition.class);
+        var chunk = mock(KnowledgeChunk.class);
+        var document = mock(KnowledgeDocument.class);
+        var collection = mock(KnowledgeCollection.class);
+        var interviewId = UUID.randomUUID();
+        var collectionId = UUID.randomUUID();
+        var chunkId = UUID.randomUUID();
+        var documentId = UUID.randomUUID();
+        when(definition.getOwnerSubject()).thenReturn("owner");
+        when(definition.getKnowledgeCollectionId()).thenReturn(collectionId);
+        when(interviews.findById(interviewId)).thenReturn(Optional.of(definition));
+        when(collection.getId()).thenReturn(collectionId);
+        when(document.getCollection()).thenReturn(collection);
+        when(document.getId()).thenReturn(documentId);
+        when(document.getFileName()).thenReturn("guide.md");
+        when(chunk.getId()).thenReturn(chunkId);
+        when(chunk.getDocument()).thenReturn(document);
+        when(chunk.getIndex()).thenReturn(3);
+        when(chunk.getContent()).thenReturn("Spring context");
+        when(chunks.findById(chunkId)).thenReturn(Optional.of(chunk));
+        var handler = new CitationToolHandler(interviews, chunks, mapper);
+        var args = mapper.createObjectNode()
+                .put("collectionId", collectionId.toString()).put("chunkId", chunkId.toString());
+
+        var result = handler.execute(context("knowledge", "get_citation",
+                "INTERVIEW", interviewId, "owner"), args);
+        assertThat(result.path("fileName").asText()).isEqualTo("guide.md");
+        assertThat(result.path("documentId").asText()).isEqualTo(documentId.toString());
+        assertThat(result.path("chunkIndex").asInt()).isEqualTo(3);
+        assertThat(result.path("content").asText()).isEqualTo("Spring context");
+        // collection not bound to the interview
+        assertThatThrownBy(() -> handler.execute(context("knowledge", "get_citation",
+                "INTERVIEW", interviewId, "owner"), mapper.createObjectNode()
+                .put("collectionId", UUID.randomUUID().toString()).put("chunkId", chunkId.toString())))
+                .isInstanceOf(McpProtocolException.class);
+        // chunk id not found
+        var missing = UUID.randomUUID();
+        when(chunks.findById(missing)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> handler.execute(context("knowledge", "get_citation",
+                "INTERVIEW", interviewId, "owner"), mapper.createObjectNode()
+                .put("collectionId", collectionId.toString()).put("chunkId", missing.toString())))
+                .isInstanceOf(McpProtocolException.class);
+        // wrong resource type
+        assertThatThrownBy(() -> handler.execute(context("knowledge", "get_citation",
+                "SESSION", interviewId, "owner"), args))
+                .isInstanceOf(McpProtocolException.class);
     }
 
     private static McpAuthorizationContext context(String server, String tool,
