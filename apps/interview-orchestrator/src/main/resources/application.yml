@@ -133,6 +133,11 @@ app:
     discord-webhook-url: ${DISCORD_WEBHOOK_URL:}
     google-chat-webhook-url: ${GOOGLE_CHAT_WEBHOOK_URL:}
     webhook-url: ${CHAT_GENERIC_WEBHOOK_URL:}
+  adaptive:
+    # Adaptive AI Interviewer (Phase 1). Off by default; the flag is also the kill-switch.
+    enabled: ${ADAPTIVE_ENABLED:false}
+    max-turns: ${ADAPTIVE_MAX_TURNS:12}
+    token-budget: ${ADAPTIVE_TOKEN_BUDGET:60000}
   ai-service:
     base-url: ${AI_SERVICE_BASE_URL:http://localhost:8000}
     service-token: ${AI_SERVICE_TOKEN:local-ai-service-token}
