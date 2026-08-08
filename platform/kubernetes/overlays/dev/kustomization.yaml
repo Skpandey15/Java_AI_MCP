@@ -18,6 +18,9 @@ configMapGenerator:
       - APP_ENVIRONMENT=dev
       - CORS_ALLOWED_ORIGINS=https://interview.dev.example.com
       - KEYCLOAK_ISSUER_URI=https://auth.dev.example.com/realms/online-interview
+      # Adaptive AI Interviewer dark-launch (dev only). uat/prod stay off until the pilot +
+      # fairness review sign off. Kill-switch: set ADAPTIVE_ENABLED=false and re-sync.
+      - ADAPTIVE_ENABLED=true
   - name: web-ui-runtime-config
     behavior: replace
     files:
