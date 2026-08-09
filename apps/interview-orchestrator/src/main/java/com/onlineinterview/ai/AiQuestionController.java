@@ -58,7 +58,7 @@ public class AiQuestionController {
     }
 
     @PostMapping("/topics:suggest")
-    @PreAuthorize("hasRole('INTERVIEWER')")
+    @PreAuthorize("hasAnyRole('INTERVIEWER', 'CANDIDATE')")
     public TopicsResponse suggestTopics(@org.springframework.web.bind.annotation.RequestBody
             SuggestTopicsRequest request) {
         return new TopicsResponse(
@@ -69,7 +69,7 @@ public class AiQuestionController {
     public record TopicsResponse(List<String> topics) {}
 
     @PostMapping("/education/details")
-    @PreAuthorize("hasRole('INTERVIEWER')")
+    @PreAuthorize("hasAnyRole('INTERVIEWER', 'CANDIDATE')")
     public AiQuestionClient.TopicDetailsResponse topicDetails(
             @org.springframework.web.bind.annotation.RequestBody TopicDetailsRequest request) {
         return service.topicDetails(request.ecosystem(), request.technology(), request.topic());
