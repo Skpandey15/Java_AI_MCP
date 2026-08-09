@@ -29,6 +29,11 @@ h1 { margin: 0; font-size: clamp(2.6rem, 7vw, 5rem); line-height: .98; }
 .adaptive-turn { border-top: 1px solid #e2e9f2; padding: 1rem 0; }
 .adaptive-turn:first-of-type { border-top: none; }
 .adaptive-turn h3 { margin: .35rem 0; }
+.adaptive-result-summary { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin: .5rem 0 1rem; }
+.result-badge { display: inline-block; padding: .3rem .8rem; border-radius: 999px; font-weight: 700; font-size: .85rem; }
+.result-badge.pass { background: #dcfce7; color: #166534; }
+.result-badge.fail { background: #fee2e2; color: #991b1b; }
+.result-badge.neutral { background: #e2e8f0; color: #334155; }
 .workspace-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 2rem; align-items: start; }
 .workspace-nav { position: sticky; top: 1rem; display: grid; gap: .55rem; padding: .75rem; border: 1px solid #d7e2ef; border-radius: 14px; background: #f5f8fc; }
 .workspace-nav button { display: flex; align-items: center; gap: .7rem; width: 100%; padding: .8rem; border: 1px solid transparent; border-radius: 9px; color: #36516f; background: transparent; text-align: left; cursor: pointer; }

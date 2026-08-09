@@ -13,6 +13,7 @@ vi.mock('../api/interviewApi', async (importOriginal) => {
       ...original.interviewApi,
       startAdaptiveSession: vi.fn(),
       answerAdaptive: vi.fn(),
+      adaptiveResult: vi.fn(),
     },
   }
 })
@@ -41,6 +42,13 @@ describe('AdaptiveSessionPage', () => {
       sessionId: 's1', phase: 'DONE', turnsUsed: 1, maxTurns: 12, done: true,
       currentQuestion: null,
     })
+    vi.mocked(interviewApi.adaptiveResult).mockResolvedValue({
+      sessionId: 's1', interviewTitle: 'Adaptive', done: true, overallScore: 82,
+      passingPercentage: 70, passed: true,
+      turns: [{ ordinal: 1, skill: 'Concurrency', difficulty: 'HARD', source: 'GENERATED',
+        question: 'Explain the JMM.', answer: 'my answer', score: 82, confidence: 70,
+        rationale: 'Solid.' }],
+    })
 
     renderPage()
 
@@ -54,6 +62,8 @@ describe('AdaptiveSessionPage', () => {
     await waitFor(() => expect(interviewApi.answerAdaptive)
       .toHaveBeenCalledWith('s1', 'my answer'))
     expect(await screen.findByText('Interview complete')).toBeInTheDocument()
+    expect(await screen.findByText('Passed')).toBeInTheDocument()
+    expect(screen.getByText(/82 \/ 100/)).toBeInTheDocument()
   })
 
   it('surfaces a start failure', async () => {

@@ -111,6 +111,7 @@ export const ecosystemTechnologies = {
     'On-Call Practices', 'Chaos Engineering', 'Capacity Planning',
   ],
   DATA_ENGINEERING: [
+    'Apache Kafka',
     'Data Pipelines', 'ETL and ELT', 'Batch Processing', 'Stream Processing', 'Kafka Streams',
     'Apache Flink', 'Apache Spark', 'Change Data Capture', 'Data Lakes', 'Data Warehouses',
     'Data Lakehouse', 'Apache Airflow', 'dbt', 'Delta Lake', 'Schema Evolution',

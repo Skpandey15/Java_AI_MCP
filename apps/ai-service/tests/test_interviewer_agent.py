@@ -81,16 +81,33 @@ def test_generated_question_must_be_grounded():
     assert resp.last_answer_evaluation.score == 80
 
 
-def test_ungrounded_generated_falls_back_to_bank():
+def test_ungrounded_generated_falls_back_to_bank_when_kb_offered():
+    # With a knowledge base offered, a generated question that cites nothing is rejected and
+    # we fall back to an offered bank question.
+    snippet = KnowledgeSnippet(chunk_id=uuid4(), file_name="kb.md", content="ctx")
     q = CandidateQuestion(question_id=uuid4(), skill="Concurrency",
                           difficulty="HARD", prompt="Bank Q")
     agent = InterviewerAgent(FakeChat(_llm(question={
         "source": "GENERATED", "question_id": "", "skill": "GC", "difficulty": "HARD",
         "prompt": "ungrounded", "citation_chunk_ids": []})))
-    resp = agent.next_turn(_req(candidates=[q]))
+    resp = agent.next_turn(_req(candidates=[q], snippets=[snippet]))
     assert resp.action == "ASK"
     assert resp.question.source == "BANK"
     assert resp.question.question_id == q.question_id
+
+
+def test_generated_allowed_without_knowledge_base():
+    # A plain (non-RAG) adaptive interview offers no snippets; a generated follow-up needs no
+    # citation and is asked, so the interview continues past an empty bank instead of concluding.
+    agent = InterviewerAgent(FakeChat(_llm(question={
+        "source": "GENERATED", "question_id": "", "skill": "Concurrency", "difficulty": "HARD",
+        "prompt": "How does volatile differ from synchronized?", "citation_chunk_ids": []})))
+    resp = agent.next_turn(_req(candidates=[], snippets=[], transcript=[
+        TranscriptEntry(skill="Concurrency", question="Q1", answer="A1")]))
+    assert resp.action == "ASK"
+    assert resp.question.source == "GENERATED"
+    assert resp.question.prompt == "How does volatile differ from synchronized?"
+    assert resp.question.citation_chunk_ids == []
 
 
 def test_invalid_bank_id_falls_back_to_first_offered():
