@@ -184,6 +184,34 @@ public class AdaptiveSessionService {
         }
     }
 
+    /** Read-only transcript for the interview owner to review an adaptive submission. The standard
+     *  review flow reads {@code interview_answer}, which adaptive interviews never populate, so the
+     *  turns (question, answer, AI score, rationale) are surfaced from {@code adaptive_turn} here. */
+    @Transactional(readOnly = true)
+    public AdaptiveTranscript transcriptForInterviewer(String interviewerSubject, UUID sessionId) {
+        requireEnabled();
+        var session = sessions.findById(sessionId).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
+        var definition = session.getAssignment().getInterviewDefinition();
+        if (!definition.getOwnerSubject().equals(interviewerSubject)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not the interview owner");
+        }
+        boolean adaptive = definition.getQuestionMode() == QuestionMode.ADAPTIVE;
+        var state = states.findById(sessionId).orElse(null);
+        var turnList = turns.findBySessionIdOrderByOrdinalAsc(sessionId).stream()
+                .map(t -> new AdaptiveTranscriptTurn(t.getOrdinal(), t.getSkill(), t.getDifficulty(),
+                        t.getSource(), t.getQuestionText(), t.getAnswerText(), t.getScore(),
+                        t.getConfidence(), t.getAgentRationale()))
+                .toList();
+        var avg = turnList.stream().map(AdaptiveTranscriptTurn::score)
+                .filter(s -> s != null).mapToInt(Integer::intValue).average();
+        Integer overall = avg.isPresent() ? (int) Math.round(avg.getAsDouble()) : null;
+        return new AdaptiveTranscript(sessionId, adaptive,
+                state == null ? "UNKNOWN" : state.getPhase(), overall,
+                state == null ? 0 : state.getTurnsUsed(),
+                state == null ? 0 : state.getMaxTurns(), turnList);
+    }
+
     private static String firstSkill(InterviewDefinition definition) {
         var skills = definition.getSkills();
         return skills.isEmpty() ? "general" : skills.get(0);
@@ -197,4 +225,10 @@ public class AdaptiveSessionService {
             boolean done, CurrentQuestion currentQuestion) {}
 
     public record CurrentQuestion(int ordinal, String skill, String difficulty, String prompt) {}
+
+    public record AdaptiveTranscript(UUID sessionId, boolean adaptive, String phase,
+            Integer overallScore, int turnsUsed, int maxTurns, List<AdaptiveTranscriptTurn> turns) {}
+
+    public record AdaptiveTranscriptTurn(int ordinal, String skill, String difficulty, String source,
+            String question, String answer, Integer score, Integer confidence, String rationale) {}
 }
