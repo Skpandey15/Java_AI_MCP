@@ -31,6 +31,8 @@ export function SubmissionReviewPage() {
       setOverallFeedback(loaded.feedback ?? '')
     }).catch((error: unknown) => setLoadError(error instanceof Error ? error.message : 'Unable to load submission'))
     // Adaptive submissions store their Q&A in a separate transcript; load it if present.
+    // Reset first so a prior session's transcript never leaks onto a different submission.
+    setAdaptive(undefined)
     interviewApi.adaptiveTranscript(sessionId)
       .then((t) => { if (t.turns.length > 0) setAdaptive(t) })
       .catch(() => undefined)
