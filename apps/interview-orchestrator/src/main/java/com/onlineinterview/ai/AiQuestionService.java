@@ -162,7 +162,8 @@ public class AiQuestionService {
                     "Ecosystem, technology and topic are required");
         }
         String v = variant == null ? "" : variant.strip().toLowerCase();
-        String resolved = (v.equals("notes") || v.equals("design")) ? v : "guide";
+        String resolved = (v.equals("notes") || v.equals("design") || v.equals("release"))
+                ? v : "guide";
         return client.topicDetails(ecosystem.strip(), technology.strip(), topic.strip(), resolved);
     }
 

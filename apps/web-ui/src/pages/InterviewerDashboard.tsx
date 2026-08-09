@@ -210,6 +210,9 @@ export const ecosystemTechnologies = {
     'Notification System', 'Search Autocomplete', 'Ride-Hailing System',
     'Distributed File Storage', 'E-commerce & Inventory System', 'Ticket Booking System',
   ],
+  VERSIONS: [
+    'JDK', 'Spring Boot', 'Spring Framework', 'Spring Security', 'Spring Cloud',
+  ],
 } as const
 
 export type Ecosystem = keyof typeof ecosystemTechnologies
@@ -228,6 +231,7 @@ export const ecosystemLabels: Record<Ecosystem, string> = {
   NETWORKING: 'Networking & Protocols', MACHINE_LEARNING: 'Machine Learning (Classical & MLOps)',
   CODE_QUALITY: 'Code Quality & Standards', MISCELLANEOUS: 'Miscellaneous',
   SYSTEM_DESIGN_QA: 'System Design Questions',
+  VERSIONS: 'JDK & Spring Versions',
   WORKFLOW: 'Workflow Automation & Orchestration',
 }
 
@@ -727,6 +731,8 @@ const technologyDescriptions: Record<string, string> = {
   'Distributed File Storage': 'Designing a Dropbox-style store: chunking, metadata, sync, conflict resolution, and durability.',
   'E-commerce & Inventory System': 'Designing an online store: catalog, cart, inventory reservation, orders, and consistency.',
   'Ticket Booking System': 'Designing a Ticketmaster-style system: seat inventory, concurrency, holds, and no double-booking.',
+  JDK: 'The Java Development Kit (Java SE) — pick a version to see what changed in that release.',
+  'Spring Cloud': 'Spring Cloud — pick a release train to see its new features and updates.',
   'API Error Handling': 'Consistent, informative error responses and status-code semantics.',
   'Authentication for APIs': 'Securing APIs with tokens, keys, OAuth, and mTLS.',
   'API Rate Limiting': 'Throttling clients to protect capacity and ensure fair use.',

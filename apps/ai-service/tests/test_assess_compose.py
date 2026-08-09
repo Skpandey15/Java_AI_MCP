@@ -295,6 +295,10 @@ def test_topic_agent_details_variant_selects_prompt():
         {"ecosystem": "Java", "technology": "Apache Kafka", "topic": "Consumers",
          "variant": "design"}))
     assert "software design" in seen["system"].lower()
+    agent.details(TopicDetailsRequest.model_validate(
+        {"ecosystem": "JDK & Spring Versions", "technology": "JDK", "topic": "Java 21 (LTS)",
+         "variant": "release"}))
+    assert "what's-new" in seen["system"].lower()
     # an unknown variant safely defaults to the full learning guide
     agent.details(TopicDetailsRequest.model_validate(
         {"ecosystem": "Java", "technology": "Apache Kafka", "topic": "Consumers",

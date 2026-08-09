@@ -5,6 +5,28 @@ import { useAuth } from '../auth/AuthProvider'
 import { ecosystemLabels, ecosystemTechnologies, type Ecosystem } from './InterviewerDashboard'
 
 const curatedTopics: Record<string, string[]> = {
+  JDK: [
+    'Java 8 (LTS)', 'Java 9', 'Java 10', 'Java 11 (LTS)', 'Java 12', 'Java 13', 'Java 14',
+    'Java 15', 'Java 16', 'Java 17 (LTS)', 'Java 18', 'Java 19', 'Java 20', 'Java 21 (LTS)',
+    'Java 22', 'Java 23', 'Java 24', 'Java 25 (LTS)',
+  ],
+  'Spring Boot': [
+    'Spring Boot 2.0', 'Spring Boot 2.1', 'Spring Boot 2.2', 'Spring Boot 2.3', 'Spring Boot 2.4',
+    'Spring Boot 2.5', 'Spring Boot 2.6', 'Spring Boot 2.7', 'Spring Boot 3.0', 'Spring Boot 3.1',
+    'Spring Boot 3.2', 'Spring Boot 3.3', 'Spring Boot 3.4',
+  ],
+  'Spring Framework': [
+    'Spring Framework 5.0', 'Spring Framework 5.1', 'Spring Framework 5.2', 'Spring Framework 5.3',
+    'Spring Framework 6.0', 'Spring Framework 6.1', 'Spring Framework 6.2',
+  ],
+  'Spring Security': [
+    'Spring Security 5.7', 'Spring Security 6.0', 'Spring Security 6.1', 'Spring Security 6.2',
+    'Spring Security 6.3',
+  ],
+  'Spring Cloud': [
+    'Spring Cloud 2021.0 (Jubilee)', 'Spring Cloud 2022.0 (Kilburn)',
+    'Spring Cloud 2023.0 (Leyton)', 'Spring Cloud 2024.0 (Moorgate)',
+  ],
   'Distributed Systems': [
     'CAP theorem and consistency models', 'Consensus with Raft and Paxos',
     'Replication, quorums, and read/write paths', 'Partitioning and sharding strategies',
@@ -370,7 +392,7 @@ export function EducationPage() {
     setTechnology(ecosystemTechnologies[value][0])
   }
 
-  function showDetails(variant: 'guide' | 'notes' | 'design' = 'guide') {
+  function showDetails(variant: 'guide' | 'notes' | 'design' | 'release' = 'guide') {
     const params = new URLSearchParams({
       ecosystem: ecosystemLabels[ecosystem], technology, topic, variant })
     navigate(`/education/details?${params}`)
@@ -406,6 +428,10 @@ export function EducationPage() {
           onClick={() => showDetails('design')}
           title="Where this topic fits in software design: layer, trade-offs, alternatives, interactions, pitfalls, and the design-interview angle.">
           Design Perspective</button>
+        <button className="secondary-button" disabled={!topic || busy}
+          onClick={() => showDetails('release')}
+          title="What's new in this version: headline features, API additions, deprecations, migration notes, and the interview angle. Best for JDK & Spring versions.">
+          What's New</button>
       </div>
       {error && <p className="error-message" role="alert">{error}</p>}
     </section>
