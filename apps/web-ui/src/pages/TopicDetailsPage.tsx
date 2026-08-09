@@ -9,16 +9,19 @@ export function TopicDetailsPage() {
   const ecosystem = params.get('ecosystem') ?? ''
   const technology = params.get('technology') ?? ''
   const topic = params.get('topic') ?? ''
+  const variant = params.get('variant') === 'notes' ? 'notes' : 'guide'
+  const isNotes = variant === 'notes'
   const [details, setDetails] = useState<TopicDetails>()
   const [error, setError] = useState('')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
   useEffect(() => {
     if (!ecosystem || !technology || !topic) { setError('Select a topic first.'); return }
-    interviewApi.topicDetails(ecosystem, technology, topic)
+    interviewApi.topicDetails(ecosystem, technology, topic, variant)
       .then(setDetails)
-      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Unable to generate guide'))
-  }, [ecosystem, technology, topic])
+      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message
+        : isNotes ? 'Unable to generate notes' : 'Unable to generate guide'))
+  }, [ecosystem, technology, topic, variant, isNotes])
 
   useEffect(() => {
     if (details || error) return
@@ -39,7 +42,8 @@ export function TopicDetailsPage() {
         : 'Reviewing and formatting your complete guide'
 
   function safeFileName() {
-    return `${technology}-${topic}-zero-to-hero`.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '')
+    return `${technology}-${topic}-${isNotes ? 'interview-notes' : 'zero-to-hero'}`
+      .replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '')
   }
 
   function exportPdf() {
@@ -73,7 +77,8 @@ export function TopicDetailsPage() {
     </div>
     {!details && !error && <section className="learning-loading" aria-live="polite" aria-busy="true">
       <div className="learning-loading-heading"><span className="learning-spinner" aria-hidden="true" />
-        <div><h2>Building your zero-to-hero guide…</h2><p>{stage}</p></div>
+        <div><h2>{isNotes ? 'Preparing your interview notes…' : 'Building your zero-to-hero guide…'}</h2>
+          <p>{stage}</p></div>
       </div>
       <div className="learning-progress" role="progressbar" aria-label="Guide generation progress"
         aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)}>

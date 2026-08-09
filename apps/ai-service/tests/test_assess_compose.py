@@ -272,6 +272,27 @@ def test_topic_agent_dedupes():
     assert resp.topics == ["Streams", "Collections", "Generics"]
 
 
+def test_topic_agent_details_variant_selects_prompt():
+    from app.application.topic_agent import TopicAgent
+    from app.domain.topic_models import TopicDetailsRequest
+    seen = {}
+
+    class Capture:
+        def complete_json(self, system, user, schema):
+            seen["system"] = system
+            return {"title": "T", "content": "C"}, USAGE
+
+    agent = TopicAgent(Capture())
+    guide = agent.details(TopicDetailsRequest.model_validate(
+        {"ecosystem": "Java", "technology": "Apache Kafka", "topic": "Consumers"}))
+    assert guide.title == "T" and guide.content == "C"
+    assert "zero-to-hero" in seen["system"]
+    agent.details(TopicDetailsRequest.model_validate(
+        {"ecosystem": "Java", "technology": "Apache Kafka", "topic": "Consumers",
+         "variant": "notes"}))
+    assert "interview prep notes" in seen["system"].lower()
+
+
 def test_topics_route(monkeypatch):
     from app.domain.topic_models import SuggestTopicsResponse
     resp = SuggestTopicsResponse(topics=["Streams"], usage=None)

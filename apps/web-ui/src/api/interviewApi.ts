@@ -259,10 +259,11 @@ export const interviewApi = {
     '/api/v1/topics:suggest',
     { method: 'POST', body: JSON.stringify({ technologies, difficulty }) },
   ),
-  topicDetails: (ecosystem: string, technology: string, topic: string) => request<TopicDetails>(
-    '/api/v1/education/details',
-    { method: 'POST', body: JSON.stringify({ ecosystem, technology, topic }) },
-  ),
+  topicDetails: (ecosystem: string, technology: string, topic: string, variant = 'guide') =>
+    request<TopicDetails>(
+      '/api/v1/education/details',
+      { method: 'POST', body: JSON.stringify({ ecosystem, technology, topic, variant }) },
+    ),
   generateQuestions: (interviewId: string) => request<Question[]>(
     `/api/v1/interviews/${interviewId}/questions:generate`,
     { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() } },
