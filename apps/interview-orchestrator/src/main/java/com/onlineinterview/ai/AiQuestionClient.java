@@ -93,12 +93,13 @@ public class AiQuestionClient {
         return response == null || response.topics() == null ? List.of() : response.topics();
     }
 
-    public TopicDetailsResponse topicDetails(String ecosystem, String technology, String topic) {
+    public TopicDetailsResponse topicDetails(String ecosystem, String technology, String topic,
+            String variant) {
         var call = (java.util.function.Supplier<TopicDetailsResponse>) () -> client.post()
                 .uri("/internal/v1/topics:details")
                 .contentType(MediaType.APPLICATION_JSON)
                 .header("X-Service-Token", serviceToken)
-                .body(new TopicDetailsRequest(ecosystem, technology, topic))
+                .body(new TopicDetailsRequest(ecosystem, technology, topic, variant))
                 .retrieve()
                 .body(TopicDetailsResponse.class);
         return resilience == null ? call.get() : resilience.execute("ai-topic-details", call);
@@ -106,7 +107,8 @@ public class AiQuestionClient {
 
     public record TopicRequest(List<String> technologies, String difficulty) {}
     public record TopicResponse(List<String> topics) {}
-    public record TopicDetailsRequest(String ecosystem, String technology, String topic) {}
+    public record TopicDetailsRequest(String ecosystem, String technology, String topic,
+            String variant) {}
     public record TopicDetailsResponse(String title, String content) {}
 
     public record ComposeRequest(List<String> skills, String difficulty, int questionCount,

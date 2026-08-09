@@ -272,8 +272,9 @@ export function EducationPage() {
     setTechnology(ecosystemTechnologies[value][0])
   }
 
-  function showDetails() {
-    const params = new URLSearchParams({ ecosystem: ecosystemLabels[ecosystem], technology, topic })
+  function showDetails(variant: 'guide' | 'notes' | 'design' = 'guide') {
+    const params = new URLSearchParams({
+      ecosystem: ecosystemLabels[ecosystem], technology, topic, variant })
     navigate(`/education/details?${params}`)
   }
 
@@ -297,7 +298,17 @@ export function EducationPage() {
         <option value="">{busy ? 'Loading topics…' : 'Select a topic'}</option>
         {topics.map((value) => <option key={value}>{value}</option>)}
       </select></label>
-      <button disabled={!topic || busy} onClick={showDetails}>Show Details</button>
+      <div className="compact-actions">
+        <button disabled={!topic || busy} onClick={() => showDetails('guide')}>Show Details</button>
+        <button className="secondary-button" disabled={!topic || busy}
+          onClick={() => showDetails('notes')}
+          title="Concise, interview-focused notes: key concepts, likely questions with answers, gotchas, and a quick summary.">
+          Interview Notes</button>
+        <button className="secondary-button" disabled={!topic || busy}
+          onClick={() => showDetails('design')}
+          title="Where this topic fits in software design: layer, trade-offs, alternatives, interactions, pitfalls, and the design-interview angle.">
+          Design Perspective</button>
+      </div>
       {error && <p className="error-message" role="alert">{error}</p>}
     </section>
   </main>

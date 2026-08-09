@@ -18,6 +18,8 @@ class TopicDetailsRequest(ApiModel):
     ecosystem: str = Field(min_length=1, max_length=100)
     technology: str = Field(min_length=1, max_length=100)
     topic: str = Field(min_length=1, max_length=200)
+    # "guide" = full zero-to-hero learning guide; "notes" = concise interview-prep notes.
+    variant: str = "guide"
 
 
 class TopicDetailsResponse(ApiModel):

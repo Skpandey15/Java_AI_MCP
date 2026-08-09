@@ -72,8 +72,10 @@ public class AiQuestionController {
     @PreAuthorize("hasAnyRole('INTERVIEWER', 'CANDIDATE')")
     public AiQuestionClient.TopicDetailsResponse topicDetails(
             @org.springframework.web.bind.annotation.RequestBody TopicDetailsRequest request) {
-        return service.topicDetails(request.ecosystem(), request.technology(), request.topic());
+        return service.topicDetails(request.ecosystem(), request.technology(), request.topic(),
+                request.variant());
     }
 
-    public record TopicDetailsRequest(String ecosystem, String technology, String topic) {}
+    public record TopicDetailsRequest(String ecosystem, String technology, String topic,
+            String variant) {}
 }

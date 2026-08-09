@@ -34,6 +34,9 @@ h1 { margin: 0; font-size: clamp(2.6rem, 7vw, 5rem); line-height: .98; }
 .result-badge.pass { background: #dcfce7; color: #166534; }
 .result-badge.fail { background: #fee2e2; color: #991b1b; }
 .result-badge.neutral { background: #e2e8f0; color: #334155; }
+.mermaid-diagram { overflow-x: auto; margin: 1.25rem 0; padding: 1rem; border: 1px solid #d7e2ef; border-radius: 12px; background: #f7faff; text-align: center; }
+.mermaid-diagram svg { max-width: 100%; height: auto; }
+.mermaid-fallback { overflow-x: auto; }
 .workspace-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 2rem; align-items: start; }
 .workspace-nav { position: sticky; top: 1rem; display: grid; gap: .55rem; padding: .75rem; border: 1px solid #d7e2ef; border-radius: 14px; background: #f5f8fc; }
 .workspace-nav button { display: flex; align-items: center; gap: .7rem; width: 100%; padding: .8rem; border: 1px solid transparent; border-radius: 9px; color: #36516f; background: transparent; text-align: left; cursor: pointer; }

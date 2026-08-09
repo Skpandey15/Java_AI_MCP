@@ -1,4 +1,5 @@
 import { type JSX, type ReactNode } from 'react'
+import { Mermaid } from './Mermaid'
 
 // Minimal, dependency-free, XSS-safe Markdown renderer. Builds React elements
 // directly (never dangerouslySetInnerHTML) and only follows explicit http(s)
@@ -43,9 +44,13 @@ export function Markdown({ content, className }: { content: string; className?: 
       const code: string[] = []
       while (i < lines.length && !/^```\s*$/.test(lines[i].trim())) code.push(lines[i++])
       if (i < lines.length) i++
-      blocks.push(<pre key={key++}><code className={fence[1] ? `language-${fence[1]}` : undefined}>
-        {code.join('\n')}
-      </code></pre>)
+      if (fence[1] === 'mermaid') {
+        blocks.push(<Mermaid key={key++} code={code.join('\n')} />)
+      } else {
+        blocks.push(<pre key={key++}><code className={fence[1] ? `language-${fence[1]}` : undefined}>
+          {code.join('\n')}
+        </code></pre>)
+      }
       continue
     }
 

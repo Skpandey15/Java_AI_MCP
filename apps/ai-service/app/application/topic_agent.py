@@ -64,21 +64,60 @@ class TopicAgent:
         )
 
     def details(self, request: TopicDetailsRequest) -> TopicDetailsResponse:
-        system = (
-            "You are a senior technical educator. Write a self-contained, accurate zero-to-hero "
-            "learning guide in Markdown. Cover prerequisites, fundamentals, mental models, setup, "
-            "syntax or APIs, progressively advanced concepts, production patterns, security, "
-            "performance, testing, debugging, common mistakes, a practical project, interview "
-            "questions with concise answers, exercises, and a mastery checklist. Use concrete "
-            "examples and code fences where relevant. Make it easy to scan: begin with a short "
-            "overview and learning outcomes, use ## sections and ### subsections, keep paragraphs "
-            "under four sentences, use bullets for steps and checklists, tables only for genuine "
-            "comparisons, and label every code fence with its language. Present concepts in "
-            "beginner, intermediate, advanced, and production order. Never claim the guide is "
-            "literally exhaustive."
-        )
-        user = (f"Ecosystem: {request.ecosystem}\nTechnology: {request.technology}\n"
-                f"Topic: {request.topic}\nCreate the complete guided learning path.")
+        if request.variant == "notes":
+            system = (
+                "You are a senior interviewer and mentor. Write concise, high-yield INTERVIEW "
+                "PREP NOTES in Markdown for the given topic — optimized for someone revising just "
+                "before a technical interview, not a full tutorial. Use ## sections in this "
+                "order: 'Key concepts to know cold' (5-8 tight bullets); 'Most-asked interview "
+                "questions' (each a bold question followed by a 2-4 sentence model answer); "
+                "'Follow-ups & gotchas' interviewers probe; 'Common mistakes / red flags to "
+                "avoid'; 'Snippets to remember' (only where a short code/command example truly "
+                "helps, label its language); and 'If you remember nothing else' — a 30-second "
+                "summary. Be accurate and specific, prefer bullets over prose, keep it scannable, "
+                "and stay focused on what actually comes up in interviews. Never claim it is "
+                "exhaustive."
+            )
+            user = (f"Ecosystem: {request.ecosystem}\nTechnology: {request.technology}\n"
+                    f"Topic: {request.topic}\nWrite the interview prep notes.")
+        elif request.variant == "design":
+            system = (
+                "You are a principal software architect. Explain the given topic through a "
+                "SOFTWARE DESIGN and ARCHITECTURE lens in Markdown — where it fits in a system "
+                "and how it shapes design decisions, not a how-to tutorial. Use ## sections in "
+                "this order: 'Where it fits' (which layer or part of a system it belongs to and "
+                "the problem it solves) — and inside this section include an architecture "
+                "diagram as a Mermaid flowchart in a ```mermaid fenced block (use `graph TD` or "
+                "`graph LR`, 6-12 nodes with short labels, showing this topic's component and how "
+                "requests or data flow through the neighbouring components); "
+                "'Design decisions & trade-offs' it drives; 'When to use "
+                "it vs alternatives' (and when NOT to); 'How it interacts with other components' "
+                "(patterns, integration points, data flow); 'Architectural pitfalls & "
+                "anti-patterns'; 'Design-interview angle' (how to reason about designing a system "
+                "with it and what an interviewer probes); and 'Fits in the big picture' — a "
+                "concrete example architecture that uses it. Be concrete, cite well-known design "
+                "patterns and real-world scenarios, prefer bullets, and label any code or "
+                "diagram-as-text fences. Never claim it is exhaustive."
+            )
+            user = (f"Ecosystem: {request.ecosystem}\nTechnology: {request.technology}\n"
+                    f"Topic: {request.topic}\nExplain where this fits from a design perspective.")
+        else:
+            system = (
+                "You are a senior technical educator. Write a self-contained, accurate "
+                "zero-to-hero learning guide in Markdown. Cover prerequisites, fundamentals, "
+                "mental models, setup, syntax or APIs, progressively advanced concepts, "
+                "production patterns, security, performance, testing, debugging, common "
+                "mistakes, a practical project, interview questions with concise answers, "
+                "exercises, and a mastery checklist. Use concrete examples and code fences "
+                "where relevant. Make it easy to scan: begin with a short overview and learning "
+                "outcomes, use ## sections and ### subsections, keep paragraphs under four "
+                "sentences, use bullets for steps and checklists, tables only for genuine "
+                "comparisons, and label every code fence with its language. Present concepts in "
+                "beginner, intermediate, advanced, and production order. Never claim the guide "
+                "is literally exhaustive."
+            )
+            user = (f"Ecosystem: {request.ecosystem}\nTechnology: {request.technology}\n"
+                    f"Topic: {request.topic}\nCreate the complete guided learning path.")
         parsed, usage = self.client.complete_json(system, user, _DETAIL_SCHEMA)
         return TopicDetailsResponse(
             title=str(parsed.get("title", request.topic)).strip() or request.topic,
