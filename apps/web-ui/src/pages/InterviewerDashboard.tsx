@@ -204,6 +204,12 @@ export const ecosystemTechnologies = {
     'Azure Durable Functions', 'Argo Workflows', 'Apache Airflow',
     'Prefect', 'Dagster', 'n8n',
   ],
+  SYSTEM_DESIGN_QA: [
+    'Distributed Systems', 'Event Sourcing System', 'Payment System', 'URL Shortener',
+    'Rate Limiter', 'Distributed Cache', 'Chat / Messaging System', 'News Feed System',
+    'Notification System', 'Search Autocomplete', 'Ride-Hailing System',
+    'Distributed File Storage', 'E-commerce & Inventory System', 'Ticket Booking System',
+  ],
 } as const
 
 export type Ecosystem = keyof typeof ecosystemTechnologies
@@ -221,6 +227,7 @@ export const ecosystemLabels: Record<Ecosystem, string> = {
   API_DESIGN: 'API Design & Integration', OS_LINUX: 'Operating Systems & Linux',
   NETWORKING: 'Networking & Protocols', MACHINE_LEARNING: 'Machine Learning (Classical & MLOps)',
   CODE_QUALITY: 'Code Quality & Standards', MISCELLANEOUS: 'Miscellaneous',
+  SYSTEM_DESIGN_QA: 'System Design Questions',
   WORKFLOW: 'Workflow Automation & Orchestration',
 }
 
@@ -706,6 +713,20 @@ const technologyDescriptions: Record<string, string> = {
   Prefect: 'A Python workflow orchestration platform emphasizing observable and resilient data flows.',
   Dagster: 'A data orchestrator built around software-defined assets, lineage, testing, and observability.',
   n8n: 'A low-code automation platform for connecting APIs, applications, events, and human workflows.',
+  'Distributed Systems': 'Core distributed-systems design: consistency, consensus, replication, partitioning, and fault tolerance.',
+  'Event Sourcing System': 'Designing a system whose state is an append-only log of events, with CQRS projections and replay.',
+  'Payment System': 'Designing payments end-to-end: ledgers, idempotency, reconciliation, fraud, and PCI compliance.',
+  'URL Shortener': 'Designing a TinyURL-style service: key generation, redirection, caching, and read-heavy scale.',
+  'Rate Limiter': 'Designing a distributed rate limiter: algorithms, atomicity, fairness, and failure modes.',
+  'Distributed Cache': 'Designing a distributed cache: eviction, consistent hashing, invalidation, and hot keys.',
+  'Chat / Messaging System': 'Designing real-time chat: delivery guarantees, presence, fan-out, and connection scale.',
+  'News Feed System': 'Designing a social feed: fan-out strategies, ranking, hot users, and freshness at scale.',
+  'Notification System': 'Designing multi-channel notifications: delivery, dedup, retries, preferences, and scale.',
+  'Search Autocomplete': 'Designing typeahead: tries, top-k ranking, sharding, and low-latency prefix search.',
+  'Ride-Hailing System': 'Designing an Uber-style platform: geospatial matching, real-time location, and surge pricing.',
+  'Distributed File Storage': 'Designing a Dropbox-style store: chunking, metadata, sync, conflict resolution, and durability.',
+  'E-commerce & Inventory System': 'Designing an online store: catalog, cart, inventory reservation, orders, and consistency.',
+  'Ticket Booking System': 'Designing a Ticketmaster-style system: seat inventory, concurrency, holds, and no double-booking.',
   'API Error Handling': 'Consistent, informative error responses and status-code semantics.',
   'Authentication for APIs': 'Securing APIs with tokens, keys, OAuth, and mTLS.',
   'API Rate Limiting': 'Throttling clients to protect capacity and ensure fair use.',
