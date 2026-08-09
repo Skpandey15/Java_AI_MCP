@@ -93,6 +93,15 @@ export type CandidateResult = {
     maxScore: number; awardedScore?: number; feedback?: string; modelAnswer?: string }>
   coachingFeedback?: string
 }
+export type AdaptiveTranscriptTurn = {
+  ordinal: number; skill: string; difficulty: string; source: string
+  question: string; answer: string | null; score: number | null
+  confidence: number | null; rationale: string | null
+}
+export type AdaptiveTranscript = {
+  sessionId: string; adaptive: boolean; phase: string; overallScore: number | null
+  turnsUsed: number; maxTurns: number; turns: AdaptiveTranscriptTurn[]
+}
 export type AnswerSuggestion = { answerId: string; suggestedScore: number; confidence: number; justification: string }
 export type CoachingResponse = { status: string; leakageSafe: boolean; leakageFlags: string[]; content: string }
 export type TopicDetails = { title: string; content: string }
@@ -296,6 +305,9 @@ export const interviewApi = {
   ),
   submission: (sessionId: string) => request<SubmissionDetail>(
     `/api/v1/interviewer/submissions/${sessionId}`,
+  ),
+  adaptiveTranscript: (sessionId: string) => request<AdaptiveTranscript>(
+    `/api/v1/interviewer/adaptive-sessions/${sessionId}/transcript`,
   ),
   scoreAnswer: (sessionId: string, answerId: string, score: number, feedback: string) =>
     request<SubmissionDetail>(`/api/v1/interviewer/submissions/${sessionId}/answers/${answerId}/score`, {

@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { interviewApi, type AnswerSuggestion, type CoachingResponse, type SubmissionDetail } from '../api/interviewApi'
+import { interviewApi, type AdaptiveTranscript, type AnswerSuggestion, type CoachingResponse, type SubmissionDetail } from '../api/interviewApi'
 import { Markdown } from '../components/Markdown'
 
 export function SubmissionReviewPage() {
   const { sessionId = '' } = useParams()
   const navigate = useNavigate()
   const [submission, setSubmission] = useState<SubmissionDetail>()
+  const [adaptive, setAdaptive] = useState<AdaptiveTranscript>()
   const [scores, setScores] = useState<Record<string, number>>({})
   const [feedback, setFeedback] = useState<Record<string, string>>({})
   const [overallFeedback, setOverallFeedback] = useState('')
@@ -29,6 +30,12 @@ export function SubmissionReviewPage() {
         .map((q) => [q.answerId!, q.feedback ?? ''])))
       setOverallFeedback(loaded.feedback ?? '')
     }).catch((error: unknown) => setLoadError(error instanceof Error ? error.message : 'Unable to load submission'))
+    // Adaptive submissions store their Q&A in a separate transcript; load it if present.
+    // Reset first so a prior session's transcript never leaks onto a different submission.
+    setAdaptive(undefined)
+    interviewApi.adaptiveTranscript(sessionId)
+      .then((t) => { if (t.turns.length > 0) setAdaptive(t) })
+      .catch(() => undefined)
   }, [sessionId])
 
   useEffect(() => {
@@ -177,6 +184,25 @@ export function SubmissionReviewPage() {
             ? '🤖 Regenerate answer key'
             : '🤖 Generate answer key (details + examples)'}</button>
     </div>
+    {adaptive && <section className="adaptive-transcript">
+      <h2>🤖 Adaptive interview transcript</h2>
+      <p className="field-hint">The AI interviewer generated each question live and scored each answer.
+        Use this to review, then add overall feedback and finalize below.</p>
+      <p><strong>AI overall score:</strong> {adaptive.overallScore ?? '—'} / 100
+        {'  ·  '}<strong>Turns:</strong> {adaptive.turnsUsed} / {adaptive.maxTurns}
+        {'  ·  '}<strong>Phase:</strong> {adaptive.phase}</p>
+      {adaptive.turns.map((turn) => <div className="adaptive-turn" key={turn.ordinal}>
+        <div className="question-meta">
+          <span>Q{turn.ordinal} · {turn.skill} · {turn.difficulty}</span>
+          <span>{turn.score != null ? `AI score ${turn.score}/100` : 'unscored'}
+            {turn.confidence != null ? ` · confidence ${turn.confidence}%` : ''}</span>
+        </div>
+        <h3>{turn.question}</h3>
+        <div className="answer-panel"><strong>Candidate answer</strong>
+          <pre>{turn.answer || 'No answer submitted'}</pre></div>
+        {turn.rationale && <p className="ai-suggestion">🤖 AI rationale: {turn.rationale}</p>}
+      </div>)}
+    </section>}
     {submission.questions.map((question) => <section className="question-card" key={question.questionId}>
       <div className="question-meta"><span>{question.type.replaceAll('_', ' ')}</span><span>{question.maxScore} points</span></div>
       <h2>{question.order}. {question.prompt}</h2>

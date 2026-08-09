@@ -1327,7 +1327,7 @@ export function InterviewerDashboard() {
                 ? 'Pick technologies above, then suggest topics to focus on specific areas.'
                 : 'Select topics to focus generation; leave all unchecked to cover the technologies broadly.'}</small>
             </div>
-            <fieldset className="question-composition">
+            {form.questionMode !== 'ADAPTIVE' && <fieldset className="question-composition">
               <legend>Types of questions</legend>
               <p>Choose how many questions of each type the interview should contain.</p>
               <div className="inline-fields">
@@ -1343,12 +1343,18 @@ export function InterviewerDashboard() {
               <strong>Total questions: {form.questionCount}</strong>
               {form.questionCount === 0 && <span className="field-error"> Select at least one question.</span>}
               {form.questionCount > 100 && <span className="field-error"> Maximum 100 questions.</span>}
-            </fieldset>
+            </fieldset>}
             <label>Difficulty<select value={form.difficulty} onChange={(e) => setForm({...form, difficulty: e.target.value})}><option>EASY</option><option>MEDIUM</option><option>HARD</option><option>MIXED</option></select></label>
             <label>Question mode<select value={form.questionMode}
-              onChange={(e) => setForm({...form, questionMode: e.target.value, knowledgeCollectionId: ''})}>
+              onChange={(e) => setForm((f) => e.target.value === 'ADAPTIVE'
+                ? {...f, questionMode: e.target.value, knowledgeCollectionId: '',
+                   mcqSingle: 0, mcqMultiple: 0, shortText: 0, longText: 0, questionCount: 0}
+                : {...f, questionMode: e.target.value, knowledgeCollectionId: ''})}>
               <option>MANUAL</option><option>DIRECT_LLM</option><option>RAG</option><option>ADAPTIVE</option>
             </select></label>
+            {form.questionMode === 'ADAPTIVE' && <p className="field-hint">Adaptive interviews generate
+              every question live from the candidate's answers — there is no fixed question set to
+              configure, and nothing to add before publishing.</p>}
             {form.questionMode === 'RAG' && <label>Knowledge collection<select required
               value={form.knowledgeCollectionId}
               onChange={(e) => setForm({...form, knowledgeCollectionId: e.target.value})}>
@@ -1359,7 +1365,7 @@ export function InterviewerDashboard() {
             <label>Duration (minutes)<input type="number" min="5" max="480" value={form.durationMinutes} onChange={(e) => setForm({...form, durationMinutes: Number(e.target.value)})} /></label>
             <label>Passing percentage<input type="number" min="1" max="100" value={form.passingPercentage} onChange={(e) => setForm({...form, passingPercentage: Number(e.target.value)})} /></label>
             <button type="submit" disabled={form.technologies.length === 0
-              || form.questionCount < 1 || form.questionCount > 100
+              || (form.questionMode !== 'ADAPTIVE' && form.questionCount < 1) || form.questionCount > 100
               || (form.questionMode === 'RAG' && !form.knowledgeCollectionId)}>Create draft</button>
           </form>}
 
