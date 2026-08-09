@@ -1246,7 +1246,7 @@ export function InterviewerDashboard() {
           <button onClick={() => navigate('/interviewer/submissions')}>
             <span>5</span>Review submissions
           </button>
-          <button onClick={() => navigate('/interviewer/education')}>
+          <button onClick={() => navigate('/education')}>
             <span>6</span>Educate Yourself
           </button>
         </nav>

@@ -68,7 +68,7 @@ export function TopicDetailsPage() {
       <div className="topic-export-actions">
         <button disabled={!details} onClick={exportPdf}>Export to PDF</button>
         <button disabled={!details} onClick={exportWord}>Export to MS Word</button>
-        <button className="secondary-button" onClick={() => navigate('/interviewer/education')}>Choose another topic</button>
+        <button className="secondary-button" onClick={() => navigate('/education')}>Choose another topic</button>
       </div>
     </div>
     {!details && !error && <section className="learning-loading" aria-live="polite" aria-busy="true">
