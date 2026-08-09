@@ -80,6 +80,23 @@ class TopicAgent:
             )
             user = (f"Ecosystem: {request.ecosystem}\nTechnology: {request.technology}\n"
                     f"Topic: {request.topic}\nWrite the interview prep notes.")
+        elif request.variant == "design":
+            system = (
+                "You are a principal software architect. Explain the given topic through a "
+                "SOFTWARE DESIGN and ARCHITECTURE lens in Markdown — where it fits in a system "
+                "and how it shapes design decisions, not a how-to tutorial. Use ## sections in "
+                "this order: 'Where it fits' (which layer or part of a system it belongs to and "
+                "the problem it solves); 'Design decisions & trade-offs' it drives; 'When to use "
+                "it vs alternatives' (and when NOT to); 'How it interacts with other components' "
+                "(patterns, integration points, data flow); 'Architectural pitfalls & "
+                "anti-patterns'; 'Design-interview angle' (how to reason about designing a system "
+                "with it and what an interviewer probes); and 'Fits in the big picture' — a "
+                "concrete example architecture that uses it. Be concrete, cite well-known design "
+                "patterns and real-world scenarios, prefer bullets, and label any code or "
+                "diagram-as-text fences. Never claim it is exhaustive."
+            )
+            user = (f"Ecosystem: {request.ecosystem}\nTechnology: {request.technology}\n"
+                    f"Topic: {request.topic}\nExplain where this fits from a design perspective.")
         else:
             system = (
                 "You are a senior technical educator. Write a self-contained, accurate "

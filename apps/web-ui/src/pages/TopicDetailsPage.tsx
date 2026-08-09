@@ -9,8 +9,10 @@ export function TopicDetailsPage() {
   const ecosystem = params.get('ecosystem') ?? ''
   const technology = params.get('technology') ?? ''
   const topic = params.get('topic') ?? ''
-  const variant = params.get('variant') === 'notes' ? 'notes' : 'guide'
+  const rawVariant = params.get('variant')
+  const variant = rawVariant === 'notes' ? 'notes' : rawVariant === 'design' ? 'design' : 'guide'
   const isNotes = variant === 'notes'
+  const isDesign = variant === 'design'
   const [details, setDetails] = useState<TopicDetails>()
   const [error, setError] = useState('')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -20,8 +22,10 @@ export function TopicDetailsPage() {
     interviewApi.topicDetails(ecosystem, technology, topic, variant)
       .then(setDetails)
       .catch((reason: unknown) => setError(reason instanceof Error ? reason.message
-        : isNotes ? 'Unable to generate notes' : 'Unable to generate guide'))
-  }, [ecosystem, technology, topic, variant, isNotes])
+        : isNotes ? 'Unable to generate notes'
+          : isDesign ? 'Unable to generate the design perspective'
+            : 'Unable to generate guide'))
+  }, [ecosystem, technology, topic, variant, isNotes, isDesign])
 
   useEffect(() => {
     if (details || error) return
@@ -42,7 +46,8 @@ export function TopicDetailsPage() {
         : 'Reviewing and formatting your complete guide'
 
   function safeFileName() {
-    return `${technology}-${topic}-${isNotes ? 'interview-notes' : 'zero-to-hero'}`
+    const suffix = isNotes ? 'interview-notes' : isDesign ? 'design-perspective' : 'zero-to-hero'
+    return `${technology}-${topic}-${suffix}`
       .replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '')
   }
 
@@ -77,7 +82,9 @@ export function TopicDetailsPage() {
     </div>
     {!details && !error && <section className="learning-loading" aria-live="polite" aria-busy="true">
       <div className="learning-loading-heading"><span className="learning-spinner" aria-hidden="true" />
-        <div><h2>{isNotes ? 'Preparing your interview notes…' : 'Building your zero-to-hero guide…'}</h2>
+        <div><h2>{isNotes ? 'Preparing your interview notes…'
+          : isDesign ? 'Mapping the design perspective…'
+            : 'Building your zero-to-hero guide…'}</h2>
           <p>{stage}</p></div>
       </div>
       <div className="learning-progress" role="progressbar" aria-label="Guide generation progress"

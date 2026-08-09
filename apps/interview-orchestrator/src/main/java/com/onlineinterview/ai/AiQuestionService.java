@@ -161,8 +161,8 @@ public class AiQuestionService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Ecosystem, technology and topic are required");
         }
-        String resolved = "notes".equalsIgnoreCase(variant == null ? "" : variant.strip())
-                ? "notes" : "guide";
+        String v = variant == null ? "" : variant.strip().toLowerCase();
+        String resolved = (v.equals("notes") || v.equals("design")) ? v : "guide";
         return client.topicDetails(ecosystem.strip(), technology.strip(), topic.strip(), resolved);
     }
 

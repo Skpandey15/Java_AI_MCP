@@ -291,6 +291,10 @@ def test_topic_agent_details_variant_selects_prompt():
         {"ecosystem": "Java", "technology": "Apache Kafka", "topic": "Consumers",
          "variant": "notes"}))
     assert "interview prep notes" in seen["system"].lower()
+    agent.details(TopicDetailsRequest.model_validate(
+        {"ecosystem": "Java", "technology": "Apache Kafka", "topic": "Consumers",
+         "variant": "design"}))
+    assert "software design" in seen["system"].lower()
 
 
 def test_topics_route(monkeypatch):

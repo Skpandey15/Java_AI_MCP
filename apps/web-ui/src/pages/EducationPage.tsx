@@ -272,7 +272,7 @@ export function EducationPage() {
     setTechnology(ecosystemTechnologies[value][0])
   }
 
-  function showDetails(variant: 'guide' | 'notes' = 'guide') {
+  function showDetails(variant: 'guide' | 'notes' | 'design' = 'guide') {
     const params = new URLSearchParams({
       ecosystem: ecosystemLabels[ecosystem], technology, topic, variant })
     navigate(`/education/details?${params}`)
@@ -304,6 +304,10 @@ export function EducationPage() {
           onClick={() => showDetails('notes')}
           title="Concise, interview-focused notes: key concepts, likely questions with answers, gotchas, and a quick summary.">
           Interview Notes</button>
+        <button className="secondary-button" disabled={!topic || busy}
+          onClick={() => showDetails('design')}
+          title="Where this topic fits in software design: layer, trade-offs, alternatives, interactions, pitfalls, and the design-interview angle.">
+          Design Perspective</button>
       </div>
       {error && <p className="error-message" role="alert">{error}</p>}
     </section>
