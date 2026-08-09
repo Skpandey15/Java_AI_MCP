@@ -279,7 +279,7 @@ def test_topic_agent_details_variant_selects_prompt():
 
     class Capture:
         def complete_json(self, system, user, schema):
-            seen["system"] = system
+            seen["system"], seen["user"] = system, user
             return {"title": "T", "content": "C"}, USAGE
 
     agent = TopicAgent(Capture())
@@ -298,7 +298,18 @@ def test_topic_agent_details_variant_selects_prompt():
     agent.details(TopicDetailsRequest.model_validate(
         {"ecosystem": "JDK & Spring Versions", "technology": "JDK", "topic": "Java 21 (LTS)",
          "variant": "release"}))
-    assert "what's-new" in seen["system"].lower()
+    release_system, release_user = seen["system"], seen["user"]
+    assert "what's-new" in release_system.lower()
+    for heading in ("Headline features", "Language / API additions", "Enhancements & performance",
+                    "Deprecations & removals", "Migration notes", "Interview angle"):
+        assert heading in release_system
+    assert (release_system.index("Headline features")
+            < release_system.index("Migration notes")
+            < release_system.index("Interview angle"))  # sections stay in order
+    assert "never invent features" in release_system  # must not hallucinate features
+    assert "version-specific" in release_system
+    assert "Topic (version):" in release_user
+    assert "Summarize what is new in this version." in release_user
     # an unknown variant safely defaults to the full learning guide
     agent.details(TopicDetailsRequest.model_validate(
         {"ecosystem": "Java", "technology": "Apache Kafka", "topic": "Consumers",

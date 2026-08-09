@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { interviewApi } from '../api/interviewApi'
 import { useAuth } from '../auth/AuthProvider'
+import { educationVariants, educationVariantKeys, type EducationVariant } from './educationVariants'
 import { ecosystemLabels, ecosystemTechnologies, type Ecosystem } from './InterviewerDashboard'
 
 // Versions for the "Language & Framework Versions" ecosystem. Kept separate from curatedTopics
@@ -413,7 +414,7 @@ export function EducationPage() {
     setTechnology(ecosystemTechnologies[value][0])
   }
 
-  function showDetails(variant: 'guide' | 'notes' | 'design' | 'release' = 'guide') {
+  function showDetails(variant: EducationVariant = 'guide') {
     const params = new URLSearchParams({
       ecosystem: ecosystemLabels[ecosystem], technology, topic, variant })
     navigate(`/education/details?${params}`)
@@ -440,19 +441,12 @@ export function EducationPage() {
         {topics.map((value) => <option key={value}>{value}</option>)}
       </select></label>
       <div className="compact-actions">
-        <button disabled={!topic || busy} onClick={() => showDetails('guide')}>Show Details</button>
-        <button className="secondary-button" disabled={!topic || busy}
-          onClick={() => showDetails('notes')}
-          title="Concise, interview-focused notes: key concepts, likely questions with answers, gotchas, and a quick summary.">
-          Interview Notes</button>
-        <button className="secondary-button" disabled={!topic || busy}
-          onClick={() => showDetails('design')}
-          title="Where this topic fits in software design: layer, trade-offs, alternatives, interactions, pitfalls, and the design-interview angle.">
-          Design Perspective</button>
-        <button className="secondary-button" disabled={!topic || busy}
-          onClick={() => showDetails('release')}
-          title="What's new in this version: headline features, API additions, deprecations, migration notes, and the interview angle. Best for JDK & Spring versions.">
-          What's New</button>
+        {educationVariantKeys.map((key) => {
+          const v = educationVariants[key]
+          return <button key={key} disabled={!topic || busy} title={v.buttonTitle}
+            className={v.primary ? undefined : 'secondary-button'}
+            onClick={() => showDetails(key)}>{v.button}</button>
+        })}
       </div>
       {error && <p className="error-message" role="alert">{error}</p>}
     </section>
