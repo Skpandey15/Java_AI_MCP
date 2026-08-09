@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { interviewApi } from '../api/interviewApi'
 import { useAuth } from '../auth/AuthProvider'
 import { ecosystemLabels, ecosystemTechnologies, type Ecosystem } from './InterviewerDashboard'
@@ -241,9 +241,13 @@ const curatedTopics: Record<string, string[]> = {
 
 export function EducationPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const auth = useAuth()
-  const isInterviewer = auth.roles.includes('interviewer')
-  const dashboardPath = isInterviewer ? '/interviewer' : '/candidate'
+  // Prefer the dashboard the user actually came from (handles dual-role accounts);
+  // fall back to role when entered directly by URL.
+  const fromPath = (location.state as { from?: string } | null)?.from
+  const dashboardPath = fromPath ?? (auth.roles.includes('interviewer') ? '/interviewer' : '/candidate')
+  const isInterviewer = dashboardPath === '/interviewer'
   const ecosystems = useMemo(() => (Object.keys(ecosystemLabels) as Ecosystem[])
     .sort((a, b) => ecosystemLabels[a].localeCompare(ecosystemLabels[b])), [])
   const [ecosystem, setEcosystem] = useState<Ecosystem>('JAVA')

@@ -50,7 +50,7 @@ export function CandidateDashboard() {
       <div className="dashboard-header">
         <div><p className="eyebrow">Candidate workspace</p><h1>My interviews</h1></div>
         <div className="header-actions">
-          <button className="secondary-button" onClick={() => navigate('/education')}>Educate Yourself</button>
+          <button className="secondary-button" onClick={() => navigate('/education', { state: { from: '/candidate' } })}>Educate Yourself</button>
           <button className="secondary-button" onClick={auth.logout}>Sign out</button>
         </div>
       </div>
