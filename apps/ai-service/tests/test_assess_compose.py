@@ -295,6 +295,11 @@ def test_topic_agent_details_variant_selects_prompt():
         {"ecosystem": "Java", "technology": "Apache Kafka", "topic": "Consumers",
          "variant": "design"}))
     assert "software design" in seen["system"].lower()
+    # an unknown variant safely defaults to the full learning guide
+    agent.details(TopicDetailsRequest.model_validate(
+        {"ecosystem": "Java", "technology": "Apache Kafka", "topic": "Consumers",
+         "variant": "foo"}))
+    assert "zero-to-hero" in seen["system"]
 
 
 def test_topics_route(monkeypatch):

@@ -32,7 +32,13 @@ export function Mermaid({ code }: { code: string }) {
     const id = `mermaid-svg-${seq++}`
     loadMermaid()
       .then((mermaid) => mermaid.render(id, code))
-      .then(({ svg }) => { if (!cancelled && ref.current) ref.current.innerHTML = svg })
+      .then(({ svg }) => {
+        if (cancelled || !ref.current) return
+        // `svg` is mermaid's own output, produced with securityLevel:'strict' which sanitizes it
+        // through DOMPurify; the diagram source itself comes from our AI service, not from end
+        // users. Assigning that sanitized SVG is the standard, safe mermaid integration.
+        ref.current.innerHTML = svg // nosemgrep
+      })
       .catch(() => { if (!cancelled) setFailed(true) })
     return () => { cancelled = true }
   }, [code])

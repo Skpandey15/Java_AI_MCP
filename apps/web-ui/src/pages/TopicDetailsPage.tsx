@@ -22,10 +22,10 @@ export function TopicDetailsPage() {
     interviewApi.topicDetails(ecosystem, technology, topic, variant)
       .then(setDetails)
       .catch((reason: unknown) => setError(reason instanceof Error ? reason.message
-        : isNotes ? 'Unable to generate notes'
-          : isDesign ? 'Unable to generate the design perspective'
+        : variant === 'notes' ? 'Unable to generate notes'
+          : variant === 'design' ? 'Unable to generate the design perspective'
             : 'Unable to generate guide'))
-  }, [ecosystem, technology, topic, variant, isNotes, isDesign])
+  }, [ecosystem, technology, topic, variant])
 
   useEffect(() => {
     if (details || error) return
