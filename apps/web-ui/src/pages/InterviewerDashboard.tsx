@@ -210,6 +210,10 @@ export const ecosystemTechnologies = {
     'Notification System', 'Search Autocomplete', 'Ride-Hailing System',
     'Distributed File Storage', 'E-commerce & Inventory System', 'Ticket Booking System',
   ],
+  VERSIONS: [
+    'JDK', 'Spring Boot', 'Spring Framework', 'Spring Security', 'Spring Cloud',
+    'Python', 'Django',
+  ],
   NODEJS: [
     'Node.js', 'Node.js Event Loop', 'Async and Promises', 'Streams and Buffers',
     'Worker Threads and Clustering', 'npm and Package Management', 'Express', 'NestJS',
@@ -236,6 +240,7 @@ export const ecosystemLabels: Record<Ecosystem, string> = {
   NETWORKING: 'Networking & Protocols', MACHINE_LEARNING: 'Machine Learning (Classical & MLOps)',
   CODE_QUALITY: 'Code Quality & Standards', MISCELLANEOUS: 'Miscellaneous',
   SYSTEM_DESIGN_QA: 'System Design Questions',
+  VERSIONS: 'Language & Framework Versions',
   NODEJS: 'Node.js & Backend JavaScript',
   WORKFLOW: 'Workflow Automation & Orchestration',
 }
@@ -736,6 +741,8 @@ const technologyDescriptions: Record<string, string> = {
   'Distributed File Storage': 'Designing a Dropbox-style store: chunking, metadata, sync, conflict resolution, and durability.',
   'E-commerce & Inventory System': 'Designing an online store: catalog, cart, inventory reservation, orders, and consistency.',
   'Ticket Booking System': 'Designing a Ticketmaster-style system: seat inventory, concurrency, holds, and no double-booking.',
+  JDK: 'The Java Development Kit (Java SE) — pick a version to see what changed in that release.',
+  'Spring Cloud': 'Spring Cloud — pick a release train to see its new features and updates.',
   'Node.js': 'A JavaScript runtime built on V8 for fast, non-blocking, event-driven server-side applications.',
   'Node.js Event Loop': 'The single-threaded event loop, its phases, microtasks, and how Node handles concurrency.',
   'Async and Promises': 'Callbacks, Promises, async/await, and error propagation in asynchronous Node code.',

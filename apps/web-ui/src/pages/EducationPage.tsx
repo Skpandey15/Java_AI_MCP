@@ -2,7 +2,44 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { interviewApi } from '../api/interviewApi'
 import { useAuth } from '../auth/AuthProvider'
+import { educationVariants, educationVariantKeys, type EducationVariant } from './educationVariants'
 import { ecosystemLabels, ecosystemTechnologies, type Ecosystem } from './InterviewerDashboard'
+
+// Versions for the "Language & Framework Versions" ecosystem. Kept separate from curatedTopics
+// because these product names (Spring Boot, Python, Django, …) are also learning technologies in
+// other ecosystems — this keeps version lists from leaking into their learning-topic dropdowns.
+const versionTopics: Record<string, string[]> = {
+  JDK: [
+    'Java 8 (LTS)', 'Java 9', 'Java 10', 'Java 11 (LTS)', 'Java 12', 'Java 13', 'Java 14',
+    'Java 15', 'Java 16', 'Java 17 (LTS)', 'Java 18', 'Java 19', 'Java 20', 'Java 21 (LTS)',
+    'Java 22', 'Java 23', 'Java 24', 'Java 25 (LTS)',
+  ],
+  'Spring Boot': [
+    'Spring Boot 2.0', 'Spring Boot 2.1', 'Spring Boot 2.2', 'Spring Boot 2.3', 'Spring Boot 2.4',
+    'Spring Boot 2.5', 'Spring Boot 2.6', 'Spring Boot 2.7', 'Spring Boot 3.0', 'Spring Boot 3.1',
+    'Spring Boot 3.2', 'Spring Boot 3.3', 'Spring Boot 3.4',
+  ],
+  'Spring Framework': [
+    'Spring Framework 5.0', 'Spring Framework 5.1', 'Spring Framework 5.2', 'Spring Framework 5.3',
+    'Spring Framework 6.0', 'Spring Framework 6.1', 'Spring Framework 6.2',
+  ],
+  'Spring Security': [
+    'Spring Security 5.7', 'Spring Security 6.0', 'Spring Security 6.1', 'Spring Security 6.2',
+    'Spring Security 6.3',
+  ],
+  'Spring Cloud': [
+    'Spring Cloud 2021.0 (Jubilee)', 'Spring Cloud 2022.0 (Kilburn)',
+    'Spring Cloud 2023.0 (Leyton)', 'Spring Cloud 2024.0 (Moorgate)',
+  ],
+  Python: [
+    'Python 3.6', 'Python 3.7', 'Python 3.8', 'Python 3.9', 'Python 3.10', 'Python 3.11',
+    'Python 3.12', 'Python 3.13',
+  ],
+  Django: [
+    'Django 2.0', 'Django 2.1', 'Django 2.2 (LTS)', 'Django 3.0', 'Django 3.1', 'Django 3.2 (LTS)',
+    'Django 4.0', 'Django 4.1', 'Django 4.2 (LTS)', 'Django 5.0', 'Django 5.1',
+  ],
+}
 
 const curatedTopics: Record<string, string[]> = {
   'Distributed Systems': [
@@ -356,21 +393,28 @@ export function EducationPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    setBusy(true); setError(''); setTopic('')
+    setError(''); setTopic('')
+    // The version ecosystem has a fixed, known list of releases — show only those, no AI topics.
+    if (ecosystem === 'VERSIONS') {
+      setTopics(versionTopics[technology] ?? [])
+      setBusy(false)
+      return
+    }
+    setBusy(true)
     interviewApi.suggestTopics([technology], 'MEDIUM')
       .then(({ topics: loaded }) => setTopics(Array.from(new Set([
         ...(curatedTopics[technology] ?? []), ...loaded,
       ]))))
       .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Unable to load topics'))
       .finally(() => setBusy(false))
-  }, [technology])
+  }, [technology, ecosystem])
 
   function changeEcosystem(value: Ecosystem) {
     setEcosystem(value)
     setTechnology(ecosystemTechnologies[value][0])
   }
 
-  function showDetails(variant: 'guide' | 'notes' | 'design' = 'guide') {
+  function showDetails(variant: EducationVariant = 'guide') {
     const params = new URLSearchParams({
       ecosystem: ecosystemLabels[ecosystem], technology, topic, variant })
     navigate(`/education/details?${params}`)
@@ -397,15 +441,12 @@ export function EducationPage() {
         {topics.map((value) => <option key={value}>{value}</option>)}
       </select></label>
       <div className="compact-actions">
-        <button disabled={!topic || busy} onClick={() => showDetails('guide')}>Show Details</button>
-        <button className="secondary-button" disabled={!topic || busy}
-          onClick={() => showDetails('notes')}
-          title="Concise, interview-focused notes: key concepts, likely questions with answers, gotchas, and a quick summary.">
-          Interview Notes</button>
-        <button className="secondary-button" disabled={!topic || busy}
-          onClick={() => showDetails('design')}
-          title="Where this topic fits in software design: layer, trade-offs, alternatives, interactions, pitfalls, and the design-interview angle.">
-          Design Perspective</button>
+        {educationVariantKeys.map((key) => {
+          const v = educationVariants[key]
+          return <button key={key} disabled={!topic || busy} title={v.buttonTitle}
+            className={v.primary ? undefined : 'secondary-button'}
+            onClick={() => showDetails(key)}>{v.button}</button>
+        })}
       </div>
       {error && <p className="error-message" role="alert">{error}</p>}
     </section>
