@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
-import { interviewApi, type AdaptiveView } from '../api/interviewApi'
+import { interviewApi, type AdaptiveResult, type AdaptiveView } from '../api/interviewApi'
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : 'Something went wrong'
@@ -13,6 +13,7 @@ export function AdaptiveSessionPage() {
   const { assignmentId } = useParams<{ assignmentId: string }>()
   const navigate = useNavigate()
   const [view, setView] = useState<AdaptiveView | null>(null)
+  const [result, setResult] = useState<AdaptiveResult | null>(null)
   const [answer, setAnswer] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -41,6 +42,13 @@ export function AdaptiveSessionPage() {
     }
   }, [view, answer])
 
+  // Once the interview concludes, load the candidate's scored transcript for immediate feedback.
+  const done = view?.done || (view != null && view.currentQuestion === null)
+  useEffect(() => {
+    if (!done || !view || result) return
+    interviewApi.adaptiveResult(view.sessionId).then(setResult).catch(() => undefined)
+  }, [done, view, result])
+
   if (!view) {
     return (
       <main className="dashboard">
@@ -63,8 +71,33 @@ export function AdaptiveSessionPage() {
       {finished ? (
         <section className="workspace-content">
           <h2>Interview complete</h2>
-          <p>Thanks — your responses are recorded. Your interviewer will review them and
-            share the result.</p>
+          {result ? (
+            <>
+              <div className="adaptive-result-summary">
+                <span className={`result-badge ${result.passed ? 'pass' : 'fail'}`}>
+                  {result.overallScore == null ? 'No score'
+                    : result.passed ? 'Passed' : 'Below passing'}</span>
+                <p><strong>Overall AI score:</strong> {result.overallScore ?? '—'} / 100
+                  {'  ·  '}<strong>Passing:</strong> {result.passingPercentage}%</p>
+              </div>
+              <p className="assignment-window-note">Review each question, your answer, and the
+                AI's feedback below to see where to improve.</p>
+              {result.turns.map((turn) => (
+                <div className="adaptive-turn" key={turn.ordinal}>
+                  <div className="question-meta">
+                    <span>Q{turn.ordinal} · {turn.skill} · {turn.difficulty}</span>
+                    <span>{turn.score != null ? `AI score ${turn.score}/100` : 'unscored'}</span>
+                  </div>
+                  <h3>{turn.question}</h3>
+                  <div className="answer-panel"><strong>Your answer</strong>
+                    <pre>{turn.answer || 'No answer submitted'}</pre></div>
+                  {turn.rationale && <p className="ai-suggestion">🤖 AI feedback: {turn.rationale}</p>}
+                </div>
+              ))}
+            </>
+          ) : (
+            <p>Thanks — your responses are recorded. Preparing your feedback…</p>
+          )}
           <button type="button" onClick={() => navigate('/candidate')}>Back to dashboard</button>
         </section>
       ) : (
