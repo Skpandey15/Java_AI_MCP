@@ -128,6 +128,11 @@ export type AdaptiveView = {
   sessionId: string; phase: string; turnsUsed: number; maxTurns: number
   done: boolean; currentQuestion: AdaptiveQuestion | null
 }
+export type AdaptiveResult = {
+  sessionId: string; interviewTitle: string; done: boolean
+  overallScore: number | null; passingPercentage: number; passed: boolean
+  turns: AdaptiveTranscriptTurn[]
+}
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) { super(message) }
@@ -292,6 +297,9 @@ export const interviewApi = {
   answerAdaptive: (sessionId: string, answer: string) => request<AdaptiveView>(
     `/api/v1/candidate/adaptive-sessions/${sessionId}/answer`,
     { method: 'POST', body: JSON.stringify({ answer }) },
+  ),
+  adaptiveResult: (sessionId: string) => request<AdaptiveResult>(
+    `/api/v1/candidate/adaptive-sessions/${sessionId}/result`,
   ),
   loadSession: (sessionId: string) => request<InterviewSession>(
     `/api/v1/candidate/sessions/${sessionId}`,

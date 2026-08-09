@@ -198,18 +198,41 @@ public class AdaptiveSessionService {
         }
         boolean adaptive = definition.getQuestionMode() == QuestionMode.ADAPTIVE;
         var state = states.findById(sessionId).orElse(null);
-        var turnList = turns.findBySessionIdOrderByOrdinalAsc(sessionId).stream()
+        var turnList = turnsFor(sessionId);
+        return new AdaptiveTranscript(sessionId, adaptive,
+                state == null ? "UNKNOWN" : state.getPhase(), overallOf(turnList),
+                state == null ? 0 : state.getTurnsUsed(),
+                state == null ? 0 : state.getMaxTurns(), turnList);
+    }
+
+    /** Candidate-facing result of their own adaptive interview: the transcript plus the AI's
+     *  overall score and pass/fail, shown immediately after the interview concludes. */
+    @Transactional(readOnly = true)
+    public AdaptiveResult candidateResult(String candidateSubject, UUID sessionId) {
+        requireEnabled();
+        var session = sessionService.load(candidateSubject, sessionId).session();
+        var definition = session.getAssignment().getInterviewDefinition();
+        var state = states.findById(sessionId).orElse(null);
+        var turnList = turnsFor(sessionId);
+        Integer overall = overallOf(turnList);
+        boolean passed = overall != null && overall >= definition.getPassingPercentage();
+        return new AdaptiveResult(sessionId, definition.getTitle(),
+                state != null && state.isDone(), overall,
+                definition.getPassingPercentage(), passed, turnList);
+    }
+
+    private List<AdaptiveTranscriptTurn> turnsFor(UUID sessionId) {
+        return turns.findBySessionIdOrderByOrdinalAsc(sessionId).stream()
                 .map(t -> new AdaptiveTranscriptTurn(t.getOrdinal(), t.getSkill(), t.getDifficulty(),
                         t.getSource(), t.getQuestionText(), t.getAnswerText(), t.getScore(),
                         t.getConfidence(), t.getAgentRationale()))
                 .toList();
+    }
+
+    private static Integer overallOf(List<AdaptiveTranscriptTurn> turnList) {
         var avg = turnList.stream().map(AdaptiveTranscriptTurn::score)
                 .filter(s -> s != null).mapToInt(Integer::intValue).average();
-        Integer overall = avg.isPresent() ? (int) Math.round(avg.getAsDouble()) : null;
-        return new AdaptiveTranscript(sessionId, adaptive,
-                state == null ? "UNKNOWN" : state.getPhase(), overall,
-                state == null ? 0 : state.getTurnsUsed(),
-                state == null ? 0 : state.getMaxTurns(), turnList);
+        return avg.isPresent() ? (int) Math.round(avg.getAsDouble()) : null;
     }
 
     private static String firstSkill(InterviewDefinition definition) {
@@ -231,4 +254,8 @@ public class AdaptiveSessionService {
 
     public record AdaptiveTranscriptTurn(int ordinal, String skill, String difficulty, String source,
             String question, String answer, Integer score, Integer confidence, String rationale) {}
+
+    public record AdaptiveResult(UUID sessionId, String interviewTitle, boolean done,
+            Integer overallScore, int passingPercentage, boolean passed,
+            List<AdaptiveTranscriptTurn> turns) {}
 }

@@ -45,5 +45,12 @@ public class AdaptiveSessionController {
         return service.answer(jwt.getSubject(), sessionId, body.answer());
     }
 
+    @GetMapping("/{sessionId}/result")
+    @PreAuthorize("hasRole('CANDIDATE')")
+    public AdaptiveSessionService.AdaptiveResult result(
+            @AuthenticationPrincipal Jwt jwt, @PathVariable UUID sessionId) {
+        return service.candidateResult(jwt.getSubject(), sessionId);
+    }
+
     public record AnswerBody(@Size(max = 20000) String answer) {}
 }
