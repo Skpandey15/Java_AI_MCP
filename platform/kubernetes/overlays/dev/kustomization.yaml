@@ -7,9 +7,9 @@ resources:
   - external-secret.yaml
   - tls-ingress.yaml
 images:
-  - {name: ghcr.io/skpandey15/java-ai-mcp-web-ui, digest: sha256:d644f484ba7b9a2e01f3b755558fd78c68c3322cf5d5f8f8b806ae94661d1268}
-  - {name: ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator, digest: sha256:14ab2448119f66611b60aafab5843fcf144b353187305d0a15b42efe9496f593}
-  - {name: ghcr.io/skpandey15/java-ai-mcp-ai-service, digest: sha256:5c95e5b89093c611d800ba42242165409dea9f77171bf1698a758303ca0a6235}
+  - {name: ghcr.io/skpandey15/java-ai-mcp-web-ui, digest: sha256:0a19562f4b273754c2b81c55518a6861f6c4aec1cf20e236b11d02b7d8a5b0bd}
+  - {name: ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator, digest: sha256:2ea74ec84f60ba4a675588fe30944bb9953cca9079dff07129d3e6a1acac97a6}
+  - {name: ghcr.io/skpandey15/java-ai-mcp-ai-service, digest: sha256:51f194d5400b7c9fab617d0ff1d705aa8be42002c3a297af30d747c7d4a58b9e}
 configMapGenerator:
   - name: platform-config
     behavior: merge
