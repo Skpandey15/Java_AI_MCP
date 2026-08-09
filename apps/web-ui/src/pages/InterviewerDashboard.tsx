@@ -212,6 +212,7 @@ export const ecosystemTechnologies = {
   ],
   VERSIONS: [
     'JDK', 'Spring Boot', 'Spring Framework', 'Spring Security', 'Spring Cloud',
+    'Python', 'Django',
   ],
 } as const
 
@@ -231,7 +232,7 @@ export const ecosystemLabels: Record<Ecosystem, string> = {
   NETWORKING: 'Networking & Protocols', MACHINE_LEARNING: 'Machine Learning (Classical & MLOps)',
   CODE_QUALITY: 'Code Quality & Standards', MISCELLANEOUS: 'Miscellaneous',
   SYSTEM_DESIGN_QA: 'System Design Questions',
-  VERSIONS: 'JDK & Spring Versions',
+  VERSIONS: 'Language & Framework Versions',
   WORKFLOW: 'Workflow Automation & Orchestration',
 }
 

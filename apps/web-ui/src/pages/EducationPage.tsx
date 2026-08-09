@@ -4,7 +4,10 @@ import { interviewApi } from '../api/interviewApi'
 import { useAuth } from '../auth/AuthProvider'
 import { ecosystemLabels, ecosystemTechnologies, type Ecosystem } from './InterviewerDashboard'
 
-const curatedTopics: Record<string, string[]> = {
+// Versions for the "Language & Framework Versions" ecosystem. Kept separate from curatedTopics
+// because these product names (Spring Boot, Python, Django, …) are also learning technologies in
+// other ecosystems — this keeps version lists from leaking into their learning-topic dropdowns.
+const versionTopics: Record<string, string[]> = {
   JDK: [
     'Java 8 (LTS)', 'Java 9', 'Java 10', 'Java 11 (LTS)', 'Java 12', 'Java 13', 'Java 14',
     'Java 15', 'Java 16', 'Java 17 (LTS)', 'Java 18', 'Java 19', 'Java 20', 'Java 21 (LTS)',
@@ -27,6 +30,17 @@ const curatedTopics: Record<string, string[]> = {
     'Spring Cloud 2021.0 (Jubilee)', 'Spring Cloud 2022.0 (Kilburn)',
     'Spring Cloud 2023.0 (Leyton)', 'Spring Cloud 2024.0 (Moorgate)',
   ],
+  Python: [
+    'Python 3.6', 'Python 3.7', 'Python 3.8', 'Python 3.9', 'Python 3.10', 'Python 3.11',
+    'Python 3.12', 'Python 3.13',
+  ],
+  Django: [
+    'Django 2.0', 'Django 2.1', 'Django 2.2 (LTS)', 'Django 3.0', 'Django 3.1', 'Django 3.2 (LTS)',
+    'Django 4.0', 'Django 4.1', 'Django 4.2 (LTS)', 'Django 5.0', 'Django 5.1',
+  ],
+}
+
+const curatedTopics: Record<string, string[]> = {
   'Distributed Systems': [
     'CAP theorem and consistency models', 'Consensus with Raft and Paxos',
     'Replication, quorums, and read/write paths', 'Partitioning and sharding strategies',
@@ -378,14 +392,21 @@ export function EducationPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    setBusy(true); setError(''); setTopic('')
+    setError(''); setTopic('')
+    // The version ecosystem has a fixed, known list of releases — show only those, no AI topics.
+    if (ecosystem === 'VERSIONS') {
+      setTopics(versionTopics[technology] ?? [])
+      setBusy(false)
+      return
+    }
+    setBusy(true)
     interviewApi.suggestTopics([technology], 'MEDIUM')
       .then(({ topics: loaded }) => setTopics(Array.from(new Set([
         ...(curatedTopics[technology] ?? []), ...loaded,
       ]))))
       .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Unable to load topics'))
       .finally(() => setBusy(false))
-  }, [technology])
+  }, [technology, ecosystem])
 
   function changeEcosystem(value: Ecosystem) {
     setEcosystem(value)
