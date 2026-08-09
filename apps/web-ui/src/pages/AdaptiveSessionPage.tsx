@@ -14,6 +14,7 @@ export function AdaptiveSessionPage() {
   const navigate = useNavigate()
   const [view, setView] = useState<AdaptiveView | null>(null)
   const [result, setResult] = useState<AdaptiveResult | null>(null)
+  const [resultError, setResultError] = useState('')
   const [answer, setAnswer] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -43,11 +44,13 @@ export function AdaptiveSessionPage() {
   }, [view, answer])
 
   // Once the interview concludes, load the candidate's scored transcript for immediate feedback.
-  const done = view?.done || (view != null && view.currentQuestion === null)
+  const finished = view != null && (view.done || view.currentQuestion === null)
   useEffect(() => {
-    if (!done || !view || result) return
-    interviewApi.adaptiveResult(view.sessionId).then(setResult).catch(() => undefined)
-  }, [done, view, result])
+    if (!finished || !view || result || resultError) return
+    interviewApi.adaptiveResult(view.sessionId)
+      .then(setResult)
+      .catch((reason: unknown) => { setResultError(messageOf(reason)) })
+  }, [finished, view, result, resultError])
 
   if (!view) {
     return (
@@ -58,8 +61,6 @@ export function AdaptiveSessionPage() {
       </main>
     )
   }
-
-  const finished = view.done || view.currentQuestion === null
 
   return (
     <main className="dashboard">
@@ -74,7 +75,8 @@ export function AdaptiveSessionPage() {
           {result ? (
             <>
               <div className="adaptive-result-summary">
-                <span className={`result-badge ${result.passed ? 'pass' : 'fail'}`}>
+                <span className={`result-badge ${
+                  result.overallScore == null ? 'neutral' : result.passed ? 'pass' : 'fail'}`}>
                   {result.overallScore == null ? 'No score'
                     : result.passed ? 'Passed' : 'Below passing'}</span>
                 <p><strong>Overall AI score:</strong> {result.overallScore ?? '—'} / 100
@@ -95,6 +97,9 @@ export function AdaptiveSessionPage() {
                 </div>
               ))}
             </>
+          ) : resultError ? (
+            <p role="alert">Your responses are recorded, but we couldn't load your detailed
+              feedback ({resultError}). You can view it later from your dashboard.</p>
           ) : (
             <p>Thanks — your responses are recorded. Preparing your feedback…</p>
           )}
