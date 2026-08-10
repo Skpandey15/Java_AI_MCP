@@ -2,9 +2,144 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { interviewApi } from '../api/interviewApi'
 import { useAuth } from '../auth/AuthProvider'
+import { educationVariants, educationVariantKeys, type EducationVariant } from './educationVariants'
 import { ecosystemLabels, ecosystemTechnologies, type Ecosystem } from './InterviewerDashboard'
 
+// Versions for the "Language & Framework Versions" ecosystem. Kept separate from curatedTopics
+// because these product names (Spring Boot, Python, Django, …) are also learning technologies in
+// other ecosystems — this keeps version lists from leaking into their learning-topic dropdowns.
+const versionTopics: Record<string, string[]> = {
+  JDK: [
+    'Java 8 (LTS)', 'Java 9', 'Java 10', 'Java 11 (LTS)', 'Java 12', 'Java 13', 'Java 14',
+    'Java 15', 'Java 16', 'Java 17 (LTS)', 'Java 18', 'Java 19', 'Java 20', 'Java 21 (LTS)',
+    'Java 22', 'Java 23', 'Java 24', 'Java 25 (LTS)',
+  ],
+  'Spring Boot': [
+    'Spring Boot 2.0', 'Spring Boot 2.1', 'Spring Boot 2.2', 'Spring Boot 2.3', 'Spring Boot 2.4',
+    'Spring Boot 2.5', 'Spring Boot 2.6', 'Spring Boot 2.7', 'Spring Boot 3.0', 'Spring Boot 3.1',
+    'Spring Boot 3.2', 'Spring Boot 3.3', 'Spring Boot 3.4',
+  ],
+  'Spring Framework': [
+    'Spring Framework 5.0', 'Spring Framework 5.1', 'Spring Framework 5.2', 'Spring Framework 5.3',
+    'Spring Framework 6.0', 'Spring Framework 6.1', 'Spring Framework 6.2',
+  ],
+  'Spring Security': [
+    'Spring Security 5.7', 'Spring Security 6.0', 'Spring Security 6.1', 'Spring Security 6.2',
+    'Spring Security 6.3',
+  ],
+  'Spring Cloud': [
+    'Spring Cloud 2021.0 (Jubilee)', 'Spring Cloud 2022.0 (Kilburn)',
+    'Spring Cloud 2023.0 (Leyton)', 'Spring Cloud 2024.0 (Moorgate)',
+  ],
+  Python: [
+    'Python 3.6', 'Python 3.7', 'Python 3.8', 'Python 3.9', 'Python 3.10', 'Python 3.11',
+    'Python 3.12', 'Python 3.13',
+  ],
+  Django: [
+    'Django 2.0', 'Django 2.1', 'Django 2.2 (LTS)', 'Django 3.0', 'Django 3.1', 'Django 3.2 (LTS)',
+    'Django 4.0', 'Django 4.1', 'Django 4.2 (LTS)', 'Django 5.0', 'Django 5.1',
+  ],
+}
+
 const curatedTopics: Record<string, string[]> = {
+  'Distributed Systems': [
+    'CAP theorem and consistency models', 'Consensus with Raft and Paxos',
+    'Replication, quorums, and read/write paths', 'Partitioning and sharding strategies',
+    'Leader election and coordination', 'Logical clocks, ordering, and causality',
+    'Failure detection and fault tolerance', 'Idempotency and exactly-once semantics',
+    'Distributed transactions and the saga pattern', 'Observability and debugging distributed systems',
+  ],
+  'Event Sourcing System': [
+    'Event store design and the append-only log', 'Commands, events, and aggregates',
+    'Rebuilding state and snapshots', 'CQRS and read-model projections',
+    'Eventual consistency and read-your-writes', 'Event versioning and upcasting',
+    'Idempotent consumers and deduplication', 'Ordering, partitioning, and replay',
+    'Sagas and process managers', 'Auditing, GDPR, and event immutability',
+  ],
+  'Payment System': [
+    'Payment gateway and PSP integration', 'Idempotency and exactly-once charges',
+    'Double-entry ledger and balances', 'Distributed transactions and sagas',
+    'Failure handling, retries, and reconciliation', 'PCI-DSS, tokenization, and vaulting',
+    'Money representation and multi-currency', 'Fraud detection and risk scoring',
+    'Webhooks and payment status updates', 'Scaling to high TPS and hot accounts',
+  ],
+  'URL Shortener': [
+    'Key generation (counter, hash, base62)', 'Collision handling and uniqueness',
+    'Read-heavy scaling and caching', 'Storage schema and capacity estimation',
+    'Redirection (301 vs 302) and latency', 'Custom aliases and link expiration',
+    'Analytics and click tracking', 'Rate limiting and abuse prevention',
+    'Database sharding and replication', 'High availability and global distribution',
+  ],
+  'Rate Limiter': [
+    'Token bucket vs leaky bucket', 'Fixed window vs sliding window',
+    'Distributed rate limiting with Redis', 'Per-user, per-IP, and global limits',
+    'Handling bursts and fairness', 'Synchronous vs asynchronous enforcement',
+    'Race conditions and atomic counters', 'Response headers and client back-off',
+    'Fail-open vs fail-closed', 'Scaling and hot-key mitigation',
+  ],
+  'Distributed Cache': [
+    'Cache-aside, read-through, and write-through', 'Eviction policies (LRU, LFU, TTL)',
+    'Consistent hashing and rebalancing', 'Cache invalidation strategies',
+    'Hot keys and the thundering herd', 'Write-back and durability trade-offs',
+    'Replication and high availability', 'Cache stampede and request coalescing',
+    'Consistency with the source of truth', 'Sizing, sharding, and eviction tuning',
+  ],
+  'Chat / Messaging System': [
+    'Real-time delivery (WebSocket, long-poll)', 'Message ordering and delivery guarantees',
+    'Online presence and typing indicators', 'Fan-out for group chats',
+    'Message storage and history', 'Read receipts and delivery status',
+    'Push notifications and offline delivery', 'End-to-end encryption',
+    'Scaling connections and sharding', 'Multi-device synchronization',
+  ],
+  'News Feed System': [
+    'Fan-out on write vs fan-out on read', 'Feed ranking and relevance',
+    'Handling celebrities and hot users', 'Pagination and infinite scroll',
+    'Caching and precomputation', 'Storage schema for posts and the social graph',
+    'Real-time updates and freshness', 'Deduplication and consistency',
+    'Scaling reads and hot partitions', 'Media handling and CDNs',
+  ],
+  'Notification System': [
+    'Multi-channel delivery (push, email, SMS)', 'Templating and personalization',
+    'Prioritization and rate limiting', 'Deduplication and idempotency',
+    'Retries, dead-letter queues, and failures', 'User preferences and opt-out',
+    'Fan-out and batching', 'Delivery tracking and analytics',
+    'Scheduling and time zones', 'Scaling and provider failover',
+  ],
+  'Search Autocomplete': [
+    'Tries and prefix data structures', 'Top-k ranking by popularity',
+    'Sharding the trie', 'Caching and latency budgets',
+    'Real-time updates and freshness', 'Fuzzy matching and typo tolerance',
+    'Personalization and context', 'Data collection and aggregation',
+    'Scaling QPS and hot prefixes', 'Memory vs storage trade-offs',
+  ],
+  'Ride-Hailing System': [
+    'Geospatial indexing (geohash, QuadTree)', 'Matching riders and drivers',
+    'Real-time location updates', 'Surge pricing',
+    'ETA estimation and routing', 'Trip lifecycle and state management',
+    'Payments, receipts, and splits', 'Consistency and location hotspots',
+    'Scaling high-volume location writes', 'Reliability and regional failover',
+  ],
+  'Distributed File Storage': [
+    'Chunking and deduplication', 'Metadata service design',
+    'Sync and conflict resolution', 'Consistency and versioning',
+    'Resumable upload and download', 'Sharing and permissions',
+    'Replication and durability', 'Caching and CDNs',
+    'Storage tiering and cost', 'Scaling metadata and blob storage',
+  ],
+  'E-commerce & Inventory System': [
+    'Catalog and product search', 'Shopping cart design',
+    'Inventory reservation and consistency', 'Order placement and checkout flow',
+    'Preventing oversell under concurrency', 'Payments and order fulfillment',
+    'Pricing, discounts, and promotions', 'Idempotent orders and retries',
+    'Flash sales and hot-item hotspots', 'Scaling reads, writes, and search',
+  ],
+  'Ticket Booking System': [
+    'Seat inventory and availability', 'Concurrency and seat locking / holds',
+    'Preventing double-booking', 'Reservation timeouts and release',
+    'Payment integration and order flow', 'Handling high-demand on-sales',
+    'Consistency vs availability trade-offs', 'Waiting rooms and virtual queues',
+    'Idempotency and retries', 'Scaling reads and write hotspots',
+  ],
   Slack: [
     'Slack Platform Fundamentals', 'Workspaces, Channels, and Messages',
     'Incoming Webhooks', 'Slack Apps, Bot Users, and OAuth Scopes',
@@ -258,21 +393,28 @@ export function EducationPage() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    setBusy(true); setError(''); setTopic('')
+    setError(''); setTopic('')
+    // The version ecosystem has a fixed, known list of releases — show only those, no AI topics.
+    if (ecosystem === 'VERSIONS') {
+      setTopics(versionTopics[technology] ?? [])
+      setBusy(false)
+      return
+    }
+    setBusy(true)
     interviewApi.suggestTopics([technology], 'MEDIUM')
       .then(({ topics: loaded }) => setTopics(Array.from(new Set([
         ...(curatedTopics[technology] ?? []), ...loaded,
       ]))))
       .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Unable to load topics'))
       .finally(() => setBusy(false))
-  }, [technology])
+  }, [technology, ecosystem])
 
   function changeEcosystem(value: Ecosystem) {
     setEcosystem(value)
     setTechnology(ecosystemTechnologies[value][0])
   }
 
-  function showDetails(variant: 'guide' | 'notes' | 'design' = 'guide') {
+  function showDetails(variant: EducationVariant = 'guide') {
     const params = new URLSearchParams({
       ecosystem: ecosystemLabels[ecosystem], technology, topic, variant })
     navigate(`/education/details?${params}`)
@@ -299,15 +441,12 @@ export function EducationPage() {
         {topics.map((value) => <option key={value}>{value}</option>)}
       </select></label>
       <div className="compact-actions">
-        <button disabled={!topic || busy} onClick={() => showDetails('guide')}>Show Details</button>
-        <button className="secondary-button" disabled={!topic || busy}
-          onClick={() => showDetails('notes')}
-          title="Concise, interview-focused notes: key concepts, likely questions with answers, gotchas, and a quick summary.">
-          Interview Notes</button>
-        <button className="secondary-button" disabled={!topic || busy}
-          onClick={() => showDetails('design')}
-          title="Where this topic fits in software design: layer, trade-offs, alternatives, interactions, pitfalls, and the design-interview angle.">
-          Design Perspective</button>
+        {educationVariantKeys.map((key) => {
+          const v = educationVariants[key]
+          return <button key={key} disabled={!topic || busy} title={v.buttonTitle}
+            className={v.primary ? undefined : 'secondary-button'}
+            onClick={() => showDetails(key)}>{v.button}</button>
+        })}
       </div>
       {error && <p className="error-message" role="alert">{error}</p>}
     </section>

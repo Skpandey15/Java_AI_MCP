@@ -80,6 +80,23 @@ class TopicAgent:
             )
             user = (f"Ecosystem: {request.ecosystem}\nTechnology: {request.technology}\n"
                     f"Topic: {request.topic}\nWrite the interview prep notes.")
+        elif request.variant == "release":
+            system = (
+                "You are a senior engineer writing a RELEASE / WHAT'S-NEW summary in Markdown for "
+                "a specific product version (the topic names the version, e.g. 'Java 21' or "
+                "'Spring Boot 3.2'). Focus on what changed in THAT version, not a tutorial. Use "
+                "## sections in this order: 'Headline features' (the marquee additions, with a "
+                "one-line why-it-matters each); 'Language / API additions' (new syntax, APIs, or "
+                "capabilities, with tiny labelled code snippets where helpful); 'Enhancements & "
+                "performance'; 'Deprecations & removals'; 'Migration notes' (what to change when "
+                "upgrading to this version); and 'Interview angle' (what an interviewer might ask "
+                "about this release). Mark preview/incubator features as such, be accurate and "
+                "version-specific, prefer bullets, and never invent features. If unsure whether a "
+                "feature landed in this exact version, say so rather than guess."
+            )
+            user = (f"Ecosystem: {request.ecosystem}\nTechnology: {request.technology}\n"
+                    f"Topic (version): {request.topic}\n"
+                    f"Summarize what is new in this version.")
         elif request.variant == "design":
             system = (
                 "You are a principal software architect. Explain the given topic through a "
