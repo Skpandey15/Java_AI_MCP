@@ -1,26 +1,36 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: online-interview-dev
+# Single "dev" environment: local k3d, LAN HTTPS over nip.io so other devices on
+# the same WiFi can reach it. Images are built locally and imported into k3d by
+# scripts/deploy-dev.ps1 (tags below); the TLS secret is issued by scripts/dev-ca.ps1.
 resources:
   - ../../base
   - vault-secret-store.yaml
   - external-secret.yaml
-  - tls-ingress.yaml
+  - ingress.yaml
+  - gmail-smtp-egress.yaml
 images:
-  - {name: ghcr.io/skpandey15/java-ai-mcp-web-ui, digest: sha256:702f8f875fb9dcb86fe084a95272d9bc19b677d3f1ed190644fb99c352079e02}
-  - {name: ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator, digest: sha256:2e5884e4604b5685a8e3487976cadf577f7eaa1987fea52e4b9e47771515b011}
-  - {name: ghcr.io/skpandey15/java-ai-mcp-ai-service, digest: sha256:0d90f1569f49dd6ced50a943ff583de586420663f412513351cc385651b17396}
+  - {name: ghcr.io/skpandey15/java-ai-mcp-web-ui, newName: local/web-ui, newTag: v4}
+  - {name: ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator, newName: local/interview-orchestrator, newTag: v2}
+  - {name: ghcr.io/skpandey15/java-ai-mcp-ai-service, newName: local/ai-service, newTag: v2}
 configMapGenerator:
   - name: platform-config
     behavior: merge
     literals:
       - SPRING_PROFILES_ACTIVE=dev
       - APP_ENVIRONMENT=dev
-      - CORS_ALLOWED_ORIGINS=https://interview.dev.example.com
-      - KEYCLOAK_ISSUER_URI=https://auth.dev.example.com/realms/online-interview
-      # Adaptive AI Interviewer dark-launch (dev only). uat/prod stay off until the pilot +
-      # fairness review sign off. Kill-switch: set ADAPTIVE_ENABLED=false and re-sync.
+      - CORS_ALLOWED_ORIGINS=https://dev.interview.192.168.1.6.nip.io:8443
+      - KEYCLOAK_ISSUER_URI=https://auth.dev.interview.192.168.1.6.nip.io:8443/realms/online-interview
+      # Adaptive AI Interviewer dark-launch (dev only). Kill-switch: ADAPTIVE_ENABLED=false + re-sync.
       - ADAPTIVE_ENABLED=true
+      - REQUIRE_VERIFIED_EMAIL=false
+      - MAIL_ENABLED=true
+      - MAIL_HOST=smtp.gmail.com
+      - MAIL_PORT=587
+      - MAIL_USERNAME=sunil4.java.ai.expert@gmail.com
+      - MAIL_FROM=sunil4.java.ai.expert@gmail.com
+      - MAIL_FROM_NAME=Online Interview Platform
   - name: web-ui-runtime-config
     behavior: replace
     files:
@@ -38,4 +48,4 @@ patches:
     patch: |-
       - op: replace
         path: /spec/template/spec/containers/0/args
-        value: [start-dev, --import-realm, --health-enabled=true, --hostname=https://auth.dev.example.com, --proxy-headers=xforwarded]
+        value: [start-dev, --import-realm, --health-enabled=true, --hostname=https://auth.dev.interview.192.168.1.6.nip.io:8443, --proxy-headers=xforwarded]

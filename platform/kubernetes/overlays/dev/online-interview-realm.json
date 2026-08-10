@@ -57,13 +57,13 @@
                         "publicClient":  true,
                         "standardFlowEnabled":  true,
                         "directAccessGrantsEnabled":  false,
-                        "rootUrl":  "https://interview.dev.example.com",
-                        "baseUrl":  "https://interview.dev.example.com",
+                        "rootUrl":  "https://dev.interview.192.168.1.6.nip.io:8443",
+                        "baseUrl":  "https://dev.interview.192.168.1.6.nip.io:8443",
                         "redirectUris":  [
-                                             "https://interview.dev.example.com/*"
+                                             "https://dev.interview.192.168.1.6.nip.io:8443/*"
                                          ],
                         "webOrigins":  [
-                                           "https://interview.dev.example.com"
+                                           "https://dev.interview.192.168.1.6.nip.io:8443"
                                        ],
                         "attributes":  {
                                            "pkce.code.challenge.method":  "S256"
