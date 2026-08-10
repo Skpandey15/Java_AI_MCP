@@ -14,32 +14,36 @@ Companion docs: [phase-4a-artifact-ci](../phase-4a-artifact-ci.md) (CI), [phase-
 ## 1. Pipeline at a glance
 
 Delivery runs as a **single GitHub Actions pipeline** (`pipeline.yml`): on every push to `main`
-it runs **build/test → publish images → promote to dev** as **one run** with a visual job graph
-and live per-step logs. Manual **uat/prod** promotion is a separate workflow (`promote-gitops.yml`).
-Delivery is **GitOps**: nothing is `kubectl apply`-ed to shared clusters directly — instead the
-desired image **digests** are written into `platform/kubernetes/overlays/<env>/kustomization.yaml`,
+it runs **build/test → publish images** as **one run** with a visual job graph and live per-step
+logs. **uat/prod** are promoted manually by a separate workflow (`promote-gitops.yml`).
+**`dev` is a local k3d environment deployed from a PR branch** by `scripts/deploy-dev.ps1` (§3) —
+GitHub-hosted runners can't reach the local cluster, so **there is no automated dev promotion**.
+uat/prod delivery is **GitOps**: nothing is `kubectl apply`-ed to shared clusters directly —
+the desired image **digests** are written into `platform/kubernetes/overlays/<env>/kustomization.yaml`
 and **Argo CD** syncs each cluster to match Git.
 
 ```
  git push (main) ─▶ pipeline.yml ── one run, live logs ─────────────────────┐
    ┌───────────────────────────────────────────────────────────────────┐   │
-   │ CI:  web-ui · interview-orchestrator · ai-service ·                │   │
-   │      docker-images · kubernetes-manifests    (also the only jobs   │   │
-   │        │ (all pass)                            that run on a PR)    │   │
-   │        ▼                                                           │   │
-   │ detect ─▶ publish ──────────────▶ promote-dev                      │   │
-   │ (skip     (per image: Trivy gate, (open dev digest PR ─────────────┼───┤ PR
-   │  digest-   SBOM, push sha-<sha>    + auto-merge)                    │   │ merges
-   │  only)     + main, Cosign, attest)                                 │   ▼
-   └───────────────────────────────────────────────────────────────────┘  Argo CD
-                                                                            syncs dev
- manual uat/prod: promote-gitops.yml (dispatch) → health-gated PR (review + Env approval)
+   │ CI:  web-ui · interview-orchestrator · ai-service ·                 │   │
+   │      docker-images · kubernetes-manifests  (the only jobs on a PR)  │   │
+   │        │ (all pass)                                                 │   │
+   │        ▼                                                            │   │
+   │ detect ─▶ publish  (per image: Trivy gate, SBOM, push sha-<sha>     │   │
+   │ (main     + main, Cosign sign, attest → ghcr.io/skpandey15/*)       │   │
+   │  only)                                                              │   │
+   └───────────────────────────────────────────────────────────────────┘   │
+                                                                             │
+ dev  (local k3d): scripts/deploy-dev.ps1 → test + build + k3d import →      │
+      push PR branch → Argo CD (auto-sync) → online-interview-dev (LAN HTTPS)│
+ uat/prod (cloud): promote-gitops.yml (dispatch) → digest PR (review + Env   │
+      approval) → Argo CD (manual sync)                                      │
  security.yml: Trivy fs (vuln+secret) + config scan; on push/PR + weekly cron
 ```
 
 | Workflow | File | Triggers | What it does |
 |---|---|---|---|
-| **pipeline** | `.github/workflows/pipeline.yml` | push `main`, **every PR**, manual | **CI** on push+PR: `web-ui` (npm test+build), `interview-orchestrator` (gradle `test jacocoTestCoverageVerification bootJar`, JDK 25), `ai-service` (uv + ruff + pytest ≥95% + AI-quality gate), `docker-images` (build all three + live health smoke), `kubernetes-manifests` (render overlays + kubeconform + policy). Then on `main` only: `detect` (skip digest-only commits) → `publish` (per image: **Trivy HIGH/CRITICAL gate**, SBOM, push `sha-<sha>`+`main`, **Cosign sign**, attest) → `promote-dev` (open dev digest PR + **auto-merge**). One run, live logs. |
+| **pipeline** | `.github/workflows/pipeline.yml` | push `main`, **every PR**, manual | **CI** on push+PR: `web-ui` (npm test+build), `interview-orchestrator` (gradle `test jacocoTestCoverageVerification bootJar`, JDK 25), `ai-service` (uv + ruff + pytest ≥95% + AI-quality gate), `docker-images` (build all three + live health smoke), `kubernetes-manifests` (render overlays + kubeconform + policy). Then on `main` only: `detect` (skip digest-only commits) → `publish` (per image: **Trivy HIGH/CRITICAL gate**, SBOM, push `sha-<sha>`+`main`, **Cosign sign**, attest). One run, live logs. **Dev is not promoted from CI** — deploy it locally with `scripts/deploy-dev.ps1` (§3). |
 | **promote-gitops** | `.github/workflows/promote-gitops.yml` | manual dispatch → **uat/prod** | Resolves immutable digests, waits for the source env to be **healthy in Argo CD** and to already run the requested release, writes digests into the target overlay, renders+validates, opens a **promotion PR** (your review + the `*-promotion` GitHub Environment approval, then merge). |
 | **security** | `.github/workflows/security.yml` | push `main`, PR, weekly cron, manual | Trivy filesystem scan (vuln + secret) and infra-config scan; fails on HIGH/CRITICAL. |
 
@@ -48,8 +52,10 @@ and **Argo CD** syncs each cluster to match Git.
 - **Migrations are gated**: the `database-migration` Job is the *only* workload allowed to run
   Flyway; app pods run with `SPRING_FLYWAY_ENABLED=false` and an init container that blocks
   readiness until the schema is migrated. See §4.
-- **Promotion is progressive**: dev (auto) → uat (manual, health-gated on dev) → prod (manual,
-  health-gated on uat).
+- **Promotion**: **dev** is deployed from a PR branch locally (`deploy-dev.ps1`, then Argo CD
+  auto-syncs it); **uat** (manual, health-gated on dev) → **prod** (manual, health-gated on uat).
+- **dev runs locally-built images** (`local/*:vN`, imported into k3d); only **uat/prod** consume
+  the immutable `ghcr @sha256` digests from `publish`.
 
 ---
 
@@ -62,15 +68,16 @@ or use the GitHub UI (**Actions → pick workflow → Run workflow**).
 ```bash
 gh workflow run pipeline.yml --repo Skpandey15/Java_AI_MCP --ref main
 ```
-Runs build/test → publish → `promote-dev` as **one run**; the dev digest PR auto-merges → Argo CD
-deploys dev. Watch the whole thing (steps + live logs) in **Actions → pipeline → the run**.
+Runs build/test → `publish` as **one run**. There is **no automated dev deploy** — dev is deployed
+locally from a PR branch (§3). Watch the run (steps + live logs) in **Actions → pipeline → the run**.
 
 ### 2b. From a branch / PR (CI only)
 ```bash
 gh workflow run pipeline.yml --repo Skpandey15/Java_AI_MCP --ref <branch>
 ```
-On a branch or PR only the CI jobs run; `publish`/`promote-dev` run on `main` only — merge to
-`main` to release.
+On a branch or PR only the CI jobs run; `publish` runs on `main` only — merge to `main` to
+release uat/prod images. To see a **PR branch running in dev**, deploy it locally with
+`scripts/deploy-dev.ps1` (§3); CI does not deploy dev.
 
 ### 2c. Promote an existing release to uat or prod
 ```bash
@@ -93,10 +100,21 @@ gh run watch --repo Skpandey15/Java_AI_MCP <run-id>
 
 ## 3. Deploy to the **local k3d cluster** (the hands-on path)
 
-Use this to put a local code change onto the running dev cluster yourself. This is the path to
-follow when you can't delegate it.
+Use this to put a local code change onto a local stack yourself.
 
-**Facts about this environment**
+> **Two local environments — don't confuse them.**
+> - **`dev`** (the primary one): namespace `online-interview-dev`, **LAN HTTPS** at
+>   `https://dev.interview.<lan-ip>.nip.io:8443` (reachable from other devices on the same WiFi).
+>   Deployed from a PR branch by **`scripts/deploy-dev.ps1`** and reconciled by **Argo CD** — see
+>   **§7**. This is the environment the automated flow and Argo manage.
+> - **`local`** (this section): a standalone stack in namespace `online-interview` at
+>   `http://interview.localhost:8081`, deployed **directly** with `deploy-local.ps1` (no Argo).
+>   Useful for quick single-machine iteration; not exposed to the LAN.
+>
+> The manual build mechanics below (§3a–§3c, migrations §4) are identical for both — only the
+> deploy target differs (`deploy-dev.ps1` → Argo vs `deploy-local.ps1` → `kubectl set image`).
+
+**Facts about the `local` stack (this section)**
 - k3d cluster: **`dev`** · namespace: **`online-interview`** · app URL: **http://interview.localhost:8081**
 - Deployment name == container name for all three (`web-ui`, `interview-orchestrator`, `ai-service`),
   so `kubectl set image deploy/<x> <x>=<image>` works.
@@ -311,34 +329,37 @@ installed in the local `dev` cluster (namespace `argocd`).
   ```
   (Change it in **User Info → Update Password**, then delete that secret.)
 
-**What's registered.** An Application `online-interview-dev` (project `online-interview`) that
-syncs `platform/kubernetes/overlays/dev-local` from GitHub `main` into a **separate**
-`online-interview-dev` namespace — so it never touches the stack you run in `online-interview`.
-It is registered with **manual sync** locally (the repo's `application-dev-local.yaml` enables
-auto-sync; manual avoids auto-spinning a full second stack that could exhaust an 8 GB node).
+**What's registered.** One Application `online-interview-dev` (project `online-interview`) that
+syncs `platform/kubernetes/overlays/dev` from GitHub into namespace `online-interview-dev`, with
+**auto-sync + selfHeal + prune** enabled (`platform/gitops/argocd/application-dev.yaml`). This
+replaced the earlier duplicate `dev` / `dev-local` apps of the same name that left Argo `OutOfSync`.
 
-**Three things you must do (they need YOUR credentials — an assistant must not enter tokens):**
-1. **Connect the private repo** so Argo CD can read the manifests (until then the app shows
-   `sync=Unknown`, *"authentication required"*): UI → **Settings → Repositories → Connect Repo**
-   → HTTPS → `https://github.com/Skpandey15/Java_AI_MCP.git` → username + a GitHub PAT with
-   `repo` read.
-2. **Add the image pull secret** so the private GHCR images can be pulled into the new namespace:
-   ```bash
-   kubectl create namespace online-interview-dev --dry-run=client -o yaml | kubectl apply -f -
-   kubectl -n online-interview-dev create secret docker-registry ghcr-pull \
-     --docker-server=ghcr.io --docker-username=Skpandey15 --docker-password="$GHCR_TOKEN"
-   ```
-3. **Publish images**: merge the CVE fix (and any change) to `main`; once `release-images` is
-   green and `promote-gitops` updates the `dev` overlay digests, the manifests Argo CD reads
-   will point at pullable images.
+**The dev deploy loop — `scripts/deploy-dev.ps1`.** Because GitHub-hosted CI can't reach the local
+cluster, dev is deployed from your machine, from a PR branch. The script:
+1. runs the three test suites (fail-fast) — so a PR branch is tested before it runs;
+2. builds the three images and `k3d image import`s them (tags `local/*:vN`);
+3. writes the image tags + current LAN IP into `platform/kubernetes/overlays/dev`;
+4. commits & pushes the PR branch and points the Argo app's `targetRevision` at it;
+5. Argo auto-syncs → rollout → app live at `https://dev.interview.<lan-ip>.nip.io:8443`.
 
-**Then deploy:** in the UI click **Sync** (or `kubectl -n argocd patch app online-interview-dev
---type merge -p '{"operation":{"sync":{}}}'`). To make it fully automatic (true push-to-deploy),
-re-enable auto-sync once you're happy with the resource load:
-```bash
-kubectl -n argocd patch app online-interview-dev --type merge \
-  -p '{"spec":{"syncPolicy":{"automated":{"prune":true,"selfHeal":true}}}}'
+```powershell
+./scripts/deploy-dev.ps1                        # test + build + deploy the current PR branch
+./scripts/deploy-dev.ps1 -LanIp 192.168.1.9     # after the desktop's Wi-Fi IP changes
 ```
+
+> **After a PR merges**, repoint Argo back to `main` (or it breaks when the branch is deleted):
+> ```bash
+> kubectl -n argocd patch app online-interview-dev --type merge \
+>   -p '{"spec":{"source":{"targetRevision":"main"}}}'
+> ```
+> The next `deploy-dev.ps1` run repoints it automatically to whatever branch you deploy.
+
+**LAN HTTPS / TLS.** `scripts/dev-ca.ps1` mints a local CA (kept in git-ignored `scripts/.lan-certs/`)
+and issues the nip.io leaf into the cluster TLS secret. Trust it **once per machine** — the desktop
+and any other device on the WiFi (e.g. a second laptop): `certutil -addstore -f Root scripts\.lan-certs\rootCA.crt`
+(elevated). Distribute only the public `rootCA.crt`, never the key. The desktop's firewall must allow
+inbound **TCP 8443**; reserve its DHCP IP so the nip.io host stays stable (an IP change means re-running
+`deploy-dev.ps1 -LanIp <new>`, which reissues the leaf and rewrites the overlay).
 
 > ⚠️ **Resource note.** Syncing spins up a full parallel stack (Keycloak, Kafka, Postgres, MinIO,
 > LiteLLM, all three apps) in `online-interview-dev` — roughly 3–4 GB on top of your running
@@ -403,8 +424,10 @@ Argo CD's notifications controller sends a Slack message when `online-interview-
 syncing and is Healthy (`:white_check_mark: deployed successfully`) and a warning when it goes
 Degraded. The templates, triggers, and the app subscription are committed:
 - `platform/gitops/local-access/argocd-notifications-cm.yaml` — Slack service, templates, triggers
-- `platform/gitops/local-access/application-dev-local.yaml` — `subscribe.on-deployed.slack` /
-  `subscribe.on-health-degraded.slack` annotations (channel: `deployments`)
+- The `subscribe.on-deployed.slack` / `subscribe.on-health-degraded.slack` annotations (channel:
+  `deployments`) belong on the Argo app `platform/gitops/argocd/application-dev.yaml`. ⚠️ **They were
+  dropped when the duplicate `application-dev-local.yaml` was removed in the dev consolidation** —
+  re-add them there to re-enable notifications.
 
 Everything is wired **except the Slack bot token**, which must be created by a human (an assistant
 must not create Slack apps or enter tokens). One-time setup:
