@@ -34,14 +34,19 @@ foreach ($environment in @('uat', 'prod')) {
     }
 }
 
-foreach ($environment in @('dev', 'uat', 'prod')) {
+# Cloud-grade policies below apply to uat/prod only. 'dev' is now a LOCAL k3d
+# environment (LAN HTTPS over nip.io via a local CA, Traefik ingress, in-cluster
+# Vault over HTTP), so — like the 'local' overlay — it is exempt from the cloud
+# TLS/Vault/ingress checks. Dev still passes the universal invariants above
+# (Flyway disabled, migrated-schema init container, runtime config, no mutable images).
+foreach ($environment in @('uat', 'prod')) {
     $manifest = Get-Content -LiteralPath (Join-Path $RenderedDirectory "$environment.yaml") -Raw
     if ($manifest -notmatch '--proxy-headers=xforwarded') {
         throw "$environment does not configure Keycloak reverse-proxy headers"
     }
 }
 
-foreach ($environment in @('dev', 'uat', 'prod')) {
+foreach ($environment in @('uat', 'prod')) {
     $manifest = Get-Content -LiteralPath (Join-Path $RenderedDirectory "$environment.yaml") -Raw
     if ($manifest -notmatch '(?m)^apiVersion: external-secrets\.io/v1\s*$') {
         throw "$environment does not use the supported external-secrets.io/v1 API"
