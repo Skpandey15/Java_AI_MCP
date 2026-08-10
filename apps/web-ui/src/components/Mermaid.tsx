@@ -44,7 +44,14 @@ export function Mermaid({ code }: { code: string }) {
   }, [code])
 
   if (failed) {
-    return <pre className="mermaid-fallback"><code>{code}</code></pre>
+    // Rendering failed (usually an unparseable AI-generated diagram). Don't dump raw source at
+    // the user — offer it collapsed, behind a clear label, so the page stays clean and readable.
+    return (
+      <details className="mermaid-fallback">
+        <summary>Diagram couldn’t be rendered — show source</summary>
+        <pre><code>{code}</code></pre>
+      </details>
+    )
   }
   return <div className="mermaid-diagram" role="img" aria-label="Architecture diagram" ref={ref} />
 }
