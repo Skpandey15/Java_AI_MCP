@@ -16,6 +16,12 @@
 
   TLS is issued separately by scripts/dev-ca.ps1 (install rootCA.crt once per machine).
   Requires: git, docker, k3d, kubectl (context k3d-dev) on PATH; the 'dev' cluster running.
+  Windows-only: LAN IP auto-detection uses Get-NetIPAddress (pass -LanIp elsewhere).
+
+  The LAN IP is intentionally rendered directly into overlays/dev (ingress hosts,
+  config.js, CORS/issuer, realm) and rewritten here by regex on -LanIp change, rather
+  than templated: Kustomize cannot cleanly substitute a value into Ingress rule
+  hostnames, so a single committed IP + this rewrite is the pragmatic source of truth.
 
 .EXAMPLE
   ./scripts/deploy-dev.ps1                       # test + build + deploy current branch

@@ -10,7 +10,15 @@
   a real padlock. Re-run with a new -LanIp after the desktop's LAN address changes;
   the root CA is reused, so already-installed clients keep trusting the new leaf.
 
-  Requires: openssl and kubectl (context k3d-dev) on PATH.
+  Requires: openssl and kubectl (context k3d-dev) on PATH. Windows-only: LAN IP
+  auto-detection uses Get-NetIPAddress (pass -LanIp on other platforms).
+
+  SECURITY: the generated root CA private key (scripts/.lan-certs/rootCA.key) is
+  long-lived and unencrypted. scripts/.lan-certs/ is git-ignored so it is never
+  committed — keep it that way, and do NOT sync/back-up/share that folder. Only the
+  PUBLIC rootCA.crt is meant to be copied to other machines (to trust the CA). A
+  long-lived CA is intentional: it lets already-trusting clients (e.g. a second
+  laptop) keep working across leaf re-issues when the LAN IP changes.
 
 .EXAMPLE
   pwsh ./scripts/dev-ca.ps1                 # auto-detect Wi-Fi IPv4
