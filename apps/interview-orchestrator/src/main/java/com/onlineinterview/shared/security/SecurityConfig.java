@@ -65,7 +65,15 @@ public class SecurityConfig {
                         .referrerPolicy(referrer -> referrer.policy(
                                 org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
                         .httpStrictTransportSecurity(hsts -> hsts
-                                .includeSubDomains(true).maxAgeInSeconds(31_536_000)))
+                                .includeSubDomains(true).maxAgeInSeconds(31_536_000))
+                        // Defense-in-depth for a JSON API: lock down what a response is ever
+                        // allowed to load or be embedded in, so a stray/HTML error response can't
+                        // become an execution or clickjacking vector. (Cache-Control: no-store is
+                        // already emitted by Spring Security's default headers writer.)
+                        .contentSecurityPolicy(csp -> csp.policyDirectives(
+                                "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"))
+                        .permissionsPolicyHeader(permissions -> permissions.policy(
+                                "geolocation=(), camera=(), microphone=(), payment=(), usb=()")))
                 .cors(cors -> { })
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/actuator/health/**", "/api/v1/health").permitAll()
