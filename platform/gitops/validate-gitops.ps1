@@ -40,7 +40,10 @@ $renderedFiles = Get-ChildItem -LiteralPath $RenderedDirectory -Filter '*.yaml' 
     Where-Object { $_.BaseName -in @('local', 'dev', 'uat', 'prod') }
 foreach ($file in $renderedFiles) {
     $manifest = Get-Content -LiteralPath $file.FullName -Raw
-    if ($file.BaseName -ne 'local' -and
+    # 'local' and 'dev' are local k3d environments that run locally-built images
+    # (imported into k3d by tag, e.g. local/web-ui:v4); only the cloud environments
+    # uat/prod are pinned to immutable ghcr @sha256 digests.
+    if ($file.BaseName -notin @('local', 'dev') -and
         $manifest -notmatch 'image:\s+ghcr\.io/skpandey15/\S+@sha256:[a-f0-9]{64}') {
         throw "$($file.BaseName) does not render immutable application image digests"
     }

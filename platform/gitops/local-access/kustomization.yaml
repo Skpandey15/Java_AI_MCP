@@ -3,4 +3,5 @@ kind: Kustomization
 resources:
   - argocd-cmd-params.yaml
   - argocd-ingress.yaml
-  - application-dev-local.yaml
+  # application-dev-local.yaml removed: dev-local overlay was folded into the single
+  # overlays/dev, managed by the one Argo app platform/gitops/argocd/application-dev.yaml.
