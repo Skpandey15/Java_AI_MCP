@@ -20,6 +20,7 @@ export function AwsTrainingPage() {
   const [phaseId, setPhaseId] = useState(awsPhases[0].id)
   const [day, setDay] = useState(awsPhases[0].days[0])
   const [contentType, setContentType] = useState<AwsContentType>('theoretical')
+  const [topic, setTopic] = useState('')
 
   const phase = useMemo(() => awsPhases.find((p) => p.id === phaseId) ?? awsPhases[0], [phaseId])
   const content = contentType === 'theoretical' ? awsDays[day]?.theoretical : awsDays[day]?.practical
@@ -31,16 +32,28 @@ export function AwsTrainingPage() {
     const next = awsPhases.find((p) => p.id === nextId) ?? awsPhases[0]
     setPhaseId(next.id)
     setDay(next.days[0]) // dependent dropdown resets to the first day of the new phase
+    setTopic('')
   }
 
-  // Selecting a topic opens an AI-generated details page for it (reuses the education flow).
-  function openTopic(topic: string) {
+  function changeDay(nextDay: number) {
+    setDay(nextDay)
+    setTopic('')
+  }
+
+  function changeContentType(next: AwsContentType) {
+    setContentType(next)
+    setTopic('')
+  }
+
+  // Open an AI-generated page for the selected topic. 'guide' = full deep-dive ("Show Details"),
+  // 'notes' = concise interview notes ("Notes").
+  function openTopic(variant: 'guide' | 'notes') {
     if (!topic) return
     const params = new URLSearchParams({
       ecosystem: 'AWS',
       technology: `AWS — ${phase.label}, Day ${day}`,
       topic,
-      variant: 'guide',
+      variant,
       back: '/aws-training',
     })
     navigate(`/education/details?${params}`)
@@ -71,13 +84,13 @@ export function AwsTrainingPage() {
         </label>
         <label>
           Day
-          <select value={day} onChange={(e) => setDay(Number(e.target.value))}>
+          <select value={day} onChange={(e) => changeDay(Number(e.target.value))}>
             {phase.days.map((d) => <option key={d} value={d}>Day {d}</option>)}
           </select>
         </label>
         <label>
           Content Type
-          <select value={contentType} onChange={(e) => setContentType(e.target.value as AwsContentType)}>
+          <select value={contentType} onChange={(e) => changeContentType(e.target.value as AwsContentType)}>
             {(Object.keys(contentTypeLabels) as AwsContentType[]).map((t) => (
               <option key={t} value={t}>{contentTypeLabels[t]}</option>
             ))}
@@ -86,9 +99,9 @@ export function AwsTrainingPage() {
         <label>
           {topicLabel}
           <select
-            value=""
+            value={topic}
             disabled={!hasTopics}
-            onChange={(e) => openTopic(e.target.value)}
+            onChange={(e) => setTopic(e.target.value)}
           >
             <option value="">{hasTopics ? 'Select a topic…' : 'Topics coming soon'}</option>
             {topics.map((entry, i) =>
@@ -103,6 +116,26 @@ export function AwsTrainingPage() {
           </select>
         </label>
       </section>
+
+      <div className="compact-actions aws-actions">
+        <button
+          type="button"
+          disabled={!topic}
+          title="A full zero-to-hero AI deep-dive for this topic."
+          onClick={() => openTopic('guide')}
+        >
+          Show Details
+        </button>
+        <button
+          type="button"
+          className="secondary-button"
+          disabled={!topic}
+          title="Concise, interview-focused AI notes for this topic."
+          onClick={() => openTopic('notes')}
+        >
+          Notes
+        </button>
+      </div>
 
       {content && (
         <p className="aws-day-title">
