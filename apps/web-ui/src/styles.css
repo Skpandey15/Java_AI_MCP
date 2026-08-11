@@ -294,7 +294,8 @@ button:disabled, textarea:disabled { cursor: not-allowed; opacity: .55; }
 .aws-links a { color: #1266d4; }
 .aws-mcqs { margin: 0; padding: 0; list-style: none; display: grid; gap: 1rem; }
 .aws-mcq { padding: 1rem 1.1rem; border: 1px solid #d7e2ef; border-radius: 12px; background: #fbfdff; }
-.aws-mcq-q { margin: 0 0 .6rem; color: #12345c; }
+.aws-mcq-fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+.aws-mcq-q { margin: 0 0 .6rem; padding: 0; color: #12345c; }
 .aws-mcq-options { list-style: none; margin: 0; padding: 0; display: grid; gap: .35rem; }
 .aws-mcq-option label { display: flex; align-items: center; gap: .55rem; padding: .4rem .55rem;
   border: 1px solid transparent; border-radius: 8px; color: #36516f; cursor: pointer; }

@@ -11,31 +11,38 @@ import {
   type AwsDayContent,
 } from './awsTrainingContent'
 
-function McqItem({ index, q, options, answer }: { index: number; q: string; options: string[]; answer: number }) {
+function McqItem(
+  { index, nameBase, q, options, answer }:
+  { index: number; nameBase: string; q: string; options: string[]; answer: number },
+) {
   const [choice, setChoice] = useState<number | null>(null)
-  const name = `mcq-${index}`
+  // Unique per question (and per block/day/content type) so radio groups never merge across
+  // questions — nameBase already encodes day + content type + block index.
+  const name = `mcq-${nameBase}-${index}`
   return (
     <li className="aws-mcq">
-      <p className="aws-mcq-q"><strong>{index + 1}.</strong> {q}</p>
-      <ul className="aws-mcq-options">
-        {options.map((option, i) => {
-          const revealed = choice !== null
-          const state = revealed && i === answer ? ' correct' : revealed && i === choice ? ' wrong' : ''
-          return (
-            <li key={i} className={`aws-mcq-option${state}`}>
-              <label>
-                <input type="radio" name={name} checked={choice === i} onChange={() => setChoice(i)} />
-                {option}
-              </label>
-            </li>
-          )
-        })}
-      </ul>
-      {choice !== null && (
-        <p className="aws-mcq-result" role="status">
-          {choice === answer ? 'Correct.' : `Not quite — the answer is "${options[answer]}".`}
-        </p>
-      )}
+      <fieldset className="aws-mcq-fieldset">
+        <legend className="aws-mcq-q"><strong>{index + 1}.</strong> {q}</legend>
+        <ul className="aws-mcq-options">
+          {options.map((option, i) => {
+            const revealed = choice !== null
+            const state = revealed && i === answer ? ' correct' : revealed && i === choice ? ' wrong' : ''
+            return (
+              <li key={i} className={`aws-mcq-option${state}`}>
+                <label>
+                  <input type="radio" name={name} checked={choice === i} onChange={() => setChoice(i)} />
+                  {option}
+                </label>
+              </li>
+            )
+          })}
+        </ul>
+        {choice !== null && (
+          <p className="aws-mcq-result" role="status">
+            {choice === answer ? 'Correct.' : `Not quite — the answer is "${options[answer]}".`}
+          </p>
+        )}
+      </fieldset>
     </li>
   )
 }
@@ -111,7 +118,7 @@ function Block({ block, keyBase }: { block: AwsBlock; keyBase: string }) {
           {block.heading && <h3>{block.heading}</h3>}
           <ol className="aws-mcqs">
             {block.items.map((m, i) => (
-              <McqItem key={`${keyBase}-${i}`} index={i} q={m.q} options={m.options} answer={m.answer} />
+              <McqItem key={`${keyBase}-${i}`} index={i} nameBase={keyBase} q={m.q} options={m.options} answer={m.answer} />
             ))}
           </ol>
         </section>
