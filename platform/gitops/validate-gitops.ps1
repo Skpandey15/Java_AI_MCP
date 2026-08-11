@@ -40,10 +40,11 @@ $renderedFiles = Get-ChildItem -LiteralPath $RenderedDirectory -Filter '*.yaml' 
     Where-Object { $_.BaseName -in @('local', 'dev', 'uat', 'prod') }
 foreach ($file in $renderedFiles) {
     $manifest = Get-Content -LiteralPath $file.FullName -Raw
-    # 'local' and 'dev' are local k3d environments that run locally-built images
-    # (imported into k3d by tag, e.g. local/web-ui:v4); only the cloud environments
-    # uat/prod are pinned to immutable ghcr @sha256 digests.
-    if ($file.BaseName -notin @('local', 'dev') -and
+    # 'local' is the only environment that runs locally-built images (imported into k3d
+    # by tag). dev now pulls the CI-published ghcr images by immutable digest — the same
+    # as uat/prod — so a merge to main auto-deploys it via the promote-dev job. Only
+    # 'local' is exempt from the immutable-digest invariant.
+    if ($file.BaseName -ne 'local' -and
         $manifest -notmatch 'image:\s+ghcr\.io/skpandey15/\S+@sha256:[a-f0-9]{64}') {
         throw "$($file.BaseName) does not render immutable application image digests"
     }

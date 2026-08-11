@@ -346,8 +346,127 @@ jobs:
         if: github.event.repository.visibility != 'public'
         run: echo "GitHub artifact attestations are unavailable for user-owned private repositories; image digest and Cosign signature remain authoritative."
 
-  # NOTE: the automated "promote-dev" job was removed. The dev environment is a
-  # local k3d stack deployed from a PR branch via scripts/deploy-dev.ps1 (builds
-  # images, imports into k3d, commits overlays/dev, points Argo CD at the branch,
-  # syncs). CI still builds, tests, and publishes images on main above.
-  # uat/prod promotion remains manual via .github/workflows/promote-gitops.yml.
+  # ---------------------------------------------------------------------------
+  # Promote to dev: bump overlays/dev to the just-published immutable digests via
+  # an auto-merged pull request. Argo CD (auto-sync from main) then pulls the new
+  # ghcr images into the k3d dev cluster — so a merge to main auto-deploys dev.
+  # The digest-only commit this produces is skipped by the `detect` job above, so
+  # the pipeline does not loop. uat/prod promotion stays manual (promote-gitops.yml).
+  # ---------------------------------------------------------------------------
+  promote-dev:
+    needs: [detect, publish]
+    if: needs.detect.outputs.publish == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      packages: read
+    environment:
+      name: dev-promotion
+    steps:
+      - name: Require GitOps bot credential
+        env:
+          GITOPS_BOT_TOKEN: ${{ secrets.GITOPS_BOT_TOKEN }}
+        run: |
+          test -n "$GITOPS_BOT_TOKEN" || {
+            echo "::error::Configure GITOPS_BOT_TOKEN so promotion pull requests trigger CI."
+            exit 1
+          }
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          token: ${{ secrets.GITOPS_BOT_TOKEN }}
+          fetch-depth: 0
+
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Authenticate to GitHub Container Registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve immutable image digests
+        id: digests
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          tag="sha-$SOURCE_SHA"
+          resolve() {
+            docker buildx imagetools inspect "$1:$tag" \
+              --format '{{json .Manifest.Digest}}' | tr -d '"'
+          }
+          {
+            echo "web_ui=$(resolve ghcr.io/skpandey15/java-ai-mcp-web-ui)"
+            echo "orchestrator=$(resolve ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator)"
+            echo "ai_service=$(resolve ghcr.io/skpandey15/java-ai-mcp-ai-service)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Update desired state
+        shell: pwsh
+        run: |
+          ./platform/gitops/update-image-digests.ps1 `
+            -Environment 'dev' `
+            -WebUiDigest '${{ steps.digests.outputs.web_ui }}' `
+            -OrchestratorDigest '${{ steps.digests.outputs.orchestrator }}' `
+            -AiServiceDigest '${{ steps.digests.outputs.ai_service }}'
+
+      - uses: azure/setup-kubectl@776406bce94f63e41d621b960d78ee25c8b76ede # v4
+        with:
+          version: v1.33.3
+
+      - name: Render and validate promoted environment
+        run: |
+          set -euo pipefail
+          mkdir rendered
+          kubectl kustomize platform/kubernetes/overlays/dev > rendered/dev.yaml
+          docker run --rm -v "$PWD/rendered:/manifests:ro" \
+            ghcr.io/yannh/kubeconform:v0.7.0 \
+            -strict -summary -ignore-missing-schemas /manifests/dev.yaml
+          pwsh ./platform/gitops/validate-gitops.ps1 \
+            -RenderedDirectory rendered \
+            -GitOpsDirectory platform/gitops/argocd
+
+      - name: Skip when dev already runs this release
+        id: drift
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- platform/kubernetes/overlays/dev/kustomization.yaml; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "dev already pinned to these digests; nothing to promote."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open promotion pull request
+        id: pull_request
+        if: steps.drift.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITOPS_BOT_TOKEN }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          short_sha="${SOURCE_SHA:0:12}"
+          branch="gitops/promote-dev-${short_sha}-${GITHUB_RUN_ID}"
+          git config user.name "online-interview-gitops"
+          git config user.email "online-interview-gitops@users.noreply.github.com"
+          git switch -c "$branch"
+          git add platform/kubernetes/overlays/dev/kustomization.yaml
+          git commit -m "promote dev images from ${short_sha}"
+          git push --set-upstream origin "$branch"
+          pr_url="$(gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "promote: dev images from ${short_sha}" \
+            --body "Promotes the three application images built from \`${SOURCE_SHA}\` to **dev** by immutable registry digest. Rendered-manifest validation passed. Auto-merges once required checks pass; Argo CD then syncs the k3d dev cluster.")"
+          echo "url=$pr_url" >> "$GITHUB_OUTPUT"
+
+      - name: Enable automatic merge after required checks
+        if: steps.drift.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITOPS_BOT_TOKEN }}
+          PR_URL: ${{ steps.pull_request.outputs.url }}
+        run: gh pr merge "$PR_URL" --auto --squash
