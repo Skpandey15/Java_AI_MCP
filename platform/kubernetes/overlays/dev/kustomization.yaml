@@ -15,9 +15,9 @@ resources:
   - ingress.yaml
   - gmail-smtp-egress.yaml
 images:
-  - {name: ghcr.io/skpandey15/java-ai-mcp-web-ui, digest: sha256:f7436338ffa1b96ac425f9dbc9583b395cfa09c6d427f120d0706bd1eda2cb1b}
-  - {name: ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator, digest: sha256:00decad4c75a2fb9bca777873abf388ad3567e4dfdf740040ee8bb7fc7eba1c3}
-  - {name: ghcr.io/skpandey15/java-ai-mcp-ai-service, digest: sha256:1c08f902c756b686409feacc2b2a754f23f88a85d5e9b679cd53d66dda9fb3eb}
+  - {name: ghcr.io/skpandey15/java-ai-mcp-web-ui, digest: sha256:54e75bfd04d4e050260aee80f197d625abf4d23b44e21ab5c4a9430c6dd49015}
+  - {name: ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator, digest: sha256:a9ff7e7a2c0224d506131da76ebf6312f5e61e9df91a3167065168b5d60e161d}
+  - {name: ghcr.io/skpandey15/java-ai-mcp-ai-service, digest: sha256:5587d36ff2f034ccd47aa615446f9f34d879cde4e4b522b9af7b7a4b78384c90}
 configMapGenerator:
   - name: platform-config
     behavior: merge
