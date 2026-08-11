@@ -405,6 +405,36 @@ jobs:
             echo "ai_service=$(resolve ghcr.io/skpandey15/java-ai-mcp-ai-service)"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@d7d6bc7722e3daa8354c50bcb52f4837da5e9b6a # v3.8.1
+
+      - name: Verify image signatures before promoting
+        env:
+          WEB_UI: ghcr.io/skpandey15/java-ai-mcp-web-ui@${{ steps.digests.outputs.web_ui }}
+          ORCHESTRATOR: ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator@${{ steps.digests.outputs.orchestrator }}
+          AI_SERVICE: ghcr.io/skpandey15/java-ai-mcp-ai-service@${{ steps.digests.outputs.ai_service }}
+        run: |
+          set -euo pipefail
+          # Signing is enforced, not decorative: refuse to promote any digest that is not
+          # Cosign-signed by this pipeline's GitHub OIDC identity (keyless). Blocks a tampered
+          # or unsigned image from ever reaching the dev overlay. The identity regexp must
+          # match the signing workflow in publish (pipeline.yml on refs/heads/main); update
+          # this value and the sign step together if that workflow is renamed or moved.
+          for image in "$WEB_UI" "$ORCHESTRATOR" "$AI_SERVICE"; do
+            echo "Verifying signature: $image"
+            # Quiet on success, but surface cosign's full output on failure so a rejected
+            # signature is diagnosable from the logs.
+            if ! output="$(cosign verify \
+              --certificate-identity-regexp '^https://github\.com/Skpandey15/Java_AI_MCP/\.github/workflows/pipeline\.yml@refs/heads/main$' \
+              --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+              "$image" 2>&1)"; then
+              echo "$output"
+              echo "::error::Signature verification failed for $image"
+              exit 1
+            fi
+          done
+          echo "All three images are signed by the pipeline's OIDC identity."
+
       - name: Update desired state
         shell: pwsh
         run: |
