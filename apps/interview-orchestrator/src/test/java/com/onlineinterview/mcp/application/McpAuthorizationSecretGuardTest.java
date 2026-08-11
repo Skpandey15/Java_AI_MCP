@@ -17,8 +17,22 @@ class McpAuthorizationSecretGuardTest {
 
             assertThatThrownBy(() -> new McpAuthorizationSecretGuard(environment, properties))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("MCP_AUTHORIZATION_SECRET");
+                    .hasMessageContaining("app.mcp.authorization-secret")
+                    .hasMessageContaining("must be overridden outside local development");
         }
+    }
+
+    @Test
+    void rejectsCommittedDefaultSecretWhenAProtectedProfileIsAmongSeveralActive() {
+        // Environment.acceptsProfiles matches when ANY active profile is requested, so a
+        // protected profile mixed with unprotected ones must still trip the guard.
+        var environment = new MockEnvironment().withProperty("spring.profiles.active", "local,prod");
+        var properties = new McpAuthorizationProperties();
+        properties.setAuthorizationSecret(McpAuthorizationProperties.LOCAL_DEVELOPMENT_SECRET);
+
+        assertThatThrownBy(() -> new McpAuthorizationSecretGuard(environment, properties))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("must be overridden outside local development");
     }
 
     @Test

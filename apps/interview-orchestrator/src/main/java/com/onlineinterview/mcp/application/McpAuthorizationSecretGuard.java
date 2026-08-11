@@ -18,6 +18,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 class McpAuthorizationSecretGuard {
+    // Single source of truth for the non-local environments this guard protects. Kept as a code
+    // constant rather than a configuration property on purpose: a security guard must not be
+    // disableable through the same configuration surface it is meant to police.
     private static final Profiles PROTECTED_ENVIRONMENTS = Profiles.of("uat", "prod");
 
     McpAuthorizationSecretGuard(Environment environment, McpAuthorizationProperties properties) {
@@ -25,7 +28,9 @@ class McpAuthorizationSecretGuard {
                 && McpAuthorizationProperties.LOCAL_DEVELOPMENT_SECRET
                         .equals(properties.getAuthorizationSecret())) {
             throw new IllegalStateException(
-                    "MCP_AUTHORIZATION_SECRET must be supplied outside local development");
+                    "app.mcp.authorization-secret must be overridden outside local development "
+                            + "(set the MCP_AUTHORIZATION_SECRET environment variable to a "
+                            + "non-default value)");
         }
     }
 }
