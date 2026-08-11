@@ -52,7 +52,7 @@ iteration; see §3.)
 | Workflow | File | Triggers | What it does |
 |---|---|---|---|
 | **pipeline** | `.github/workflows/pipeline.yml` | push `main`, **every PR**, manual | **CI** on push+PR: `web-ui` (npm test+build), `interview-orchestrator` (gradle `test jacocoTestCoverageVerification bootJar`, JDK 25), `ai-service` (uv + ruff + pytest ≥95% + AI-quality gate), `docker-images` (build all three + live health smoke), `kubernetes-manifests` (render overlays + kubeconform + policy). Then on `main` only: `detect` (skip digest-only commits) → `publish` (per image: **Trivy HIGH/CRITICAL gate**, SBOM, push `sha-<sha>`+`main`, **Cosign sign**, attest) → `promote-dev` (bump `overlays/dev` to the new digests via an auto-merged PR; Argo CD then syncs the k3d cluster). One run, live logs. |
-| **promote-gitops** | `.github/workflows/promote-gitops.yml` | manual dispatch → **uat/prod** | Resolves immutable digests, waits for the source env to be **healthy in Argo CD** and to already run the requested release, writes digests into the target overlay, renders+validates, opens a **promotion PR** (your review + the `*-promotion` GitHub Environment approval, then merge). |
+| **promote-gitops** | `.github/workflows/promote-gitops.yml` | manual dispatch → **uat/prod** | Resolves immutable digests, **verifies their Cosign signatures**, waits for the source env to be **healthy in Argo CD** and to already run the requested release, writes digests into the target overlay, renders+validates, opens a **promotion PR**, and **pauses on the required-reviewer `*-promotion` Environment approval** (the enforced human gate) before it can merge. |
 | **security** | `.github/workflows/security.yml` | push `main`, PR, weekly cron, manual | Trivy filesystem scan (vuln + secret) and infra-config scan; fails on HIGH/CRITICAL. |
 
 **Key properties**
@@ -98,8 +98,17 @@ gh workflow run promote-gitops.yml --repo Skpandey15/Java_AI_MCP --ref main \
   -f source_sha=<full-40-char-sha>
 ```
 - uat promotion requires **dev** to be healthy in Argo CD; prod requires **uat** healthy.
-- It opens a PR and pauses on the `uat-promotion` / `prod-promotion` Environment approval —
-  approve in **GitHub → Settings → Environments** (or the PR checks), then merge. Argo CD syncs.
+- Before writing any digest, the workflow **verifies the images' Cosign signatures** against the
+  pipeline's OIDC identity — an unsigned/tampered image fails the promotion.
+- It opens a PR and **pauses on the `uat-promotion` / `prod-promotion` Environment approval**,
+  which is configured with a **required reviewer** (the repo owner). This is the *enforced* human
+  gate: `main` itself does not require PR review, so the Environment approval is what makes a
+  uat/prod deploy deliberate. Approve the paused run in **GitHub → Actions → the job** (or
+  **Settings → Environments**), then merge the digest PR. Argo CD syncs.
+- **Deployment audit trail:** every promotion is recorded three independent ways — the GitHub
+  **Environment deployment history** (approver, SHA, timestamp), the **digest-bump PR**, and the
+  immutable **git commit** in `overlays/<env>/kustomization.yaml`. Argo CD keeps its own per-app
+  sync history.
 
 ### 2d. Watch it
 ```bash
@@ -542,21 +551,34 @@ the token gate.
 ## 9. Pipeline review — findings (2026-08)
 
 **Strengths.** Coverage + AI-quality gates block merges; images are vulnerability-scanned,
-SBOM'd, Cosign-signed and deployed by immutable digest; migrations are strictly gated and
-ordered ahead of app readiness; promotion is progressive and health-gated between environments;
-manifests are schema- and policy-validated in CI before they can ship. This is a genuinely
-production-grade supply chain.
+SBOM'd, Cosign-signed **and signature-verified before every promotion** (dev, uat and prod), then
+deployed by immutable digest; migrations are strictly gated and ordered ahead of app readiness;
+promotion is progressive, health-gated between environments, and **approval-gated for uat/prod**
+(required-reviewer Environments); manifests are schema- and policy-validated in CI before they can
+ship. This is a genuinely production-grade supply chain.
+
+**Production-grade hardening program (2026-08).** Tracked, phased work:
+- **Signature verification enforced (done).** `promote-dev` and `promote-gitops` run `cosign verify`
+  against the pipeline's OIDC identity and fail the promotion on an unsigned/tampered image — signing
+  is enforced, not decorative. In-cluster admission enforcement (Kyverno `verifyImages`) is the
+  planned next layer.
+- **uat/prod approval gates configured (done).** `uat-promotion` / `prod-promotion` Environments now
+  carry a required reviewer (repo owner); a promotion pauses for approval. Previously the
+  Environments did not exist, so the "gate" was not actually enforced.
+- **Deployment audit trail (done).** GitHub Environment deployment history + digest PR + git commit +
+  Argo sync history (see §2c).
 
 **Gaps / follow-ups to consider.**
 1. **No post-deploy smoke against the live environment.** CI smoke-tests images in isolation, but
    nothing verifies the app *after* Argo CD syncs an env. Add an Argo CD `PostSync` health/smoke
-   hook (or a probe job) per environment.
-2. **No automated rollback trigger.** Rollback is manual (revert the promotion commit). Consider
-   Argo Rollouts (canary/analysis) for prod so a failed health check auto-aborts the rollout.
-3. **`main` tag is mutable and also pushed.** uat/prod correctly use digests, but the floating
-   `main` tag invites accidental use in a manifest — keep it for dev convenience only and lint
-   against digest-less image refs in uat/prod overlays (partly covered by validate-gitops).
+   hook (or a probe job) per environment. Enforceable cloud-side for uat/prod; dev is LAN-local so
+   it relies on Argo selfHeal + notifications.
+2. **No automated rollback trigger.** Rollback is manual (revert the promotion commit). Planned as
+   the next program phase: on health-degraded, auto-revert the digest commit (Argo reconciles back).
+3. **`main` tag is mutable and also pushed.** uat/prod/dev correctly use digests, but the floating
+   `main` tag invites accidental use in a manifest — keep it for convenience only; `validate-gitops`
+   requires immutable digests for every non-`local` overlay.
 4. **Local iterative deploys bypass the migration Job.** Solved: `scripts/deploy-local.ps1`
    (§3.0) runs the migration Job automatically when passed `-Migrate`.
-5. **Private-repo provenance attestation is skipped** (GitHub limitation, already noted in the
-   workflow). Digest + Cosign signature remain authoritative; revisit if the repo goes public.
+5. **Provenance attestation** — the repo is **public**, so the `attest-build-provenance` step runs
+   and persists SLSA provenance alongside the digest and Cosign signature.
