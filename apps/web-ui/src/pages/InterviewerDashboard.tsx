@@ -1330,6 +1330,9 @@ export function InterviewerDashboard() {
           <button onClick={() => navigate('/education', { state: { from: '/interviewer' } })}>
             <span>6</span>Educate Yourself
           </button>
+          <button onClick={() => navigate('/aws-training', { state: { from: '/interviewer' } })}>
+            <span>☁️</span>AWS Training
+          </button>
         </nav>
 
         <section className="workspace-content">
