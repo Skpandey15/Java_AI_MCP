@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { interviewApi, type TopicDetails } from '../api/interviewApi'
 import { Markdown } from '../components/Markdown'
 import { educationVariants, toVariant } from './educationVariants'
+
+// Delay before auto-printing so the generated markdown has painted first.
+const AUTO_PRINT_DELAY_MS = 600
 
 export function TopicDetailsPage() {
   const navigate = useNavigate()
@@ -13,6 +16,8 @@ export function TopicDetailsPage() {
   // Where "Choose another topic" returns to — defaults to the education page, but the AWS
   // Training flow passes back=/aws-training so it returns to that selector.
   const back = params.get('back') ?? '/education'
+  // When opened with export=pdf, auto-open the print/Save-as-PDF dialog once the guide is ready.
+  const autoExportPdf = params.get('export') === 'pdf'
   const variant = toVariant(params.get('variant'))
   const meta = educationVariants[variant]
   const [details, setDetails] = useState<TopicDetails>()
@@ -35,6 +40,16 @@ export function TopicDetailsPage() {
     }, 1000)
     return () => window.clearInterval(timer)
   }, [details, error])
+
+  // Auto-open the print/Save-as-PDF dialog once, only for a generated guide opened with
+  // export=pdf. The ref guard ensures it fires a single time even if details re-renders.
+  const hasAutoPrintedRef = useRef(false)
+  useEffect(() => {
+    if (!details || !autoExportPdf || variant !== 'guide' || hasAutoPrintedRef.current) return
+    hasAutoPrintedRef.current = true
+    const timer = window.setTimeout(() => window.print(), AUTO_PRINT_DELAY_MS)
+    return () => window.clearTimeout(timer)
+  }, [details, autoExportPdf, variant])
 
   const progress = Math.min(92, 10 + elapsedSeconds * 1.35)
   const stage = elapsedSeconds < 8
