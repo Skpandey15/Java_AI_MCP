@@ -125,6 +125,27 @@ jobs:
             echo "ai_service=$(resolve ghcr.io/skpandey15/java-ai-mcp-ai-service)"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@d7d6bc7722e3daa8354c50bcb52f4837da5e9b6a # v3.8.1
+
+      - name: Verify image signatures before promoting
+        env:
+          WEB_UI: ghcr.io/skpandey15/java-ai-mcp-web-ui@${{ steps.digests.outputs.web_ui }}
+          ORCHESTRATOR: ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator@${{ steps.digests.outputs.orchestrator }}
+          AI_SERVICE: ghcr.io/skpandey15/java-ai-mcp-ai-service@${{ steps.digests.outputs.ai_service }}
+        run: |
+          set -euo pipefail
+          # Refuse to promote to uat/prod any digest not Cosign-signed by the pipeline's
+          # GitHub OIDC identity (keyless). Enforcement, not decoration.
+          for image in "$WEB_UI" "$ORCHESTRATOR" "$AI_SERVICE"; do
+            echo "Verifying signature: $image"
+            cosign verify \
+              --certificate-identity-regexp '^https://github\.com/Skpandey15/Java_AI_MCP/\.github/workflows/pipeline\.yml@refs/heads/main$' \
+              --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
+              "$image" > /dev/null
+          done
+          echo "All three images are signed by the pipeline's OIDC identity."
+
       - name: Verify source environment uses the requested release
         shell: pwsh
         run: |
