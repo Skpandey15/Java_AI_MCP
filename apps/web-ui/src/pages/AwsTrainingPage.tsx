@@ -1,161 +1,13 @@
 import { useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
-import { Mermaid } from '../components/Mermaid'
 import {
   awsDays,
   awsPhases,
   contentTypeLabels,
-  type AwsBlock,
+  flattenTopics,
   type AwsContentType,
-  type AwsDayContent,
 } from './awsTrainingContent'
-
-function McqItem(
-  { index, nameBase, q, options, answer }:
-  { index: number; nameBase: string; q: string; options: string[]; answer: number },
-) {
-  const [choice, setChoice] = useState<number | null>(null)
-  // Unique per question (and per block/day/content type) so radio groups never merge across
-  // questions — nameBase already encodes day + content type + block index.
-  const name = `mcq-${nameBase}-${index}`
-  return (
-    <li className="aws-mcq">
-      <fieldset className="aws-mcq-fieldset">
-        <legend className="aws-mcq-q"><strong>{index + 1}.</strong> {q}</legend>
-        <ul className="aws-mcq-options">
-          {options.map((option, i) => {
-            const revealed = choice !== null
-            const state = revealed && i === answer ? ' correct' : revealed && i === choice ? ' wrong' : ''
-            return (
-              <li key={i} className={`aws-mcq-option${state}`}>
-                <label>
-                  <input type="radio" name={name} checked={choice === i} onChange={() => setChoice(i)} />
-                  {option}
-                </label>
-              </li>
-            )
-          })}
-        </ul>
-        {choice !== null && (
-          <p className="aws-mcq-result" role="status">
-            {choice === answer ? 'Correct.' : `Not quite — the answer is "${options[answer]}".`}
-          </p>
-        )}
-      </fieldset>
-    </li>
-  )
-}
-
-function Block({ block, keyBase }: { block: AwsBlock; keyBase: string }) {
-  switch (block.kind) {
-    case 'lead':
-      return <p className="summary">{block.text}</p>
-    case 'objectives':
-      return (
-        <section className="aws-block">
-          <h3>Learning objectives</h3>
-          <ul className="aws-list">{block.items.map((t, i) => <li key={i}>{t}</li>)}</ul>
-        </section>
-      )
-    case 'topics':
-      return (
-        <section className="aws-block">
-          {block.heading && <h3>{block.heading}</h3>}
-          <ul className="aws-topics">{block.items.map((t, i) => <li key={i}>{t}</li>)}</ul>
-        </section>
-      )
-    case 'diagram':
-      return (
-        <section className="aws-block">
-          <h3>Architecture diagram</h3>
-          <Mermaid code={block.code} />
-          {block.caption && <p className="aws-caption">{block.caption}</p>}
-        </section>
-      )
-    case 'callout':
-      return (
-        <section className={`aws-callout aws-callout-${block.tone ?? 'info'}`}>
-          <h3>{block.heading}</h3>
-          <ul className="aws-list">{block.items.map((t, i) => <li key={i}>{t}</li>)}</ul>
-        </section>
-      )
-    case 'steps':
-      return (
-        <section className="aws-block">
-          {block.heading && <h3>{block.heading}</h3>}
-          <ol className="aws-steps">{block.items.map((t, i) => <li key={i}>{t}</li>)}</ol>
-        </section>
-      )
-    case 'checklist':
-      return (
-        <section className="aws-block">
-          {block.heading && <h3>{block.heading}</h3>}
-          <ul className="aws-checklist">
-            {block.items.map((t, i) => (
-              <li key={i}><label><input type="checkbox" />{t}</label></li>
-            ))}
-          </ul>
-        </section>
-      )
-    case 'code':
-      return (
-        <section className="aws-block">
-          {block.heading && <h3>{block.heading}</h3>}
-          <pre className="aws-code"><code>{block.code}</code></pre>
-        </section>
-      )
-    case 'scenarios':
-      return (
-        <section className="aws-block">
-          {block.heading && <h3>{block.heading}</h3>}
-          <ul className="aws-list">{block.items.map((t, i) => <li key={i}>{t}</li>)}</ul>
-        </section>
-      )
-    case 'mcqs':
-      return (
-        <section className="aws-block">
-          {block.heading && <h3>{block.heading}</h3>}
-          <ol className="aws-mcqs">
-            {block.items.map((m, i) => (
-              <McqItem key={`${keyBase}-${i}`} index={i} nameBase={keyBase} q={m.q} options={m.options} answer={m.answer} />
-            ))}
-          </ol>
-        </section>
-      )
-    case 'interview':
-      return (
-        <section className="aws-callout aws-callout-info">
-          {block.heading && <h3>{block.heading}</h3>}
-          <p className="aws-mcq-q"><strong>Q.</strong> {block.q}</p>
-          <details className="aws-interview">
-            <summary>Show model answer</summary>
-            <p>{block.a}</p>
-          </details>
-        </section>
-      )
-    case 'links':
-      return (
-        <section className="aws-block">
-          {block.heading && <h3>{block.heading}</h3>}
-          <ul className="aws-links">
-            {block.items.map((l, i) => (
-              <li key={i}><a href={l.href} target="_blank" rel="noreferrer noopener">{l.label}</a></li>
-            ))}
-          </ul>
-        </section>
-      )
-    case 'deliverable':
-      return (
-        <section className="aws-deliverable">
-          <h3>Deliverable</h3>
-          <p>{block.text}</p>
-        </section>
-      )
-    default:
-      return null
-  }
-}
 
 export function AwsTrainingPage() {
   const navigate = useNavigate()
@@ -170,6 +22,10 @@ export function AwsTrainingPage() {
   const [contentType, setContentType] = useState<AwsContentType>('theoretical')
 
   const phase = useMemo(() => awsPhases.find((p) => p.id === phaseId) ?? awsPhases[0], [phaseId])
+  const content = contentType === 'theoretical' ? awsDays[day]?.theoretical : awsDays[day]?.practical
+  const topics = content?.topics ?? []
+  const hasTopics = flattenTopics(topics).length > 0
+  const topicLabel = `${contentTypeLabels[contentType]} topics`
 
   function changePhase(nextId: number) {
     const next = awsPhases.find((p) => p.id === nextId) ?? awsPhases[0]
@@ -177,8 +33,18 @@ export function AwsTrainingPage() {
     setDay(next.days[0]) // dependent dropdown resets to the first day of the new phase
   }
 
-  const content: AwsDayContent | undefined =
-    contentType === 'theoretical' ? awsDays[day]?.theoretical : awsDays[day]?.practical
+  // Selecting a topic opens an AI-generated details page for it (reuses the education flow).
+  function openTopic(topic: string) {
+    if (!topic) return
+    const params = new URLSearchParams({
+      ecosystem: 'AWS',
+      technology: `AWS — ${phase.label}, Day ${day}`,
+      topic,
+      variant: 'guide',
+      back: '/aws-training',
+    })
+    navigate(`/education/details?${params}`)
+  }
 
   return (
     <main className="dashboard education-page aws-training-page">
@@ -191,7 +57,10 @@ export function AwsTrainingPage() {
           {isInterviewer ? 'Interview management' : 'Back to my interviews'}
         </button>
       </div>
-      <p className="summary">{phase.label} · {phase.focus}</p>
+      <p className="summary">
+        {phase.label} · {phase.focus}. Choose a phase, day and content type, then pick a topic to
+        open an AI-generated deep-dive.
+      </p>
 
       <section className="education-selector aws-selector">
         <label>
@@ -214,20 +83,31 @@ export function AwsTrainingPage() {
             ))}
           </select>
         </label>
+        <label>
+          {topicLabel}
+          <select
+            value=""
+            disabled={!hasTopics}
+            onChange={(e) => openTopic(e.target.value)}
+          >
+            <option value="">{hasTopics ? 'Select a topic…' : 'Topics coming soon'}</option>
+            {topics.map((entry, i) =>
+              typeof entry === 'string' ? (
+                <option key={`t-${i}`} value={entry}>{entry}</option>
+              ) : (
+                <optgroup key={`g-${i}`} label={entry.group}>
+                  {entry.items.map((item) => <option key={item} value={item}>{item}</option>)}
+                </optgroup>
+              ),
+            )}
+          </select>
+        </label>
       </section>
 
-      {content ? (
-        <article className="aws-content">
-          <header className="aws-content-head">
-            <p className="eyebrow">Day {day} · {contentTypeLabels[contentType]}</p>
-            <h2>{content.title}</h2>
-          </header>
-          {content.blocks.map((block, i) => (
-            <Block key={`${day}-${contentType}-${i}`} block={block} keyBase={`${day}-${contentType}-${i}`} />
-          ))}
-        </article>
-      ) : (
-        <p className="summary">No content available for this selection.</p>
+      {content && (
+        <p className="aws-day-title">
+          <strong>Day {day} · {contentTypeLabels[contentType]}:</strong> {content.title}
+        </p>
       )}
     </main>
   )
