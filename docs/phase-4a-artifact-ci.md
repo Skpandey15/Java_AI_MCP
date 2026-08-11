@@ -50,10 +50,15 @@ Example local verification after installing Cosign:
 
 ```bash
 cosign verify \
-  --certificate-identity-regexp='https://github.com/Skpandey15/Java_AI_MCP/.github/workflows/release-images.yml@refs/heads/main' \
+  --certificate-identity-regexp='https://github.com/Skpandey15/Java_AI_MCP/.github/workflows/pipeline.yml@refs/heads/main' \
   --certificate-oidc-issuer='https://token.actions.githubusercontent.com' \
   ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator@sha256:<digest>
 ```
+
+This same verification is now **enforced automatically** in the delivery path: both `promote-dev`
+(in `pipeline.yml`) and `promote-gitops.yml` run `cosign verify` against the resolved digests and
+fail the promotion if any image is not signed by the pipeline's OIDC identity — so an unsigned or
+tampered image can never be written into an environment overlay.
 
 GitHub does not persist artifact attestations for user-owned private repositories. In that configuration, verify the immutable digest and Cosign signature. When attestations are supported, verify them with GitHub CLI:
 
