@@ -46,8 +46,9 @@ export function AwsTrainingPage() {
   }
 
   // Open an AI-generated page for the selected topic. 'guide' = full deep-dive ("Show Details"),
-  // 'notes' = concise interview notes ("Notes").
-  function openTopic(variant: 'guide' | 'notes') {
+  // 'notes' = concise interview notes ("Notes"). When exportPdf is set, the details page opens
+  // the print/PDF dialog automatically once the content has been generated.
+  function openTopic(variant: 'guide' | 'notes', exportPdf = false) {
     if (!topic) return
     const params = new URLSearchParams({
       ecosystem: 'AWS',
@@ -56,6 +57,7 @@ export function AwsTrainingPage() {
       variant,
       back: '/aws-training',
     })
+    if (exportPdf) params.set('export', 'pdf')
     navigate(`/education/details?${params}`)
   }
 
@@ -134,6 +136,15 @@ export function AwsTrainingPage() {
           onClick={() => openTopic('notes')}
         >
           Notes
+        </button>
+        <button
+          type="button"
+          className="secondary-button"
+          disabled={!topic}
+          title="Generate the deep-dive and open the print / Save-as-PDF dialog."
+          onClick={() => openTopic('guide', true)}
+        >
+          Export To PDF
         </button>
       </div>
 

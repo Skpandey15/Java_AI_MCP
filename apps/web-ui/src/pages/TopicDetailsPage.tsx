@@ -13,6 +13,8 @@ export function TopicDetailsPage() {
   // Where "Choose another topic" returns to — defaults to the education page, but the AWS
   // Training flow passes back=/aws-training so it returns to that selector.
   const back = params.get('back') ?? '/education'
+  // When opened with export=pdf, auto-open the print/Save-as-PDF dialog once the guide is ready.
+  const autoExportPdf = params.get('export') === 'pdf'
   const variant = toVariant(params.get('variant'))
   const meta = educationVariants[variant]
   const [details, setDetails] = useState<TopicDetails>()
@@ -35,6 +37,13 @@ export function TopicDetailsPage() {
     }, 1000)
     return () => window.clearInterval(timer)
   }, [details, error])
+
+  useEffect(() => {
+    if (!details || !autoExportPdf) return
+    // Small delay so the markdown has painted before the print dialog captures it.
+    const timer = window.setTimeout(() => window.print(), 600)
+    return () => window.clearTimeout(timer)
+  }, [details, autoExportPdf])
 
   const progress = Math.min(92, 10 + elapsedSeconds * 1.35)
   const stage = elapsedSeconds < 8
