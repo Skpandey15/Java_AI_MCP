@@ -2,8 +2,12 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: online-interview-dev
 # Single "dev" environment: local k3d, LAN HTTPS over nip.io so other devices on
-# the same WiFi can reach it. Images are built locally and imported into k3d by
-# scripts/deploy-dev.ps1 (tags below); the TLS secret is issued by scripts/dev-ca.ps1.
+# the same WiFi can reach it. Application images are the CI-published, cosign-signed
+# ghcr images pinned by immutable digest; Argo CD (auto-sync from main) pulls them,
+# so a merge to main auto-deploys dev via the pipeline's promote-dev job. The digests
+# below are advanced automatically by that job; the TLS secret is issued by
+# scripts/dev-ca.ps1, and the private ghcr images require a 'ghcr-pull' docker-registry
+# secret in the online-interview-dev namespace (see docs/phase-4b-kubernetes.md).
 resources:
   - ../../base
   - vault-secret-store.yaml
@@ -11,9 +15,9 @@ resources:
   - ingress.yaml
   - gmail-smtp-egress.yaml
 images:
-  - {name: ghcr.io/skpandey15/java-ai-mcp-web-ui, newName: local/web-ui, newTag: v4}
-  - {name: ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator, newName: local/interview-orchestrator, newTag: v2}
-  - {name: ghcr.io/skpandey15/java-ai-mcp-ai-service, newName: local/ai-service, newTag: v2}
+  - {name: ghcr.io/skpandey15/java-ai-mcp-web-ui, digest: sha256:c4fc6193393548d3db984cf963d7355b581436a8157fffcd4aad02815c26ec29}
+  - {name: ghcr.io/skpandey15/java-ai-mcp-interview-orchestrator, digest: sha256:6c0eddd035ac76fd8261188394ea0c41bfd55e5c57d6bbbd5d12999ac64fbe94}
+  - {name: ghcr.io/skpandey15/java-ai-mcp-ai-service, digest: sha256:0ecbf3e07c2545dd3c2efefa7f3256dca289f7bdb85d69274f17e0db8bcb1d99}
 configMapGenerator:
   - name: platform-config
     behavior: merge

@@ -15,12 +15,20 @@ Companion docs: [phase-4a-artifact-ci](../phase-4a-artifact-ci.md) (CI), [phase-
 
 Delivery runs as a **single GitHub Actions pipeline** (`pipeline.yml`): on every push to `main`
 it runs **build/test → publish images** as **one run** with a visual job graph and live per-step
-logs. **uat/prod** are promoted manually by a separate workflow (`promote-gitops.yml`).
-**`dev` is a local k3d environment deployed from a PR branch** by `scripts/deploy-dev.ps1` (§3) —
-GitHub-hosted runners can't reach the local cluster, so **there is no automated dev promotion**.
-uat/prod delivery is **GitOps**: nothing is `kubectl apply`-ed to shared clusters directly —
-the desired image **digests** are written into `platform/kubernetes/overlays/<env>/kustomization.yaml`
-and **Argo CD** syncs each cluster to match Git.
+logs, then **auto-promotes `dev`**. **uat/prod** are promoted manually by a separate workflow
+(`promote-gitops.yml`). **`dev` auto-deploys on merge to `main`**: the `promote-dev` job bumps
+`overlays/dev` to the freshly published image **digests** via an auto-merged PR, and **Argo CD**
+(auto-sync from `main`, running inside the k3d cluster) pulls those ghcr images — so no
+GitHub-hosted runner needs to reach the cluster. All of dev/uat/prod delivery is **GitOps**:
+nothing is `kubectl apply`-ed to shared clusters directly — the desired image **digests** are
+written into `platform/kubernetes/overlays/<env>/kustomization.yaml` and **Argo CD** syncs each
+cluster to match Git. (`scripts/deploy-dev.ps1` remains a manual local-build override for fast
+iteration; see §3.)
+
+> **Prerequisite for dev auto-deploy:** the private ghcr images require a `ghcr-pull`
+> docker-registry secret in the `online-interview-dev` namespace (one-time; see
+> [phase-4b-kubernetes.md](../phase-4b-kubernetes.md)), and the repo needs `GITOPS_BOT_TOKEN`
+> set plus **Allow auto-merge** enabled.
 
 ```
  git push (main) ─▶ pipeline.yml ── one run, live logs ─────────────────────┐
@@ -34,8 +42,8 @@ and **Argo CD** syncs each cluster to match Git.
    │  only)                                                              │   │
    └───────────────────────────────────────────────────────────────────┘   │
                                                                              │
- dev  (local k3d): scripts/deploy-dev.ps1 → test + build + k3d import →      │
-      push PR branch → Argo CD (auto-sync) → online-interview-dev (LAN HTTPS)│
+ dev  (local k3d): promote-dev (auto) → digest PR (auto-merge) → Argo CD     │
+      (auto-sync) pulls ghcr images → online-interview-dev (LAN HTTPS)       │
  uat/prod (cloud): promote-gitops.yml (dispatch) → digest PR (review + Env   │
       approval) → Argo CD (manual sync)                                      │
  security.yml: Trivy fs (vuln+secret) + config scan; on push/PR + weekly cron
@@ -43,7 +51,7 @@ and **Argo CD** syncs each cluster to match Git.
 
 | Workflow | File | Triggers | What it does |
 |---|---|---|---|
-| **pipeline** | `.github/workflows/pipeline.yml` | push `main`, **every PR**, manual | **CI** on push+PR: `web-ui` (npm test+build), `interview-orchestrator` (gradle `test jacocoTestCoverageVerification bootJar`, JDK 25), `ai-service` (uv + ruff + pytest ≥95% + AI-quality gate), `docker-images` (build all three + live health smoke), `kubernetes-manifests` (render overlays + kubeconform + policy). Then on `main` only: `detect` (skip digest-only commits) → `publish` (per image: **Trivy HIGH/CRITICAL gate**, SBOM, push `sha-<sha>`+`main`, **Cosign sign**, attest). One run, live logs. **Dev is not promoted from CI** — deploy it locally with `scripts/deploy-dev.ps1` (§3). |
+| **pipeline** | `.github/workflows/pipeline.yml` | push `main`, **every PR**, manual | **CI** on push+PR: `web-ui` (npm test+build), `interview-orchestrator` (gradle `test jacocoTestCoverageVerification bootJar`, JDK 25), `ai-service` (uv + ruff + pytest ≥95% + AI-quality gate), `docker-images` (build all three + live health smoke), `kubernetes-manifests` (render overlays + kubeconform + policy). Then on `main` only: `detect` (skip digest-only commits) → `publish` (per image: **Trivy HIGH/CRITICAL gate**, SBOM, push `sha-<sha>`+`main`, **Cosign sign**, attest) → `promote-dev` (bump `overlays/dev` to the new digests via an auto-merged PR; Argo CD then syncs the k3d cluster). One run, live logs. |
 | **promote-gitops** | `.github/workflows/promote-gitops.yml` | manual dispatch → **uat/prod** | Resolves immutable digests, waits for the source env to be **healthy in Argo CD** and to already run the requested release, writes digests into the target overlay, renders+validates, opens a **promotion PR** (your review + the `*-promotion` GitHub Environment approval, then merge). |
 | **security** | `.github/workflows/security.yml` | push `main`, PR, weekly cron, manual | Trivy filesystem scan (vuln + secret) and infra-config scan; fails on HIGH/CRITICAL. |
 
@@ -52,10 +60,11 @@ and **Argo CD** syncs each cluster to match Git.
 - **Migrations are gated**: the `database-migration` Job is the *only* workload allowed to run
   Flyway; app pods run with `SPRING_FLYWAY_ENABLED=false` and an init container that blocks
   readiness until the schema is migrated. See §4.
-- **Promotion**: **dev** is deployed from a PR branch locally (`deploy-dev.ps1`, then Argo CD
-  auto-syncs it); **uat** (manual, health-gated on dev) → **prod** (manual, health-gated on uat).
-- **dev runs locally-built images** (`local/*:vN`, imported into k3d); only **uat/prod** consume
-  the immutable `ghcr @sha256` digests from `publish`.
+- **Promotion**: **dev** auto-promotes on merge to `main` (`promote-dev` → auto-merged digest PR →
+  Argo CD auto-sync); **uat** (manual, health-gated on dev) → **prod** (manual, health-gated on uat).
+- **All shared envs run immutable `ghcr @sha256` digests** from `publish`; only the `local`
+  overlay uses locally-built images. `scripts/deploy-dev.ps1` can still local-build over dev for
+  fast iteration, but the GitOps desired state is the ghcr digest in `overlays/dev`.
 
 ---
 
@@ -68,16 +77,18 @@ or use the GitHub UI (**Actions → pick workflow → Run workflow**).
 ```bash
 gh workflow run pipeline.yml --repo Skpandey15/Java_AI_MCP --ref main
 ```
-Runs build/test → `publish` as **one run**. There is **no automated dev deploy** — dev is deployed
-locally from a PR branch (§3). Watch the run (steps + live logs) in **Actions → pipeline → the run**.
+Runs build/test → `publish` → `promote-dev` as **one run**; `promote-dev` opens an auto-merged
+digest PR and Argo CD then syncs the dev cluster. Watch the run (steps + live logs) in
+**Actions → pipeline → the run**.
 
 ### 2b. From a branch / PR (CI only)
 ```bash
 gh workflow run pipeline.yml --repo Skpandey15/Java_AI_MCP --ref <branch>
 ```
-On a branch or PR only the CI jobs run; `publish` runs on `main` only — merge to `main` to
-release uat/prod images. To see a **PR branch running in dev**, deploy it locally with
-`scripts/deploy-dev.ps1` (§3); CI does not deploy dev.
+On a branch or PR only the CI jobs run; `publish` and `promote-dev` run on `main` only — merge
+to `main` to publish images and auto-deploy dev. To preview a **PR branch in dev before merging**,
+local-build over it with `scripts/deploy-dev.ps1` (§3); the next merge to `main` returns dev to
+the GitOps digest.
 
 ### 2c. Promote an existing release to uat or prod
 ```bash
