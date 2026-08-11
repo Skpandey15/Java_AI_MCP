@@ -136,13 +136,21 @@ jobs:
         run: |
           set -euo pipefail
           # Refuse to promote to uat/prod any digest not Cosign-signed by the pipeline's
-          # GitHub OIDC identity (keyless). Enforcement, not decoration.
+          # GitHub OIDC identity (keyless). Enforcement, not decoration. The identity regexp
+          # must match the signing workflow in publish (pipeline.yml on refs/heads/main); if
+          # that workflow file is renamed or moved, update this value and the sign step together.
           for image in "$WEB_UI" "$ORCHESTRATOR" "$AI_SERVICE"; do
             echo "Verifying signature: $image"
-            cosign verify \
+            # Quiet on success, but surface cosign's full output on failure so a rejected
+            # signature is diagnosable from the logs.
+            if ! output="$(cosign verify \
               --certificate-identity-regexp '^https://github\.com/Skpandey15/Java_AI_MCP/\.github/workflows/pipeline\.yml@refs/heads/main$' \
               --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
-              "$image" > /dev/null
+              "$image" 2>&1)"; then
+              echo "$output"
+              echo "::error::Signature verification failed for $image"
+              exit 1
+            fi
           done
           echo "All three images are signed by the pipeline's OIDC identity."
 
