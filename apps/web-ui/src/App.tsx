@@ -10,6 +10,7 @@ import { SubmissionReviewPage } from './pages/SubmissionReviewPage'
 import { CandidateResultPage } from './pages/CandidateResultPage'
 import { EducationPage } from './pages/EducationPage'
 import { TopicDetailsPage } from './pages/TopicDetailsPage'
+import { AwsTrainingPage } from './pages/AwsTrainingPage'
 
 export function dashboardPath(roles: string[]) {
   if (roles.includes('interviewer')) return '/interviewer'
@@ -61,6 +62,7 @@ export function App() {
           <Route path="/interviewer/submissions/:sessionId" element={<ProtectedRoute role="interviewer"><SubmissionReviewPage /></ProtectedRoute>} />
           <Route path="/education" element={<ProtectedRoute role={['interviewer', 'candidate']}><EducationPage /></ProtectedRoute>} />
           <Route path="/education/details" element={<ProtectedRoute role={['interviewer', 'candidate']}><TopicDetailsPage /></ProtectedRoute>} />
+          <Route path="/aws-training" element={<ProtectedRoute role={['interviewer', 'candidate']}><AwsTrainingPage /></ProtectedRoute>} />
           <Route path="/unauthorized" element={<main className="dashboard"><h1>Access denied</h1><p>Your account does not have permission for this dashboard.</p></main>} />
         </Routes>
       </BrowserRouter>
