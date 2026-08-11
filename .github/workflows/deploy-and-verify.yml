@@ -1,0 +1,136 @@
+name: deploy-and-verify
+
+# Deploy a merged promotion to uat/prod and verify it — with AUTOMATIC ROLLBACK.
+#
+# uat/prod are manual-sync Argo CD apps (automated.enabled: false), so after a promotion
+# digest is merged to main a human decides when it actually rolls out. This workflow is that
+# rollout: it syncs the app to the current desired state, waits for it to become Synced +
+# Healthy, and if it does not, rolls the cluster back to the last known-good revision AND
+# reverts the git desired state so the unhealthy digest is not re-applied on the next sync.
+#
+# dev is intentionally excluded: it is a LAN k3d cluster (unreachable from GitHub-hosted
+# runners) whose Argo app is auto-sync + selfHeal, so it already reconciles to git; a bad dev
+# release is rolled back by reverting the dev digest commit (Argo auto-syncs the revert).
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment to deploy and verify
+        required: true
+        type: choice
+        options: [uat, prod]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  # Never let two rollouts (or a rollout and its rollback) race on the same environment.
+  group: deploy-${{ github.event.inputs.environment }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      APP: online-interview-${{ inputs.environment }}
+      ARGOCD_SERVER: ${{ secrets.ARGOCD_SERVER }}
+      ARGOCD_AUTH_TOKEN: ${{ secrets.ARGOCD_AUTH_TOKEN }}
+      ARGOCD_OPTS: --grpc-web
+      ARGOCD_VERSION: v3.4.2
+      # Rollout gets a generous budget (prod can be slow); rollback stays tight and bounded.
+      DEPLOY_TIMEOUT: "300"
+      ROLLBACK_TIMEOUT: "180"
+    steps:
+      - name: Require Argo CD access
+        run: |
+          set -euo pipefail
+          test -n "$ARGOCD_SERVER" || { echo "::error::ARGOCD_SERVER is not configured"; exit 1; }
+          test -n "$ARGOCD_AUTH_TOKEN" || { echo "::error::ARGOCD_AUTH_TOKEN is not configured"; exit 1; }
+
+      - name: Install Argo CD CLI
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location \
+            --output argocd-linux-amd64 \
+            "https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/argocd-linux-amd64"
+          curl --fail --silent --show-error --location \
+            --output cli_checksums.txt \
+            "https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/cli_checksums.txt"
+          grep 'argocd-linux-amd64$' cli_checksums.txt | sha256sum --check
+          install -m 0755 argocd-linux-amd64 /usr/local/bin/argocd
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          token: ${{ secrets.GITOPS_BOT_TOKEN }}
+          fetch-depth: 0
+
+      - name: Record current healthy revision for rollback
+        id: prev
+        run: |
+          set -euo pipefail
+          # Before syncing, the last entry in Argo's deployment history is the currently running
+          # (known-good) revision — the point we roll back to if the new one is bad. Read it from
+          # structured JSON (not the human-readable table) so it survives CLI format changes.
+          prev_id="$(argocd app get "$APP" -o json | jq -r '.status.history[-1].id')"
+          if [ -z "$prev_id" ] || [ "$prev_id" = "null" ]; then
+            echo "::error::Could not read Argo CD deployment history for $APP"; exit 1
+          fi
+          echo "id=$prev_id" >> "$GITHUB_OUTPUT"
+          echo "Known-good rollback point for $APP: history id $prev_id"
+
+      - name: Sync and verify health
+        run: |
+          set -euo pipefail
+          # Sync the app to the desired state already merged into main, then require it to
+          # become Synced AND Healthy within the timeout. A failure here trips the rollback.
+          argocd app sync "$APP" --timeout "$DEPLOY_TIMEOUT"
+          argocd app wait "$APP" --sync --health --timeout "$DEPLOY_TIMEOUT"
+          echo "$APP is Synced and Healthy on the new release."
+
+      - name: Roll back on failed deployment
+        if: failure() && steps.prev.outputs.id != ''
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          PREV_ID: ${{ steps.prev.outputs.id }}
+          GH_TOKEN: ${{ secrets.GITOPS_BOT_TOKEN }}
+        run: |
+          set -euo pipefail
+          echo "::warning::$APP is unhealthy — rolling back to history id $PREV_ID"
+
+          # 1. Immediate service restore: redeploy the previous known-good revision. (Argo CD
+          #    permits rollback only because uat/prod have automated sync disabled.)
+          argocd app rollback "$APP" "$PREV_ID" --timeout "$ROLLBACK_TIMEOUT"
+          argocd app wait "$APP" --health --timeout "$ROLLBACK_TIMEOUT"
+          echo "$APP rolled back to the previous healthy revision."
+
+          # 2. Reconcile git so the unhealthy digest is not re-applied on the next sync: revert
+          #    the promotion commit (the last commit that touched this env's overlay) via an
+          #    auto-merged PR. Argo's desired state then matches the rolled-back cluster.
+          overlay="platform/kubernetes/overlays/${ENVIRONMENT}/kustomization.yaml"
+          bad_commit="$(git log -1 --format=%H -- "$overlay")"
+          test -n "$bad_commit" || { echo "::error::Could not find the promotion commit to revert"; exit 1; }
+          # Only auto-revert if that commit is actually a promotion of this environment. If it is
+          # anything else, do not rewrite git — Argo CD is already rolled back, so fail loudly and
+          # let a human reconcile rather than risk reverting an unrelated change.
+          subject="$(git log -1 --format=%s "$bad_commit")"
+          case "$subject" in
+            *promote*"${ENVIRONMENT}"*) : ;;
+            *) echo "::error::Last change to $overlay ($bad_commit: \"$subject\") is not a ${ENVIRONMENT} promotion. Argo CD was rolled back, but git was NOT auto-reverted — reconcile manually."; exit 1 ;;
+          esac
+          branch="gitops/rollback-${ENVIRONMENT}-${GITHUB_RUN_ID}"
+          git config user.name "online-interview-gitops"
+          git config user.email "online-interview-gitops@users.noreply.github.com"
+          git switch -c "$branch"
+          git revert --no-edit "$bad_commit"
+          git push --set-upstream origin "$branch"
+          pr_url="$(gh pr create \
+            --base main \
+            --head "$branch" \
+            --title "rollback: ${ENVIRONMENT} to the previous healthy digest" \
+            --body "Automatic rollback. ${APP} was unhealthy after syncing commit ${bad_commit}. Argo CD has already been rolled back to history id ${PREV_ID}; this reverts the git desired state so the unhealthy digest is not re-applied on the next sync.")"
+          gh pr merge "$pr_url" --auto --squash
+          echo "::error::Deployment to $APP failed health verification and was rolled back. Reconciliation PR: $pr_url"
+          exit 1
