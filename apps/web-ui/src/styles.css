@@ -262,45 +262,8 @@ button:disabled, textarea:disabled { cursor: not-allowed; opacity: .55; }
 
 /* --- AWS Training ---------------------------------------------------------- */
 .aws-training-page { max-width: 1040px; }
+.aws-selector { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
 .aws-selector select { text-transform: none; }
-.aws-content { margin-top: 1.5rem; display: grid; gap: 1.4rem; }
-.aws-content-head h2 { margin: .2rem 0 0; color: #12345c; }
-.aws-block { display: grid; gap: .6rem; }
-.aws-block h3 { margin: 0; color: #1459ad; font-size: 1.05rem; }
-.aws-list { margin: 0; padding-left: 1.2rem; display: grid; gap: .35rem; color: #36516f; }
-.aws-topics { list-style: none; margin: 0; padding: 0; display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .5rem; }
-.aws-topics li { padding: .5rem .7rem; border: 1px solid #d7e2ef; border-radius: 9px;
-  background: #f7faff; color: #36516f; font-size: .9rem; }
-.aws-steps { margin: 0; padding-left: 1.3rem; display: grid; gap: .45rem; color: #36516f; }
-.aws-caption { margin: 0; color: #647d9e; font-size: .85rem; font-style: italic; }
-.aws-code { margin: 0; padding: 1rem; border-radius: 12px; background: #0f2740; color: #e6f0fb;
-  overflow-x: auto; font-size: .85rem; line-height: 1.5; }
-.aws-checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; }
-.aws-checklist label { display: flex; align-items: center; gap: .6rem; color: #36516f; cursor: pointer; }
-.aws-callout { display: grid; gap: .6rem; padding: 1.1rem 1.3rem; border-radius: 14px;
-  border: 1px solid #d7e2ef; background: #f5f8fc; }
-.aws-callout h3 { margin: 0; }
-.aws-callout-cost { border-color: #f2c9a0; background: #fff6ec; }
-.aws-callout-cost h3 { color: #b5651d; }
-.aws-callout-info { border-color: #b9cdea; background: #eef5ff; }
-.aws-callout-warn { border-color: #eab8b8; background: #fdeeee; }
-.aws-callout-warn h3 { color: #b23b3b; }
-.aws-deliverable { padding: 1.1rem 1.3rem; border-radius: 14px; border: 1px solid #b7e0c4;
-  background: #eefaf0; }
-.aws-deliverable h3 { margin: 0 0 .3rem; color: #1c7a43; font-size: 1rem; }
-.aws-deliverable p { margin: 0; color: #2c5a3f; font-weight: 600; }
-.aws-links { margin: 0; padding-left: 1.2rem; display: grid; gap: .35rem; }
-.aws-links a { color: #1266d4; }
-.aws-mcqs { margin: 0; padding: 0; list-style: none; display: grid; gap: 1rem; }
-.aws-mcq { padding: 1rem 1.1rem; border: 1px solid #d7e2ef; border-radius: 12px; background: #fbfdff; }
-.aws-mcq-fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
-.aws-mcq-q { margin: 0 0 .6rem; padding: 0; color: #12345c; }
-.aws-mcq-options { list-style: none; margin: 0; padding: 0; display: grid; gap: .35rem; }
-.aws-mcq-option label { display: flex; align-items: center; gap: .55rem; padding: .4rem .55rem;
-  border: 1px solid transparent; border-radius: 8px; color: #36516f; cursor: pointer; }
-.aws-mcq-option.correct label { border-color: #9bd8b0; background: #eafaef; color: #1c7a43; }
-.aws-mcq-option.wrong label { border-color: #eab8b8; background: #fdeeee; color: #b23b3b; }
-.aws-mcq-result { margin: .55rem 0 0; font-weight: 600; color: #36516f; }
-.aws-interview summary { cursor: pointer; color: #1266d4; font-weight: 600; }
-.aws-interview p { margin: .6rem 0 0; color: #36516f; }
+.aws-day-title { margin-top: 1.4rem; padding: 1rem 1.2rem; border: 1px solid #d7e2ef;
+  border-radius: 12px; background: #f7faff; color: #36516f; }
+.aws-day-title strong { color: #12345c; }

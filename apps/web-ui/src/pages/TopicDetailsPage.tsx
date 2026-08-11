@@ -10,6 +10,9 @@ export function TopicDetailsPage() {
   const ecosystem = params.get('ecosystem') ?? ''
   const technology = params.get('technology') ?? ''
   const topic = params.get('topic') ?? ''
+  // Where "Choose another topic" returns to — defaults to the education page, but the AWS
+  // Training flow passes back=/aws-training so it returns to that selector.
+  const back = params.get('back') ?? '/education'
   const variant = toVariant(params.get('variant'))
   const meta = educationVariants[variant]
   const [details, setDetails] = useState<TopicDetails>()
@@ -73,7 +76,7 @@ export function TopicDetailsPage() {
       <div className="topic-export-actions">
         <button disabled={!details} onClick={exportPdf}>Export to PDF</button>
         <button disabled={!details} onClick={exportWord}>Export to MS Word</button>
-        <button className="secondary-button" onClick={() => navigate('/education')}>Choose another topic</button>
+        <button className="secondary-button" onClick={() => navigate(back)}>Choose another topic</button>
       </div>
     </div>
     {!details && !error && <section className="learning-loading" aria-live="polite" aria-busy="true">
