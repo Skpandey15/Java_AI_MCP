@@ -44,8 +44,8 @@ iteration; see §3.)
                                                                              │
  dev  (local k3d): promote-dev (auto) → digest PR (auto-merge) → Argo CD     │
       (auto-sync) pulls ghcr images → online-interview-dev (LAN HTTPS)       │
- uat/prod (cloud): promote-gitops.yml (dispatch) → digest PR (review + Env   │
-      approval) → Argo CD (manual sync)                                      │
+ uat/prod (cloud): promote-gitops.yml (dispatch) → digest PR (Env approval)  │
+      → deploy-and-verify.yml (sync + health-gate + auto-rollback)           │
  security.yml: Trivy fs (vuln+secret) + config scan; on push/PR + weekly cron
 ```
 
@@ -53,6 +53,7 @@ iteration; see §3.)
 |---|---|---|---|
 | **pipeline** | `.github/workflows/pipeline.yml` | push `main`, **every PR**, manual | **CI** on push+PR: `web-ui` (npm test+build), `interview-orchestrator` (gradle `test jacocoTestCoverageVerification bootJar`, JDK 25), `ai-service` (uv + ruff + pytest ≥95% + AI-quality gate), `docker-images` (build all three + live health smoke), `kubernetes-manifests` (render overlays + kubeconform + policy). Then on `main` only: `detect` (skip digest-only commits) → `publish` (per image: **Trivy HIGH/CRITICAL gate**, SBOM, push `sha-<sha>`+`main`, **Cosign sign**, attest) → `promote-dev` (bump `overlays/dev` to the new digests via an auto-merged PR; Argo CD then syncs the k3d cluster). One run, live logs. |
 | **promote-gitops** | `.github/workflows/promote-gitops.yml` | manual dispatch → **uat/prod** | Resolves immutable digests, **verifies their Cosign signatures**, waits for the source env to be **healthy in Argo CD** and to already run the requested release, writes digests into the target overlay, renders+validates, opens a **promotion PR**, and **pauses on the required-reviewer `*-promotion` Environment approval** (the enforced human gate) before it can merge. |
+| **deploy-and-verify** | `.github/workflows/deploy-and-verify.yml` | manual dispatch → **uat/prod** | Rolls out a merged promotion: `argocd app sync` → wait **Synced + Healthy**. On failure, **auto-rollback** — Argo CD rolled back to the last known-good revision, plus an auto-merged revert PR to reconcile git. dev is excluded (auto-sync + selfHeal). |
 | **security** | `.github/workflows/security.yml` | push `main`, PR, weekly cron, manual | Trivy filesystem scan (vuln + secret) and infra-config scan; fails on HIGH/CRITICAL. |
 
 **Key properties**
@@ -313,9 +314,24 @@ kubectl -n online-interview exec deploy/interview-orchestrator -c interview-orch
 kubectl -n online-interview rollout undo deploy/interview-orchestrator
 kubectl -n online-interview rollout status deploy/interview-orchestrator
 ```
-For shared envs, roll back by reverting the promotion commit on `main`; Argo CD self-heals to
-the previous digests. **Never** roll a database migration backward without a compensating
-forward migration.
+**Shared-environment rollout & rollback.**
+- **uat/prod** are deployed by the `deploy-and-verify.yml` workflow (manual dispatch, choose the
+  env). It `argocd app sync`s to the merged desired state, waits for **Synced + Healthy**, and if
+  that fails it **rolls back automatically**: Argo CD is rolled back to the last known-good
+  revision for immediate service restore, and an auto-merged **revert PR** returns the git desired
+  state to the previous digest so the unhealthy release is not re-applied. A failed run means the
+  environment was rolled back — check the run's revert PR link.
+  ```bash
+  gh workflow run deploy-and-verify.yml --repo Skpandey15/Java_AI_MCP --ref main \
+    -f environment=uat
+  ```
+  To roll back manually (without a bad-deploy trigger), revert the promotion commit on `main` and
+  re-run `deploy-and-verify` for that env.
+- **dev** is auto-sync + selfHeal, so it always reconciles to git; roll back a bad dev release by
+  reverting the dev digest commit on `main` — Argo CD auto-syncs the revert.
+
+**Never** roll a database migration backward without a compensating forward migration — image
+rollback does not undo a schema change.
 
 ---
 
@@ -562,6 +578,9 @@ ship. This is a genuinely production-grade supply chain.
   against the pipeline's OIDC identity and fail the promotion on an unsigned/tampered image — signing
   is enforced, not decorative. In-cluster admission enforcement (Kyverno `verifyImages`) is the
   planned next layer.
+- **Automatic rollback for uat/prod (done).** `deploy-and-verify.yml` syncs, waits for Synced +
+  Healthy, and on failure rolls Argo CD back to the last known-good revision and auto-merges a revert
+  PR to reconcile git. dev relies on Argo auto-sync + selfHeal.
 - **uat/prod approval gates configured (done).** `uat-promotion` / `prod-promotion` Environments now
   carry a required reviewer (repo owner); a promotion pauses for approval. Previously the
   Environments did not exist, so the "gate" was not actually enforced.
@@ -573,8 +592,10 @@ ship. This is a genuinely production-grade supply chain.
    nothing verifies the app *after* Argo CD syncs an env. Add an Argo CD `PostSync` health/smoke
    hook (or a probe job) per environment. Enforceable cloud-side for uat/prod; dev is LAN-local so
    it relies on Argo selfHeal + notifications.
-2. **No automated rollback trigger.** Rollback is manual (revert the promotion commit). Planned as
-   the next program phase: on health-degraded, auto-revert the digest commit (Argo reconciles back).
+2. **Automated rollback (done for uat/prod).** `deploy-and-verify.yml` verifies health after sync
+   and, on failure, rolls Argo CD back to the last known-good revision and auto-merges a revert PR
+   to reconcile git. dev relies on Argo auto-sync + selfHeal. A future enhancement is progressive
+   delivery (Argo Rollouts canary/analysis) so a bad release is caught before full rollout.
 3. **`main` tag is mutable and also pushed.** uat/prod/dev correctly use digests, but the floating
    `main` tag invites accidental use in a manifest — keep it for convenience only; `validate-gitops`
    requires immutable digests for every non-`local` overlay.
